@@ -1,0 +1,85 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+/old-backend-api/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env.agents
+.env.agents.monad
+.env.convex.monad
+.env.agents.*.tmp
+.codex-next.*.log
+.env.local
+.env.*.local
+.env.example.local
+LOCAL_SECRETS.md
+
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Ignored for the template, you probably want to remove it:
+package-lock.json
+!execution-sidecar/package-lock.json
+!/package-lock.json
+contracts/uniswap-v4-hooks/cache/
+contracts/uniswap-v4-hooks/out/
+contracts/managed-spot-vault/cache/
+contracts/managed-spot-vault/out/
+
+# clerk configuration (can include secrets)
+/.clerk/
+.env
+/.agents/skills
+.env.local
+.ignored-stuff/dev-tunnels.ps1
+/.data
+.env.local
+.vscode/mcp.json
+docs/product-experience/moeazi-ux-friction-review.docx
+docs/product-experience/moeazi-user-journey.docx
+/docs/product-experience
+/docs/funding
+/.agentic-integration-runs/
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace.json
+/.agents
+/.codex-remote-attachments

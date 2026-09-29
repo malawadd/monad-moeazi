@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-01/session.schema.json",
+  "title": "MobileSession",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["accessToken", "refreshToken", "expiresIn", "session"],
+  "properties": {
+    "accessToken": {"type": "string", "minLength": 32},
+    "refreshToken": {"type": "string", "minLength": 32},
+    "expiresIn": {"type": "integer", "minimum": 60},
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject", "walletAddress", "deviceId"],
+      "properties": {
+        "subject": {"type": "string", "pattern": "^magic:0x[a-f0-9]{40}$"},
+        "walletAddress": {"type": "string", "pattern": "^0x[a-f0-9]{40}$"},
+        "deviceId": {"type": "string", "minLength": 8}
+      }
+    }
+  }
+}

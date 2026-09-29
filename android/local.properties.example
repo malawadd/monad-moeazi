@@ -1,0 +1,4 @@
+sdk.dir=C:\\AndroidSdk
+moeazi.apiBaseUrl=http://10.0.2.2:3102
+moeazi.magicPublishableKey=pk_live_or_test_publishable_key
+moeazi.arbitrumRpcUrl=https://arb1.arbitrum.io/rpc

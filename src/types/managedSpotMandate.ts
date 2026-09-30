@@ -1,0 +1,24 @@
+export type ManagedSpotMandate = {
+  mandateId: string;
+  mandateHash: string;
+  status: 'awaiting_vault' | 'expired_unfunded' | 'vault_ready' | 'funding_uncertain' | 'active' | 'stopped' | 'closed';
+  ownerAddress: string;
+  assignmentId: string;
+  programVersionId: string;
+  programHash: string;
+  policyHash: string;
+  capitalUnits: string;
+  maxBuyUnits: string;
+  durationDays: number;
+  expiresAt: number;
+  vaultAddress: string | null;
+  vaultCodeHash: string | null;
+  executorAddress: string | null;
+  provisioningState: 'claimed' | 'submitted' | 'uncertain' | null;
+  provisioningTransactionHash: string | null;
+  venueAccountId: string | null;
+  fundingTransactionHash: string | null;
+  stopFinalizedBlockNumber: string | null;
+  stopFinalizedBlockHash: string | null;
+  fundingOperation: {operationId: string; status: string; particleTransactionId: string | null} | null;
+};

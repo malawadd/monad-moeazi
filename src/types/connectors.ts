@@ -1,0 +1,13 @@
+import type {Address, Hex} from 'viem';
+export type ProviderPin = {id: string; version: string};
+export type FundingOptions = {schemaVersion: '2026-09-29'; commissionBps: 0; currencyCodes: string[]; providers: (ProviderPin & {name: string; available: boolean; reason?: string; environment?: 'sandbox' | 'production'; quoteSupported?: boolean})[]};
+export type Purchase = {schemaVersion: '2026-09-29'; purchaseId: string; provider: ProviderPin; status: 'creating' | 'checkout_ready' | 'processing' | 'delivery_pending' | 'received' | 'cancelled' | 'failed' | 'needs_attention'; fiatCurrency: string; amount: string; checkoutUrl?: string; checkoutHosts: string[]; expiresAt: number; transactionHash?: string; updatedAt: number};
+export type GasReadiness = {schemaVersion: '2026-09-29'; available: boolean; activated: boolean; requiresActivation: boolean; networkFeePayer?: 'moeazi'; reason?: string};
+export type Authorization = {contractAddress: Address; chainId: 42161; nonce: number};
+export type SignedAuthorization = {address: Address; chainId: Hex; nonce: Hex; r: Hex; s: Hex; yParity: Hex};
+export type ActivationReview = {schemaVersion: '2026-09-29'; stage: 'authorization_required'; operationId: string; owner: Address; implementation: Address; authorization: Authorization; expiresAt: number; networkFeePayer: 'moeazi'; grantsAiTradingAuthority: false};
+export type UserOperation = {sender: Address; nonce: Hex; callData: Hex; callGasLimit: Hex; verificationGasLimit: Hex; preVerificationGas: Hex; maxFeePerGas: Hex; maxPriorityFeePerGas: Hex; paymaster?: Address; paymasterVerificationGasLimit?: Hex; paymasterPostOpGasLimit?: Hex; paymasterData?: Hex};
+export type SponsoredOperation = {schemaVersion: '2026-09-29'; transport: 'erc4337'; operationId: string; idempotencyKey: string; owner: Address; chainId: 42161; entryPoint: Address; account: ProviderPin; implementation: Address;
+  intent: {kind: 'activation' | 'withdrawal'; owner: Address; destination?: Address; amountRaw?: string}; userOperation: UserOperation; userOperationHash: Hex; reviewHash: Hex; expiresAt: number; observedBlock: number; feeCeilingWei: string; networkFeePayer: 'moeazi'; bundler: ProviderPin; paymaster: ProviderPin; authorization?: Authorization;
+  withdrawal?: {amount: string; destination: Address; destinationKind: 'wallet' | 'contract'; remainingAmount: string}};
+export type SponsoredStatus = {schemaVersion: '2026-09-29'; operationId: string; kind: 'activation' | 'withdrawal'; status: string; transactionHash?: string; withdrawal?: SponsoredOperation['withdrawal']; updatedAt: number};

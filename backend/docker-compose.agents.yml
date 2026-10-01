@@ -1,0 +1,304 @@
+name: moeazi-monad
+
+x-agent-service: &agent-service
+  build: ./agent-service
+  env_file: ${AGENT_ENV_FILE:-.env.agents.example}
+  environment: &agent-environment
+    WORKER_SHARED_SECRET: ${WORKER_SHARED_SECRET:-}
+    CONVEX_WORKER_URL: ${CONVEX_WORKER_URL:-}
+    CONVEX_GATEWAY_CREDENTIAL_URL: ${CONVEX_GATEWAY_CREDENTIAL_URL:-}
+    GATEWAY_CREDENTIAL_SECRET: ""
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    # Financial integration secrets belong only in execution-sidecar, even when
+    # the development env file is shared with analysis services.
+    PIMLICO_API_KEY: ""
+    PIMLICO_SPONSORSHIP_POLICY_ID: ""
+    MOONPAY_API_KEY: ""
+    MOONPAY_API_SECRET: ""
+    MOONPAY_WEBHOOK_SECRET: ""
+    TRANSAK_API_KEY: ""
+    TRANSAK_API_SECRET: ""
+    BANXA_API_KEY: ""
+    BANXA_WEBHOOK_KEY: ""
+    BANXA_WEBHOOK_SECRET: ""
+    PROVIDER_TOKEN_CACHE_SECRET: ""
+    OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+    OPENROUTER_HTTP_REFERER: ${OPENROUTER_HTTP_REFERER:-https://moeazi.com}
+    OPENROUTER_APP_TITLE: ${OPENROUTER_APP_TITLE:-Moeazi}
+    BYOK_ENABLED: ${BYOK_ENABLED:-true}
+    BYOK_SECRET_BACKEND: ${BYOK_SECRET_BACKEND:-local}
+    BYOK_AWS_KMS_KEY_ID: ${BYOK_AWS_KMS_KEY_ID:-}
+    BYOK_AWS_REGION: ${BYOK_AWS_REGION:-us-east-1}
+    TRACE_BODY_RETENTION_DAYS: ${TRACE_BODY_RETENTION_DAYS:-7}
+    EVALUATION_TRACE_RETENTION_DAYS: ${EVALUATION_TRACE_RETENTION_DAYS:-90}
+    EVALUATION_TASK_QUEUE: ${EVALUATION_TASK_QUEUE:-moeazi-evaluations}
+    EVALUATION_GLOBAL_BUDGET_USD: ${EVALUATION_GLOBAL_BUDGET_USD:-0.10}
+    EVALUATION_OPERATOR_SUBJECTS: ${EVALUATION_OPERATOR_SUBJECTS:-}
+    AGENT_CUSTOMER_RESEARCH_DETERMINISTIC: ${AGENT_CUSTOMER_RESEARCH_DETERMINISTIC:-false}
+    AGENT_DEV_CONTROLS_ENABLED: ${AGENT_DEV_CONTROLS_ENABLED:-true}
+    AGENT_MANUAL_GUARD_DEFAULT: ${AGENT_MANUAL_GUARD_DEFAULT:-true}
+    AGENT_LITE_MODE_DEFAULT: ${AGENT_LITE_MODE_DEFAULT:-true}
+    DEV_STARTER_CREDITS: ${DEV_STARTER_CREDITS:-100}
+    DEV_LITE_ACCOUNT_RUNS_PER_DAY: ${DEV_LITE_ACCOUNT_RUNS_PER_DAY:-4}
+    DEV_LITE_GLOBAL_RUNS_PER_DAY: ${DEV_LITE_GLOBAL_RUNS_PER_DAY:-8}
+    DEV_LITE_PROVIDER_BUDGET_USD: ${DEV_LITE_PROVIDER_BUDGET_USD:-0.10}
+    ARBITRUM_RPC_URL: ${ARBITRUM_RPC_URL:-}
+    MAINNET_VENUE_SETUP_ENABLED: ${MAINNET_VENUE_SETUP_ENABLED:-false}
+    LIVE_EXECUTION_ENABLED: ${LIVE_EXECUTION_ENABLED:-false}
+    DEPENDENCY_SAFETY_MODE: ${DEPENDENCY_SAFETY_MODE:-observe}
+    CERTIFIED_VENUES: ${CERTIFIED_VENUES:-}
+  depends_on:
+    temporal:
+      condition: service_started
+    convex:
+      condition: service_healthy
+    timescaledb:
+      condition: service_healthy
+    migrations:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.28.2-pg16
+    environment:
+      POSTGRES_DB: moeazi
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ./agent-service/migrations:/docker-entrypoint-initdb.d:ro
+    ports: ["127.0.0.1:15432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d moeazi"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [default, test-center-runtime]
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    volumes: ["redis-data:/data"]
+    ports: ["127.0.0.1:16379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [default, test-center-runtime]
+
+  redis-scoped-replica:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--replicaof", "redis", "6379", "--appendonly", "yes", "--appendfsync", "always"]
+    volumes: ["redis-scoped-replica-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [default]
+
+  migrations:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: timescaledb
+      PGDATABASE: moeazi
+      PGUSER: postgres
+      PGPASSWORD: ${TIMESCALE_PASSWORD:-postgres}
+    volumes:
+      - ./agent-service/migrations:/migrations:ro
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        for attempt in $$(seq 1 60); do
+          if pg_isready -h timescaledb -U "$$PGUSER" -d "$$PGDATABASE"; then break; fi
+          sleep 2
+        done
+        pg_isready -h timescaledb -U "$$PGUSER" -d "$$PGDATABASE" -t 2
+        for file in /migrations/*.sql; do
+          echo "Applying $$file"
+          psql -v ON_ERROR_STOP=1 -f "$$file"
+        done
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: "no"
+
+  temporal:
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0"]
+    ports: ["127.0.0.1:17233:7233", "127.0.0.1:18233:8233"]
+
+  convex:
+    image: ghcr.io/get-convex/convex-backend:latest
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    environment:
+      INSTANCE_NAME: ${CONVEX_INSTANCE_NAME:-moeazi-monad}
+      INSTANCE_SECRET: ${CONVEX_INSTANCE_SECRET:?Run scripts/setup-monad-local.ps1 first}
+      CONVEX_CLOUD_ORIGIN: http://127.0.0.1:3310
+      CONVEX_SITE_ORIGIN: http://127.0.0.1:3311
+      DISABLE_BEACON: "true"
+      DISABLE_METRICS_ENDPOINT: "true"
+      DO_NOT_REQUIRE_SSL: "true"
+      REDACT_LOGS_TO_CLIENT: "true"
+      RUST_LOG: info
+    volumes: ["convex-data:/convex/data"]
+    ports: ["127.0.0.1:3310:3210", "127.0.0.1:3311:3211"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3210/version"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  convex-dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:latest
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: http://127.0.0.1:3310
+    ports: ["127.0.0.1:6891:6791"]
+    depends_on:
+      convex:
+        condition: service_healthy
+
+  api:
+    <<: *agent-service
+    environment:
+      <<: *agent-environment
+      MANAGED_VAULT_EXECUTION_SECRET: ${MANAGED_VAULT_EXECUTION_SECRET:-}
+      MANAGED_VAULT_EXECUTION_ENABLED: ${MANAGED_VAULT_EXECUTION_ENABLED:-false}
+      MANAGED_VAULT_INTERNAL_TEST_ADDRESS: ${MANAGED_VAULT_INTERNAL_TEST_ADDRESS:-}
+      MANAGED_VAULT_AUTO_POLICY_MAX_USDC_UNITS: ${MANAGED_VAULT_AUTO_POLICY_MAX_USDC_UNITS:-0}
+    command: ["uvicorn", "moeazi_agent.api:app", "--host", "0.0.0.0", "--port", "8100"]
+    ports: ["127.0.0.1:9100:8100"]
+
+  test-center:
+    build: ./agent-service
+    command: ["uvicorn", "moeazi_agent.test_center_server:app", "--host", "0.0.0.0", "--port", "8110"]
+    environment:
+      ENVIRONMENT: ${TEST_CENTER_ENVIRONMENT:-local}
+      POSTGRES_DSN: postgresql+asyncpg://postgres:${TIMESCALE_PASSWORD:-postgres}@timescaledb:5432/moeazi
+      REDIS_URL: redis://redis:6379/0
+      WORKER_SHARED_SECRET: ${WORKER_SHARED_SECRET:-}
+      AGENT_TEST_CENTER_ENABLED: ${AGENT_TEST_CENTER_ENABLED:-false}
+      TEST_CENTER_OPERATOR_SUBJECTS: ${TEST_CENTER_OPERATOR_SUBJECTS:-}
+      TEST_CENTER_BIND_HOST: 127.0.0.1
+      TEST_CENTER_EXTERNAL_NETWORK_ENABLED: "false"
+      TEST_CENTER_REPOSITORY_SHA: ${TEST_CENTER_REPOSITORY_SHA:-}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ports: ["127.0.0.1:9110:8110"]
+    profiles: ["test-center"]
+    networks: [test-center-runtime]
+
+  worker:
+    <<: *agent-service
+    command: ["python", "-m", "moeazi_agent.temporal_app"]
+    deploy:
+      replicas: 2
+
+  evaluation-worker:
+    <<: *agent-service
+    command: ["python", "-m", "moeazi_agent.evaluation_worker"]
+
+  dispatcher:
+    <<: *agent-service
+    command: ["python", "-m", "moeazi_agent.dispatcher"]
+    profiles: ["legacy-polling"]
+
+  ingestors:
+    <<: *agent-service
+    command: ["python", "-m", "moeazi_agent.ingestor"]
+    profiles: ["continuous-ingestion"]
+
+  execution-gateway:
+    <<: *agent-service
+    command: ["uvicorn", "moeazi_agent.execution_api:app", "--host", "0.0.0.0", "--port", "8200"]
+    environment:
+      <<: *agent-environment
+      CONVEX_GATEWAY_CREDENTIAL_URL: ${CONVEX_GATEWAY_CREDENTIAL_URL:-}
+      GATEWAY_CREDENTIAL_SECRET: ${GATEWAY_CREDENTIAL_SECRET:-}
+    ports: ["127.0.0.1:9200:8200"]
+
+  execution-sidecar:
+    build: ./execution-sidecar
+    depends_on:
+      convex:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redis-scoped-replica:
+        condition: service_healthy
+    env_file: ${AGENT_ENV_FILE:-.env.agents.example}
+    environment:
+      WORKER_SHARED_SECRET: ${WORKER_SHARED_SECRET:-}
+      CONVEX_SITE_URL: ${CONVEX_SITE_URL:-}
+      AGENT_SERVICE_URL: ${AGENT_SERVICE_URL:-http://api:8100}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SCOPED_SWAP_SIGNER_VAULT_SECRET: ${SCOPED_SWAP_SIGNER_VAULT_SECRET:-}
+      SCOPED_SWAP_OPERATION_STORE_SECRET: ${SCOPED_SWAP_OPERATION_STORE_SECRET:-}
+      SCOPED_SWAP_STORAGE_DURABILITY_ACK: ${SCOPED_SWAP_STORAGE_DURABILITY_ACK:-}
+      SCOPED_UNISWAP_EXECUTION_ENABLED: ${SCOPED_UNISWAP_EXECUTION_ENABLED:-false}
+      MOBILE_PURCHASES_ENABLED: ${MOBILE_PURCHASES_ENABLED:-false}
+      MOBILE_FUNDING_QUOTES_ENABLED: ${MOBILE_FUNDING_QUOTES_ENABLED:-false}
+      MOBILE_SPONSORSHIP_ENABLED: ${MOBILE_SPONSORSHIP_ENABLED:-false}
+      MOBILE_SPONSORSHIP_CERTIFIED: ${MOBILE_SPONSORSHIP_CERTIFIED:-false}
+      ARBITRUM_RPC_URL: ${ARBITRUM_RPC_URL:-}
+      MAINNET_VENUE_SETUP_ENABLED: ${MAINNET_VENUE_SETUP_ENABLED:-false}
+      LIVE_EXECUTION_ENABLED: ${LIVE_EXECUTION_ENABLED:-false}
+      CERTIFIED_VENUES: ${CERTIFIED_VENUES:-}
+      MANAGED_VAULT_PROVISION_SECRET: ${MANAGED_VAULT_PROVISION_SECRET:-}
+      MANAGED_VAULT_FACTORY_ADDRESS: ${MANAGED_VAULT_FACTORY_ADDRESS:-}
+      MANAGED_VAULT_FACTORY_CODE_HASH: ${MANAGED_VAULT_FACTORY_CODE_HASH:-}
+      MANAGED_VAULT_EXECUTOR_ADDRESS: ${MANAGED_VAULT_EXECUTOR_ADDRESS:-}
+      MANAGED_VAULT_MAX_TX_GAS_COST_WEI: ${MANAGED_VAULT_MAX_TX_GAS_COST_WEI:-}
+      MANAGED_VAULT_PROVISION_ENABLED: ${MANAGED_VAULT_PROVISION_ENABLED:-false}
+      MANAGED_VAULT_EXECUTION_SECRET: ${MANAGED_VAULT_EXECUTION_SECRET:-}
+      MANAGED_VAULT_EXECUTION_ENABLED: ${MANAGED_VAULT_EXECUTION_ENABLED:-false}
+      MANAGED_VAULT_STOP_ENABLED: ${MANAGED_VAULT_STOP_ENABLED:-false}
+      MANAGED_VAULT_INTERNAL_TEST_ADDRESS: ${MANAGED_VAULT_INTERNAL_TEST_ADDRESS:-}
+      MANAGED_VAULT_AUTO_POLICY_MAX_USDC_UNITS: ${MANAGED_VAULT_AUTO_POLICY_MAX_USDC_UNITS:-0}
+      UNISWAP_API_KEY: ${UNISWAP_API_KEY:-}
+      DEPENDENCY_SAFETY_MODE: ${DEPENDENCY_SAFETY_MODE:-observe}
+      UNISWAP_ARBITRUM_TARGETS: ${UNISWAP_ARBITRUM_TARGETS:-}
+      UNISWAP_HOOK_EXPERIMENT_ENABLED: ${UNISWAP_HOOK_EXPERIMENT_ENABLED:-false}
+      UNISWAP_HOOK_ADDRESS: ${UNISWAP_HOOK_ADDRESS:-}
+      UNISWAP_HOOK_CODE_HASH: ${UNISWAP_HOOK_CODE_HASH:-}
+      UNISWAP_HOOK_FEE: ${UNISWAP_HOOK_FEE:-3000}
+      UNISWAP_HOOK_TICK_SPACING: ${UNISWAP_HOOK_TICK_SPACING:-60}
+    restart: unless-stopped
+    secrets:
+      - managed_vault_executor_key
+    ports: ["127.0.0.1:9300:8300"]
+
+secrets:
+  managed_vault_executor_key:
+    file: ${MANAGED_VAULT_EXECUTOR_KEY_SOURCE:-./execution-sidecar/managed-vault-executor.disabled}
+
+volumes:
+  convex-data:
+  timescale-data:
+  redis-data:
+  redis-scoped-replica-data:
+
+networks:
+  default:
+  test-center-runtime:
+    internal: true

@@ -1,0 +1,34 @@
+# Explicit overlay: docker compose -f docker-compose.agents.yml
+# -f docker-compose.simulation.yml --profile simulation ...
+# No shared env_file: providers, wallet keys and sidecar credentials stay absent.
+services:
+  simulation-worker:
+    profiles: [simulation]
+    build: ./agent-service
+    command: [python, -m, moeazi_agent.simulation_worker]
+    environment:
+      TRADING_SIMULATION_ENABLED: ${TRADING_SIMULATION_ENABLED:-false}
+      TRADING_SIMULATION_POSTGRES_DSN: ${TRADING_SIMULATION_POSTGRES_DSN:-}
+      TRADING_SIMULATION_CONVEX_IDENTITY_URL: ${TRADING_SIMULATION_CONVEX_IDENTITY_URL:-}
+      TRADING_SIMULATION_IDENTITY_SECRET: ${SIMULATION_WORKER_SECRET:-}
+      TRADING_SIMULATION_TEMPORAL_ADDRESS: temporal:7233
+      TRADING_SIMULATION_TEMPORAL_NAMESPACE: default
+      TRADING_SIMULATION_MAX_CONCURRENT_ACTIVITIES: 2
+    depends_on:
+      temporal:
+        condition: service_started
+      timescaledb:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    restart: unless-stopped

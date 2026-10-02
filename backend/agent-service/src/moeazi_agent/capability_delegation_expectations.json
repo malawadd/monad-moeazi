@@ -1,0 +1,1 @@
+{"schemaVersion":1,"expectations":{"valid-chain-allow":"allow","chain-zero-contract-block":"deny","missing-parent-block":"deny","expired-observation-block":"deny","over-limit-block":"deny","replayed-nonce-block":"deny","pending-revocation-block":"deny","reconcile-safe-lane":"close_or_reconcile_only","wrong-tenant-block":"deny","duplicate-transition-block":"deny"}}

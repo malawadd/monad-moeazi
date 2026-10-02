@@ -1,0 +1,1 @@
+{"schemaVersion":1,"registryVersion":"2026-08-14.asset-journal-local-v1","eventClasses":["fee","funding","lock","opening","pending","realized_pnl","settlement","transfer","unlock"],"finality":["finalized","pending","safe"],"safeLanes":["catch_up","correct","reconcile","settle_existing"],"prohibited":{"externalNetwork":true,"liveSubmit":true,"signing":true,"redisJournal":true}}

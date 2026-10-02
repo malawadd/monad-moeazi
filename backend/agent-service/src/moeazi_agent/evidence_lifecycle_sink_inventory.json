@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 5,
+  "sinks": [
+    {
+      "id": "push-api-timescale-redis",
+      "file": "api.py",
+      "required": "persist_ingested_evidence"
+    },
+    {
+      "id": "continuous-timescale-redis",
+      "file": "ingestor.py",
+      "required": "persist_ingested_evidence"
+    },
+    {
+      "id": "analysis-provider",
+      "file": "temporal_app.py",
+      "required": "lifecycle_gate"
+    },
+    {
+      "id": "analysis-history",
+      "file": "temporal_app.py",
+      "required": "archive_decision"
+    },
+    {
+      "id": "evaluation-v1-provider",
+      "file": "evaluation_runner.py",
+      "required": "EvaluationLifecycleGate"
+    },
+    {
+      "id": "evaluation-v1-history",
+      "file": "evaluation_runner.py",
+      "required": "lifecycle_gate.archive"
+    },
+    {
+      "id": "evaluation-v2-provider",
+      "file": "evaluation_pipeline_v2.py",
+      "required": "EvaluationLifecycleGate"
+    },
+    {
+      "id": "evaluation-v2-history",
+      "file": "evaluation_pipeline_v2.py",
+      "required": "lifecycle_gate.archive"
+    },
+    {
+      "id": "evaluation-case",
+      "file": "evaluation_lifecycle.py",
+      "required": "timescale.evaluation_case"
+    },
+    {
+      "id": "grounding-provider",
+      "file": "grounding_evaluator.py",
+      "required": "await lifecycle_gate"
+    },
+    {
+      "id": "analysis-snapshot",
+      "file": "analysis_completion.py",
+      "required": "govern_projection"
+    },
+    {
+      "id": "trade-proposal",
+      "file": "analysis_completion.py",
+      "required": "proposal_sanitized"
+    },
+    {
+      "id": "trace-timescale",
+      "file": "tracing.py",
+      "required": "timescale.agent_trace"
+    },
+    {
+      "id": "trace-redis",
+      "file": "tracing.py",
+      "required": "redis.trace_notification"
+    },
+    {
+      "id": "monitoring-output",
+      "file": "evidence_lifecycle_operations.py",
+      "required": "monitoring.evidence_output"
+    },
+    {
+      "id": "copy-owner-commands",
+      "file": "evidence_lifecycle_copy_commands.py",
+      "required": "pending_copy_commands"
+    }
+  ],
+  "pythonRoot": "agent-service/src/moeazi_agent/**/*.py",
+  "pythonGroups": [
+    {
+      "kind": "monitoring_output",
+      "count": 1,
+      "fingerprintRoot": "931240f210ac27814a08c91858315b305b3f7483272b03cc80ce434b3747aed5",
+      "owner": "convex_product_state",
+      "dataClass": "customer_confidential",
+      "boundary": "monitoring response adapter",
+      "policyRoute": "monitoring_export/monitoring/monitoring.evidence_output"
+    },
+    {
+      "kind": "provider_boundary",
+      "count": 41,
+      "fingerprintRoot": "a5b4d5f4dad35ea73776b5c51752aeb0f0650a9d8e9752a81495e4fb99433c31",
+      "owner": "external_provider",
+      "dataClass": "customer_confidential_or_reviewed_non_evidence",
+      "boundary": "actual SDK or HTTP dispatch plus governed provider construction",
+      "policyRoute": "exact providerCallsites entry required"
+    },
+    {
+      "kind": "redis_write",
+      "count": 18,
+      "fingerprintRoot": "d0c9164d6ecffde3699f86e9b4cc8734495a4b14a6d5af023fe5af5d06993a39",
+      "owner": "redis_coordination",
+      "dataClass": "ephemeral_or_notification",
+      "boundary": "Redis write or publish",
+      "policyRoute": "registered Redis route or reviewed operational control"
+    },
+    {
+      "kind": "repository_write",
+      "count": 76,
+      "fingerprintRoot": "994bd5252930e29f0a682946423d6f0d014e5e1fca4ec17b5e969023c9e2f796",
+      "owner": "declared_repository_owner",
+      "dataClass": "governed_or_safety_root",
+      "boundary": "repository write adapter",
+      "policyRoute": "callsite lifecycle gate or reviewed non-evidence state"
+    },
+    {
+      "kind": "service_command",
+      "count": 24,
+      "fingerprintRoot": "59cef32bedf846557ba0f7a07983a6adf361f063040af538eeb773cc095d7743",
+      "owner": "convex_product_state",
+      "dataClass": "current_projection",
+      "boundary": "authenticated service command",
+      "policyRoute": "governed projection or reviewed control state"
+    },
+    {
+      "kind": "sql_dynamic",
+      "count": 7,
+      "fingerprintRoot": "66c8f45551578df4a4034e005987da0f67d3b649e334a0a680d51b34406b31e4",
+      "owner": "timescale_history",
+      "dataClass": "review_required",
+      "boundary": "dynamic SQL adapter",
+      "policyRoute": "explicit reviewed exemption: bounded query or registered body disposition"
+    },
+    {
+      "kind": "sql_write",
+      "count": 226,
+      "fingerprintRoot": "31557c9b80e9f52feb2436b68b612597e809a3a7360145bbcc397e1f91b0b099",
+      "owner": "timescale_history_and_postgres_financial_authority",
+      "dataClass": "history_or_safety_root_or_financial_state",
+      "boundary": "SQL mutation",
+      "policyRoute": "repository-owned lifecycle gate, reviewed operational metadata, or scoped exact financial writer checks"
+    },
+    {
+      "kind": "temporal_boundary",
+      "count": 45,
+      "fingerprintRoot": "bc1edcf6c8da72a50a1a0c621f7f019f81abe7acdda17890b4bf6db8b646d62b",
+      "owner": "temporal_workflows",
+      "dataClass": "frozen_payload",
+      "boundary": "Temporal start or activity payload",
+      "policyRoute": "registered workflow contract or reviewed control payload"
+    }
+  ],
+  "typescriptRoots": [
+    "convex/**/*.ts",
+    "app/api/**/*.{ts,tsx}"
+  ],
+  "typescriptGroups": [
+    {
+      "kind": "convex_mutation_boundary",
+      "count": 72,
+      "fingerprintRoot": "e5e8ade01bcec77b933aa6d9d075295fbb314bd70df4b5a8fb34327ea1190542",
+      "owner": "convex_product_state",
+      "dataClass": "authenticated_product_state",
+      "boundary": "Convex mutation dispatch",
+      "policyRoute": "strict internal mutation contract"
+    },
+    {
+      "kind": "convex_write",
+      "count": 264,
+      "fingerprintRoot": "7b5d5e2e7ae04dec94ba6040c32bdbb4b685f69f51ebef133fa5e4c18428f5ab",
+      "owner": "convex_product_state",
+      "dataClass": "current_projection_or_product_state",
+      "boundary": "Convex database mutation",
+      "policyRoute": "schema-owned mutation or reviewed non-evidence state"
+    },
+    {
+      "kind": "lifecycle_next_output",
+      "count": 14,
+      "fingerprintRoot": "acb88badb6a8b105c61d5c637c5f9f3340f6a1d371ebf893bc707c8c35a9f08a",
+      "owner": "next_authenticated_proxy",
+      "dataClass": "sanitized_response",
+      "boundary": "lifecycle-facing Next route",
+      "policyRoute": "authenticated proxy to governed Python or Test Center boundary"
+    }
+  ],
+  "providerCallsiteFiles": [
+    "evidence_lifecycle_provider_callsites.json",
+    "evidence_lifecycle_provider_callsites_02.json"
+  ]
+}

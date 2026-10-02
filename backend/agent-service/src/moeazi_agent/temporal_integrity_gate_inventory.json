@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {"path":"convex/agentMutations.ts","symbol":"approval expiry","gateClass":"approval","clockExpression":"Date.now","domain":"fixture-wall","owner":"product","riskEffect":"authority","status":"inventoried_unwired"},
+    {"path":"agent-service/src/moeazi_agent/execution_workflow.py","symbol":"workflow deadline","gateClass":"deadline","clockExpression":"datetime.now","domain":"fixture-workflow","owner":"temporal","riskEffect":"authority","status":"inventoried_unwired"},
+    {"path":"agent-service/src/moeazi_agent/evaluation_budget.py","symbol":"budget epoch","gateClass":"budget","clockExpression":"datetime.now","domain":"fixture-budget","owner":"credits","riskEffect":"cost","status":"inventoried_unwired"},
+    {"path":"lib/trade/hyperliquidOrder.ts","symbol":"order nonce","gateClass":"nonce","clockExpression":"Date.now","domain":"fixture-hyperliquid","owner":"execution","riskEffect":"authority","status":"inventoried_unwired"}
+  ],
+  "excluded": [
+    {"path":"components/agent-lab","class":"ui-display","reason":"display-only"},
+    {"path":"lib/auth","class":"authentication-challenge","reason":"not an execution temporal gate"},
+    {"path":"crypto","class":"cryptographic-iv","reason":"not a protocol execution nonce"}
+  ]
+}

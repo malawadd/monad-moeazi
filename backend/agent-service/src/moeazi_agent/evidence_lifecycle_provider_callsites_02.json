@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "providerCallsites": [
+    {
+      "fingerprint": "d67a0d9414ecafe5f83643878371d79b54fa7a551314e3f596ac72a5ec72125e",
+      "file": "mobile_connector_workflow.py",
+      "function": "connector_call",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/internal_authenticated_mobile_reconciliation"
+    },
+    {
+      "fingerprint": "59db9dd741a2962d7b331e42e5480cf273ecfc23b1cb48ad19c6c20e4a0529f9",
+      "file": "mobile_withdrawal_workflow.py",
+      "function": "_rpc",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/native_settlement_reconciliation_read"
+    }
+  ]
+}

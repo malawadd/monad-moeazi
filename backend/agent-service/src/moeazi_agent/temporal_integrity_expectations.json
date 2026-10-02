@@ -1,0 +1,1 @@
+{"schemaVersion":1,"expectations":{"temporal-interior-allow":"allow","temporal-expiry-equality-block":"block","temporal-wide-uncertainty-block":"block","temporal-rollback-block":"block","temporal-timestamp-only-block":"block","temporal-nonce-conflict-block":"block","temporal-reconcile-safe-lane":"safe_only","temporal-close-safe-lane":"safe_only"}}

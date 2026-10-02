@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "providerCallsites": [
+    {
+      "fingerprint": "362c402677b64e8fa825f8964da85f9fe8006ec32e2947f0aed469c39cd1aab1",
+      "file": "convex.py",
+      "function": "command",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/internal_authenticated_convex_command"
+    },
+    {
+      "fingerprint": "0d701c48e8c86e75f61cfb4d9608d28b756368acc9fb95a6c2548edf0578caf2",
+      "file": "data_adapters.py",
+      "function": "fetch",
+      "callee": "request",
+      "policyRoute": "reviewed_exemption/public_market_data_read"
+    },
+    {
+      "fingerprint": "d713c360dfa81a3b058bff895e814462b5fdcccc477b67895c230094783f25db",
+      "file": "data_adapters.py",
+      "function": "fetch",
+      "callee": "stream",
+      "policyRoute": "reviewed_exemption/public_market_data_read"
+    },
+    {
+      "fingerprint": "f623746520756be01043aa671a6153daf08b6a89a121a1c292d65642dadeb25e",
+      "file": "evaluation_pipeline_v2.py",
+      "function": "_run_subject",
+      "callee": "build_provider_bundle",
+      "policyRoute": "provider_prompt/evaluation/provider.model_request"
+    },
+    {
+      "fingerprint": "c0c5a4e5aa9e61104ed86b253dbb6bcdaa575a133b1d453dbd3d905f6243c32a",
+      "file": "evaluation_runner.py",
+      "function": "run_evaluation_subject",
+      "callee": "build_provider_bundle",
+      "policyRoute": "provider_prompt/evaluation/provider.model_request"
+    },
+    {
+      "fingerprint": "761461c13f861624be67801cec3b6b2c3e028a8bf594d88c1c7e2b3b837b49cb",
+      "file": "execution_workflow.py",
+      "function": "gateway_call",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/internal_execution_gateway"
+    },
+    {
+      "fingerprint": "7e38ed662f3722d3c1cb2b9803c1757521d6ea680c13b15bf37b04643c39247f",
+      "file": "grounding_evaluator.py",
+      "function": "structured_evaluation",
+      "callee": "parse",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "17b00fca2051589cf741669fb1d4436aab9c51fe14046796503b6c258a9779d4",
+      "file": "grounding_evaluator.py",
+      "function": "structured_evaluation",
+      "callee": "post",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "0d2389e70b331588b804c8dcbb226689fff89c49bb280332ffad27362d8c0962",
+      "file": "openrouter_provider.py",
+      "function": "_request",
+      "callee": "post",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "5a41adff88b1e6d6c7cbb36c653c5f256ab93f2b6e8567546dd5f6c38142618f",
+      "file": "openrouter_provider.py",
+      "function": "_generation_cost",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/provider_pricing_metadata_read"
+    },
+    {
+      "fingerprint": "3aa66110f729d9f2357298f29f39b011d7c6574d0819412362d0c33a5ff2fd99",
+      "file": "provider_catalog.py",
+      "function": "list_models",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/provider_model_catalog_read"
+    },
+    {
+      "fingerprint": "52073020d8e30f3518aa7289df7b188b23196be65bc43733d3d21ab52c7d4359",
+      "file": "provider_catalog.py",
+      "function": "_openrouter_catalog",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/provider_model_catalog_read"
+    },
+    {
+      "fingerprint": "bb62c941c2131d5166f3ba50ac7df22de089c43c0f1922e423f253b004e1c0e5",
+      "file": "provider_catalog.py",
+      "function": "openrouter_model_details",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/provider_model_metadata_read"
+    },
+    {
+      "fingerprint": "f9fd89327492ff761a97dcaffb4beb5fa1f0047f30c21400d026ee4887757dc6",
+      "file": "provider_catalog.py",
+      "function": "probe_model",
+      "callee": "parse",
+      "policyRoute": "reviewed_exemption/operator_authorized_provider_probe"
+    },
+    {
+      "fingerprint": "ad391b4a674b972640461def599cc667f0e40b003710a5358f39786bd5844a1b",
+      "file": "provider_catalog.py",
+      "function": "probe_model",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/operator_authorized_provider_probe"
+    },
+    {
+      "fingerprint": "e7b9223aa7d3a2a7169adf0b55812ceb26f46cca5d6f18424f773a64f0b30f5d",
+      "file": "provider_catalog.py",
+      "function": "probe_model",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/operator_authorized_provider_probe"
+    },
+    {
+      "fingerprint": "1c3c29110b0b2707bf91f2e4b328304c87f15391685cac2a4a26bab4df58d016",
+      "file": "providers.py",
+      "function": "analyze",
+      "callee": "parse",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "bab78c38b81a4ffa12bfc0d337883216d19ab96580db3ffad9369f531ff846c1",
+      "file": "providers.py",
+      "function": "synthesize",
+      "callee": "parse",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "6d079705428b846f68aad30578b92e083f4ed8832e618e4b08040cb1b2fe8789",
+      "file": "providers.py",
+      "function": "analyze",
+      "callee": "post",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "81e357a3faaeb0e7506280b2b4d4e4a85208807964493b4aa6106305d057d993",
+      "file": "providers.py",
+      "function": "synthesize",
+      "callee": "post",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "1d782c724a9b3ee03f567cb44f52d9202faff3709c56d410b14222af0d41143a",
+      "file": "routing_adapters.py",
+      "function": "hyperliquid",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/public_orderbook_read"
+    },
+    {
+      "fingerprint": "3cd07ad4e9f676bb22ebbb3c78b2de4c49758508c50cfbbce41c35a298fb6416",
+      "file": "routing_adapters.py",
+      "function": "hyperliquid",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/public_orderbook_read"
+    },
+    {
+      "fingerprint": "c2c88c3fe9184baf8f9280de581cd75d0a0ade5b08c1e26a25cc9e5934f3c5c3",
+      "file": "routing_adapters.py",
+      "function": "hyperliquid_markets",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/public_market_metadata_read"
+    },
+    {
+      "fingerprint": "47627611492b5287d5021dde839d466466a8a4e402e661695f708fe4b5f719ca",
+      "file": "routing_adapters.py",
+      "function": "lighter",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_orderbook_read"
+    },
+    {
+      "fingerprint": "d740b12712ff2c31a14787be4ff0514bb6f7bb0e5e8263c94a9de124375fd26d",
+      "file": "routing_adapters.py",
+      "function": "_lighter_details",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_market_metadata_read"
+    },
+    {
+      "fingerprint": "4510fdfce4cf0c8ea5c646efe2f2220fdba00951efc6691ca3e44412b2a00c7c",
+      "file": "routing_adapters.py",
+      "function": "orderly",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_orderbook_read"
+    },
+    {
+      "fingerprint": "9b1874a92726d7c4ef7544abcb63fb6a5210b221ecffca9f3727ccfc400a0ba0",
+      "file": "routing_adapters.py",
+      "function": "orderly",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_orderbook_read"
+    },
+    {
+      "fingerprint": "e89fda814f4a5d9db3ddf28e58f8ff7e8bd43384ccdb3f5128e418d7023614ba",
+      "file": "routing_adapters.py",
+      "function": "orderly_markets",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_market_metadata_read"
+    },
+    {
+      "fingerprint": "e241ed052325c0b915479affbb79d7bb5e003a527aa9919d85e87c02b4bd3498",
+      "file": "routing_adapters.py",
+      "function": "orderly_markets",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_market_metadata_read"
+    },
+    {
+      "fingerprint": "ca4e9a943efd6b27de90de5c8920a560a16856b96c5ea2359a3e157e47c0f183",
+      "file": "routing_onchain_adapters.py",
+      "function": "gmx",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_onchain_market_read"
+    },
+    {
+      "fingerprint": "b2df749c8cb79e9b2fd927e1dbd2eb4144dada6e008aba60783d7ce6b083b235",
+      "file": "routing_onchain_adapters.py",
+      "function": "gmx_markets",
+      "callee": "get",
+      "policyRoute": "reviewed_exemption/public_onchain_market_read"
+    },
+    {
+      "fingerprint": "0863ec128fdc5519451de9c013d22b234687a9f5fa005fbc5ddbd19854a085d7",
+      "file": "swap_api.py",
+      "function": "sidecar",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/internal_execution_sidecar"
+    },
+    {
+      "fingerprint": "44446d6fcea7f5ab99c4fff5c2f3f23bc3a0c85ff22e20aaefd55156cd53e80b",
+      "file": "temporal_app.py",
+      "function": "analyze_market_activity",
+      "callee": "build_provider_bundle",
+      "policyRoute": "provider_prompt/agent_analysis/provider.model_request"
+    },
+    {
+      "fingerprint": "695da97f693d89c1339faa72be45855f402ef91564e52f0611659ccc5575308b",
+      "file": "venues.py",
+      "function": "quote",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/unsigned_venue_quote"
+    },
+    {
+      "fingerprint": "a59dbc89799347ee4cd3b687371f5f39c6ea1f541a0a51094eafbd6cb775db38",
+      "file": "venues.py",
+      "function": "balance",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/venue_account_read"
+    },
+    {
+      "fingerprint": "cb257ecb9acab5a93928aa5ff3789814c9c31b618189d1cda5dda998ea28146c",
+      "file": "venues.py",
+      "function": "health",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/venue_health_read"
+    },
+    {
+      "fingerprint": "70b24d3daae49495d676cfe5f425780ca72f37258a7df001547015a08a0906ea",
+      "file": "venues.py",
+      "function": "check_approval",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/unsigned_venue_preflight"
+    },
+    {
+      "fingerprint": "3c9a3897c535a1985522a6b259274b8e2dde6221a102261dde4fdbd7e5e0651d",
+      "file": "venues.py",
+      "function": "quote",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/unsigned_venue_quote"
+    },
+    {
+      "fingerprint": "547ea0f75eb72c4fc932c2275d3aa297f9b9ee536a4d909766770001108f0b10",
+      "file": "venues.py",
+      "function": "build_swap",
+      "callee": "post",
+      "policyRoute": "reviewed_exemption/unsigned_swap_construction"
+    }
+  ]
+}

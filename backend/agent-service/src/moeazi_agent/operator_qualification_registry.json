@@ -1,0 +1,161 @@
+{
+    "schemaVersion": 1,
+    "registryVersion": "local-v2",
+    "environments": [
+        "local",
+        "test"
+    ],
+    "identityTrust": "synthetic_untrusted",
+    "roles": {
+        "incident_commander": "role:v1",
+        "incident_communications_operator": "role:v1",
+        "recovery_operator": "role:v1",
+        "safety_change_approver": "role:v1",
+        "strategy_termination_operator": "role:v1"
+    },
+    "modules": {
+        "module:local-v1": "module:v1"
+    },
+    "fakeAdapters": [
+        "fake_clock",
+        "fake_inbox",
+        "fake_provider",
+        "fake_signer",
+        "fake_venue"
+    ],
+    "drills": {
+        "alert-storm": {
+            "version": "drill:v1",
+            "required": [
+                "alert:triage",
+                "inbox:ack"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 600,
+            "hard": [
+                "inbox:ack"
+            ]
+        },
+        "emergency-stop": {
+            "version": "drill:v1",
+            "required": [
+                "stop:confirm"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 300,
+            "hard": [
+                "stop:confirm"
+            ]
+        },
+        "handoff": {
+            "version": "drill:v1",
+            "required": [
+                "handoff:confirm"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 600,
+            "hard": [
+                "handoff:confirm"
+            ]
+        },
+        "incident-communication": {
+            "version": "drill:v1",
+            "required": [
+                "inbox:ack",
+                "incident:compose"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 600,
+            "hard": [
+                "inbox:ack"
+            ]
+        },
+        "revocation": {
+            "version": "drill:v1",
+            "required": [
+                "revoke:confirm"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 300,
+            "hard": [
+                "revoke:confirm"
+            ]
+        },
+        "uncertain-submission": {
+            "version": "drill:v1",
+            "required": [
+                "submission:hold"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 300,
+            "hard": [
+                "submission:hold"
+            ]
+        },
+        "unsafe-pressure": {
+            "version": "drill:v1",
+            "required": [
+                "pressure:refuse"
+            ],
+            "forbidden": [
+                "venue:submit"
+            ],
+            "deadline": 300,
+            "hard": [
+                "pressure:refuse"
+            ]
+        }
+    },
+    "rubrics": {
+        "rubric:v1": {
+            "weights": {
+                "required": 8000,
+                "timing": 2000
+            },
+            "passScore": 8000
+        }
+    },
+    "consumers": {
+        "incident-communication-outbox": {
+            "ack": "incident_communications_operator",
+            "compose": "incident_communications_operator",
+            "escalate": "incident_communications_operator"
+        },
+        "safety-change-quorum": {
+            "approval": "safety_change_approver"
+        },
+        "verified-strategy-termination": {
+            "checkpoint": "strategy_termination_operator",
+            "request": "strategy_termination_operator"
+        }
+    },
+    "accommodation": {
+        "version": "accommodation:v1",
+        "equivalentOracleHash": "fixture-equivalent",
+        "presentationOnly": true
+    },
+    "limits": {
+        "attemptMinutes": 90,
+        "calibrationDays": 30,
+        "calibrationCases": 20,
+        "grantDays": 30,
+        "kappaDenominator": 10,
+        "kappaNumerator": 7,
+        "passScore": 8000,
+        "scoreMax": 10000
+    },
+    "policyHash": "local-policy-v2",
+    "selfHash": "1e23daff31b5307e59e5c3f2a84e34cccd9a405ed2f574c4c14545922685b756"
+}

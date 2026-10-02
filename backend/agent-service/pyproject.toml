@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "moeazi-agent-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "openai>=2,<3",
+  "openai-agents>=0.18,<0.19",
+  "opentelemetry-exporter-otlp>=1.30,<2",
+  "opentelemetry-instrumentation-fastapi>=0.50b0,<1",
+  "opentelemetry-sdk>=1.30,<2",
+  "orjson>=3.10,<4",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "redis>=5.2,<6",
+  "sqlalchemy[asyncio]>=2.0,<3",
+  "asyncpg>=0.30,<1",
+  "boto3>=1.39,<2",
+  "cryptography>=44,<46",
+  "temporalio>=1.9,<2",
+  "uvicorn[standard]>=0.34,<1",
+  "hyperliquid-python-sdk==0.24.0",
+  "ostium-python-sdk>=3.3,<4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<1", "respx>=0.22,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/moeazi_agent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"

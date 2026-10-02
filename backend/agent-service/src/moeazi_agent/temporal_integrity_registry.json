@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2026-08-11.local-v1",
+  "domains": [
+    {"domainId":"fixture-wall","domainType":"wall_utc","owner":"local_fixture","epoch":1,"allowedOperations":["approval_validate","cancel","close","freshness_check","prepare","reconcile","revoke"],"maxUncertaintyUs":1000000,"maxAgeUs":300000000,"decisionTtlUs":30000000},
+    {"domainId":"fixture-workflow","domainType":"workflow","owner":"local_fixture","epoch":1,"allowedOperations":["workflow_deadline"],"maxUncertaintyUs":0,"maxAgeUs":300000000,"decisionTtlUs":30000000},
+    {"domainId":"fixture-chain-42161","domainType":"chain","owner":"local_fixture","epoch":1,"allowedOperations":["prepare"],"maxUncertaintyUs":0,"maxAgeUs":300000000,"decisionTtlUs":30000000},
+    {"domainId":"fixture-hyperliquid","domainType":"venue_sequence","owner":"local_fixture","epoch":1,"allowedOperations":["sign","submit"],"maxUncertaintyUs":0,"maxAgeUs":300000000,"decisionTtlUs":30000000},
+    {"domainId":"fixture-evm","domainType":"venue_sequence","owner":"local_fixture","epoch":1,"allowedOperations":["sign","submit"],"maxUncertaintyUs":0,"maxAgeUs":300000000,"decisionTtlUs":30000000},
+    {"domainId":"fixture-budget","domainType":"budget_epoch","owner":"local_fixture","epoch":1,"allowedOperations":["budget_reserve"],"maxUncertaintyUs":1000000,"maxAgeUs":300000000,"decisionTtlUs":30000000}
+  ],
+  "operations": {"prepare":"fixture-chain-42161","sign":"fixture-hyperliquid","submit":"fixture-hyperliquid","reconcile":"fixture-wall","close":"fixture-wall","cancel":"fixture-wall","revoke":"fixture-wall","freshness_check":"fixture-wall","approval_validate":"fixture-wall","workflow_deadline":"fixture-workflow","budget_reserve":"fixture-budget"}
+}

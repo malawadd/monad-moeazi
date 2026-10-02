@@ -1,0 +1,3 @@
+def safe_projection(artifacts,verdict):
+ finding=artifacts["finding"]; remedy=artifacts["remedy"]; response=artifacts["response"]
+ return {"simulatedBoundary":verdict.boundary,"caseState":"closed" if verdict.closure_eligible else "held","findingOutcome":finding.outcome,"appealState":"pending" if artifacts.get("appeal_pending") else "none","remedyState":remedy.status,"closureEligible":verdict.closure_eligible,"evidenceCount":len(artifacts["evidence"]),"actionCount":len(artifacts["actions"]),"reasonCodes":list(verdict.reasons),"fixtureOnly":True,"notLegalAdvice":True,"productOutcome":"unavailable","authorityEffect":"none","operationPerformed":False,"externalAttempts":0,"providerCost":0,"baseline":"off_unknown_blocked","candidate":"isolated_fixture"}

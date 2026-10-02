@@ -1,0 +1,1 @@
+{"version":"v1","fixtureOnly":true,"sources":["safety_assurance_canonical.py","safety_assurance_evaluator.py","safety_assurance_graph.py","safety_assurance_registry.py","safety_assurance_registry.json","safety_assurance_expectations.json","safety_assurance_goldens.json"]}

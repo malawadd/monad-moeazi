@@ -1,0 +1,1 @@
+{"schemaVersion":1,"registryVersion":"intent-equivalence-fixture-v1","artifactBytes":16384,"decodedNodes":128,"commands":64,"depth":8,"stateDeltas":128,"gas":30000000,"receiptTtlSeconds":30,"operations":["permit2_transfer","universal_router_exact_in"],"prohibited":{"externalNetwork":true,"liveSubmit":true,"signing":true,"providerRpc":true,"redisReceipts":true}}

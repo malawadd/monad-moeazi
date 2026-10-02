@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-14/withdrawal-status.schema.json",
+  "title": "MobileWithdrawalStatus",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "operationId", "status", "amount", "destination",
+    "destinationKind", "network", "asset", "estimatedFeeWei",
+    "remainingAmount", "expiresAt", "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "2026-09-14"},
+    "operationId": {"type": "string", "minLength": 1},
+    "status": {"enum": ["prepared", "submitted", "confirming", "completed", "failed", "cancelled", "uncertain", "expired", "needs_attention"]},
+    "amount": {"type": "string"},
+    "destination": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "destinationKind": {"enum": ["wallet", "contract"]},
+    "network": {"const": "Arbitrum"},
+    "asset": {"const": "USDC"},
+    "estimatedFeeWei": {"type": "string", "pattern": "^[0-9]+$"},
+    "remainingAmount": {"type": "string"},
+    "transactionHash": {"type": "string", "pattern": "^0x[a-fA-F0-9]{64}$"},
+    "failureCode": {"type": "string"},
+    "failureMessage": {"type": "string"},
+    "expiresAt": {"type": "integer", "minimum": 0},
+    "updatedAt": {"type": "integer", "minimum": 0}
+  }
+}

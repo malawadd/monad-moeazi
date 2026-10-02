@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-01/funding.schema.json",
+  "title": "MobileFundingSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "ownerAddress", "depositAddress", "universalAccount", "network", "chainId", "status", "latestAmount"],
+  "properties": {
+    "schemaVersion": {"const": "2026-09-01"},
+    "ownerAddress": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "depositAddress": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "universalAccount": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "network": {"const": "Arbitrum"},
+    "chainId": {"const": 42161},
+    "status": {"enum": ["waiting", "detected", "confirming", "available", "failed"]},
+    "latestAmount": {"type": ["string", "null"]}
+  }
+}

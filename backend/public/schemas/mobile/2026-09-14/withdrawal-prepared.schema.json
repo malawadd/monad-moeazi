@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-14/withdrawal-prepared.schema.json",
+  "title": "PreparedMobileWithdrawal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "operationId", "idempotencyKey", "owner", "chainId",
+    "network", "asset", "amount", "amountRaw", "destination", "destinationKind",
+    "remainingAmount", "estimatedFeeWei", "observedBlock", "transaction",
+    "preparedHash", "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "2026-09-14"},
+    "operationId": {"type": "string", "minLength": 1},
+    "idempotencyKey": {"type": "string", "minLength": 1},
+    "owner": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "chainId": {"const": 42161},
+    "network": {"const": "Arbitrum"},
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "contractAddress", "decimals"],
+      "properties": {
+        "symbol": {"const": "USDC"},
+        "contractAddress": {"const": "0xaf88d065e77c8cc2239327c5edb3a432268e5831"},
+        "decimals": {"const": 6}
+      }
+    },
+    "amount": {"type": "string"},
+    "amountRaw": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "destination": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+    "destinationKind": {"enum": ["wallet", "contract"]},
+    "remainingAmount": {"type": "string"},
+    "estimatedFeeWei": {"type": "string", "pattern": "^[0-9]+$"},
+    "observedBlock": {"type": "integer", "minimum": 0},
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "data", "value", "gas", "maxFeePerGas", "nonce"],
+      "properties": {
+        "from": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"},
+        "to": {"const": "0xaf88d065e77c8cc2239327c5edb3a432268e5831"},
+        "data": {"type": "string", "pattern": "^0x[a-fA-F0-9]+$"},
+        "value": {"const": "0x0"},
+        "gas": {"type": "string", "pattern": "^0x[a-fA-F0-9]+$"},
+        "maxFeePerGas": {"type": "string", "pattern": "^0x[a-fA-F0-9]+$"},
+        "nonce": {"type": "string", "pattern": "^0x[a-fA-F0-9]+$"}
+      }
+    },
+    "preparedHash": {"type": "string", "pattern": "^0x[a-fA-F0-9]{64}$"},
+    "expiresAt": {"type": "integer", "minimum": 0}
+  }
+}

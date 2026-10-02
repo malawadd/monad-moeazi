@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "environment": "experiment",
+  "scopeId": "run-🧪",
+  "strategyAccountId": "acct-مرحبا",
+  "accountRevision": "9007199254740993",
+  "writerEpoch": "4",
+  "authorityEpoch": "7",
+  "reconciliationState": "quarantined",
+  "reconciliationReason": "observed_below_retained_hold",
+  "observationSnapshotHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "observedAt": "2026-09-30T11:59:59.987Z",
+  "asOf": "2026-09-30T12:00:00.123Z",
+  "balances": [
+    {
+      "assetUnitId": "BTC:8",
+      "registryHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "locationId": "venue",
+      "book": "collateral",
+      "units": "1"
+    },
+    {
+      "assetUnitId": "USDC:6",
+      "registryHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "locationId": "wallet",
+      "book": "wallet",
+      "units": "9007199254740993"
+    }
+  ],
+  "holds": [
+    {
+      "reservationId": "r-a",
+      "capacityKey": "z:USDC",
+      "assetUnitId": "USDC:6",
+      "locationId": "wallet",
+      "units": "100",
+      "status": "uncertain"
+    },
+    {
+      "reservationId": "r-z",
+      "capacityKey": "a:BTC",
+      "assetUnitId": "BTC:8",
+      "locationId": "venue",
+      "units": "2",
+      "status": "reserved"
+    }
+  ],
+  "capacity": [
+    {
+      "capacityKey": "a:BTC",
+      "assetUnitId": "BTC:8",
+      "locationId": "venue",
+      "availableUnits": "-1",
+      "heldUnits": "2"
+    },
+    {
+      "capacityKey": "z:USDC",
+      "assetUnitId": "USDC:6",
+      "locationId": "wallet",
+      "availableUnits": "9007199254740893",
+      "heldUnits": "100"
+    }
+  ]
+}

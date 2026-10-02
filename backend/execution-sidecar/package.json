@@ -1,0 +1,27 @@
+{
+  "name": "moeazi-execution-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test:mobile": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gmx-io/sdk": "1.6.3",
+    "@zerodev/permissions": "5.6.3",
+    "@zerodev/sdk": "5.5.10",
+    "ioredis": "^5.8.2",
+    "ox": "^0.11.3",
+    "permissionless": "^0.4.1",
+    "tslib": "^2.8.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.2",
+    "viem": "^2.54.3"
+  },
+  "devDependencies": {
+    "@uniswap/v4-core": "1.0.2",
+    "@uniswap/v4-periphery": "1.0.3"
+  }
+}

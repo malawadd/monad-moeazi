@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {"id":"recovery-coherent-restore","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"ready","faults":[]},
+    {"id":"recovery-missing-domain","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["missing_convex"]},
+    {"id":"recovery-corrupt-timescale","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["corrupt_timescale"]},
+    {"id":"recovery-stale-convex","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["stale_convex"]},
+    {"id":"recovery-cutoff-disagreement","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["cutoff_disagreement"]},
+    {"id":"recovery-release-schema-config-skew","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["release_skew"]},
+    {"id":"recovery-missing-temporal-history","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["missing_temporal_history"]},
+    {"id":"recovery-valid-empty-redis-rebuild","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"ready","faults":[]},
+    {"id":"recovery-redis-as-truth-rejected","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["redis_as_truth"]},
+    {"id":"recovery-unresolved-submission","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["unresolved_submission"]},
+    {"id":"recovery-reconciled-submission","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"ready","faults":[]},
+    {"id":"recovery-missing-execution-state","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["missing_execution_state"]},
+    {"id":"recovery-missing-secret-custody","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["missing_secret_custody"]},
+    {"id":"recovery-duplicate-schedule-reservation","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["duplicate_schedule","duplicate_reservation"]},
+    {"id":"recovery-wrong-tenant","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["wrong_tenant"]},
+    {"id":"recovery-held-deleted-evidence-gap","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["evidence_gap"]},
+    {"id":"recovery-interrupted-retry","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"ready","faults":[]},
+    {"id":"recovery-production-outbound-rejection","evidenceProfile":"synthetic-bound-v1","expectedReadOnly":"blocked","faults":["production_write","outbound_attempt"]}
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-09-30",
+  "sourceUrl": "https://api.hyperliquid.xyz/info",
+  "origin": "recorded_native",
+  "rightsScope": "internal_qualification_only",
+  "rawDistribution": "Ignored local artifacts; no commercial redistribution permission established",
+  "admission": "bounded BTC runtime sample admitted; future-time and clock-unstable captures excluded; ongoing clock readiness unqualified",
+  "samples": [
+    {
+      "rawPath": ".data/q2-capture/spot-meta.json",
+      "requestType": "spotMeta",
+      "receivedAt": "2026-09-30T12:57:22.212Z",
+      "sha256": "a84545ef4addc99185c5124f216902af6375ea43e8c64637bb546e3738863fc5"
+    },
+    {
+      "rawPath": ".data/q2-capture/perp-meta.json",
+      "requestType": "metaAndAssetCtxs",
+      "receivedAt": "2026-09-30T12:57:22.574Z",
+      "sha256": "c730ab1390725192f79b82eef5003a87d473b79fcd0b21865ce2bbdf8eb09724"
+    },
+    {
+      "rawPath": ".data/q2-capture/perp-book.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "BTC",
+      "receivedAt": "2026-09-30T12:57:22.889Z",
+      "sourceLeadMs": 754,
+      "sha256": "3bf650604f9e950f9a9936bf8fa7ca046ea23a50782aadf5fd3eedd7ff245845"
+    },
+    {
+      "rawPath": ".data/q2-capture/spot-book.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "PURR/USDC",
+      "receivedAt": "2026-09-30T12:57:23.193Z",
+      "sourceLeadMs": 961,
+      "sha256": "4c66eb65123127ca911f806262d25e087d55c0efbd252602c9456b7407c74f85"
+    },
+    {
+      "rawPath": ".data/q2-clock-capture/sample-0.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "BTC",
+      "receivedAt": "2026-09-30T13:15:49.453Z",
+      "sourceLeadMs": 474,
+      "sha256": "dbc61c4535655d79b21994011f9081c134f83123038b2cb7910cfc5954600540"
+    },
+    {
+      "rawPath": ".data/q2-clock-capture/sample-1.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "BTC",
+      "receivedAt": "2026-09-30T13:15:50.893Z",
+      "sourceLeadMs": 642,
+      "sha256": "7f5c737f21a39d1d4c5658a1bdc8a2cf0cf1ad77fc9b8db5cf2f489cbbd932fa"
+    },
+    {
+      "rawPath": ".data/q2-clock-capture/sample-2.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "BTC",
+      "receivedAt": "2026-09-30T13:15:52.307Z",
+      "sourceLeadMs": 351,
+      "sha256": "daa0e1a13dbf36fc132b2b325de48e03908b7e99853da820e0b857e811fe15b9"
+    },
+    {
+      "rawPath": ".data/q2-runtime-capture/spot-book.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "PURR/USDC",
+      "receivedAt": "2026-09-30T14:27:45.203718Z",
+      "sourceLeadMs": -743,
+      "sha256": "51aaa3e9b0ead5175e8b914d70c7f239f8944c40cdb8a5d47002960a4496ebd6",
+      "captureClock": "Docker API runtime, unmodified",
+      "captureDisposition": "exclude_clock_step_during_capture",
+      "wallElapsedMs": 2984.819,
+      "monotonicElapsedMs": 625.113642
+    },
+    {
+      "rawPath": ".data/q2-runtime-capture/perp-book.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "BTC",
+      "receivedAt": "2026-09-30T14:27:45.546742Z",
+      "sourceLeadMs": -553,
+      "sha256": "fa31cb847233d4c7459efa6525492c44e5a151ea99fa60b883e754c79117320e",
+      "captureClock": "Docker API runtime, unmodified",
+      "captureDisposition": "independent_recorded_replay_pass",
+      "wallElapsedMs": 342.742,
+      "monotonicElapsedMs": 342.787943
+    },
+    {
+      "rawPath": ".data/q2-runtime-spot-capture/spot-book.json",
+      "requestType": "l2Book",
+      "nativeInstrument": "PURR/USDC",
+      "receivedAt": "2026-09-30T14:32:23.420581Z",
+      "sourceLeadMs": 1046,
+      "sha256": "fdd31c1595c0a274e20be8c21ce3538941e9964eb2d13b9fc5a1c10995e49260",
+      "captureClock": "Docker API runtime, unmodified",
+      "captureDisposition": "quarantine_event_after_availability",
+      "wallElapsedMs": 430.924,
+      "monotonicElapsedMs": 430.939496
+    }
+  ]
+}

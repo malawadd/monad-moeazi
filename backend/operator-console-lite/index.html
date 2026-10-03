@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moeazi · Local operations</title>
+    <link rel="stylesheet" href="/app.css">
+    <link rel="stylesheet" href="/manual-sequence.css">
+    <script src="/operator-auth.js" defer></script>
+    <script src="/app.js" defer></script>
+    <script src="/programs.js" defer></script>
+    <script src="/dev-controls.js" defer></script>
+    <script src="/manual-sequence.js" defer></script>
+    <script src="/console-pages.js" defer></script>
+  </head>
+  <body>
+    <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
+      <form id="login-form" class="login-card">
+        <span class="brand-mark">M</span>
+        <p class="eyebrow">MONAD LOCAL OPERATIONS</p>
+        <h1 id="login-title">Operator sign in</h1>
+        <p>Enter the local admin secret from <code>backend/.data/operator-console-admin.secret</code>. This secret stays on this machine.</p>
+        <label for="admin-secret">Local admin secret</label>
+        <input id="admin-secret" type="password" autocomplete="current-password" required maxlength="512">
+        <button type="submit">Open operator console</button>
+        <p id="login-state" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <main class="shell" id="console-shell" hidden>
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Moeazi programs and experiments home"><span class="brand-mark">M</span><span>MOEAZI <small>LOCAL OPERATIONS</small></span></a>
+        <div class="head-actions"><span class="local-tag"><i></i> LOOPBACK ONLY</span><button id="logout" type="button">Sign out</button></div>
+      </header>
+
+      <nav class="page-nav" aria-label="Operator console pages">
+        <a href="#health">Health &amp; monitoring</a><a href="#workspace-page">Programs &amp; teams</a>
+        <a href="#testing-page">Experiments &amp; Test Center</a><a href="#credits-title">Credits &amp; providers</a>
+        <a href="#config-page">Configuration</a><a href="#manual-sequence-page">Manual sequence</a>
+      </nav>
+
+      <section class="intro">
+        <p class="eyebrow">PROGRAMS · EXPERIMENTS</p>
+        <h1>Versions &amp; run review</h1>
+        <p>Browse your owned experiment specs, inspect recorded run status, and compare verified outcomes when the API has them.</p>
+      </section>
+
+      <section class="notice" aria-label="Access and scope">
+        <strong>Dedicated local operator identity</strong>
+        <span>Console calls use a walletless, paused Monad-local workspace. Browser requests never receive Convex admin keys or service credentials.</span>
+        <span class="scope">Customer identities and existing assignments are not used for operator-owned teams and programs.</span>
+      </section>
+
+      <section class="workspace" id="health" aria-labelledby="health-title">
+        <div class="panel-head"><div><p class="eyebrow">LOCAL SERVICE STATUS</p><h2 id="health-title">Health &amp; monitoring</h2></div><button data-refresh="health" type="button">Refresh</button></div>
+        <p class="section-lead">Loopback diagnostics for the Monad API, Convex, agent services, data stores, and Temporal. Checks do not make provider calls.</p>
+        <div id="health-grid" class="ops-grid" aria-live="polite"><p class="empty-state">Loading local services…</p></div>
+      </section>
+
+      <section class="workspace" id="workspace-page" aria-labelledby="workspace-title">
+        <div class="panel-head"><div><p class="eyebrow">OPERATOR-OWNED WORKSPACE</p><h2 id="workspace-title">Programs, teams &amp; models</h2></div><button data-refresh="workspace" type="button">Refresh</button></div>
+        <p class="section-lead">Create isolated local agent teams and internal programs. Saved configurations start paused and do not affect customer assignments.</p>
+        <form id="team-create-form" class="ops-form"><label for="team-name">New team name</label><div class="control-row"><input id="team-name" minlength="2" maxlength="60" required placeholder="Example: Market structure research"><select id="team-tier"><option value="focus">Focus</option><option value="pro">Pro</option><option value="max">Max</option></select><button type="submit">Create paused team</button></div><span id="team-create-state" role="status"></span></form>
+        <form id="program-create-form" class="ops-form"><label for="program-name">New internal program name</label><div class="control-row"><input id="program-name" minlength="2" maxlength="80" required placeholder="Example: Internal mobile program"><button type="submit">Create program draft</button></div><span id="program-create-state" role="status"></span></form>
+        <div id="workspace-content" class="ops-grid" aria-live="polite"><p class="empty-state">Loading operator workspace…</p></div>
+      </section>
+
+      <section class="workspace" id="testing-page" aria-labelledby="testing-title">
+        <div class="panel-head"><div><p class="eyebrow">FIXTURE AND EVIDENCE TOOLS</p><h2 id="testing-title">Experiments &amp; Test Center</h2></div><button data-refresh="testing" type="button">Refresh</button></div>
+        <p class="section-lead">Review experiment specs and explicitly start local fixture evaluations. Test Center availability and repository/lease gates remain controlled by the backend.</p>
+        <form id="experiment-create-form" class="ops-form">
+          <label for="experiment-version">Owned saved team version</label>
+          <div class="control-row"><select id="experiment-version" required><option value="">Load workspace first</option></select><button type="submit">Save non-executable experiment spec</button></div>
+          <span id="experiment-create-state" role="status">Identity-only metadata; this does not start a run.</span>
+        </form>
+        <div id="test-center-panel" class="ops-grid" aria-live="polite"><p class="empty-state">Checking Test Center registry…</p></div>
+      </section>
+
+      <section class="workspace" id="config-page" aria-labelledby="config-title">
+        <div class="panel-head"><div><p class="eyebrow">TYPED LOCAL SWITCH REGISTRY</p><h2 id="config-title">Configuration controls</h2></div><button data-refresh="config" type="button">Refresh</button></div>
+        <p class="section-lead">Each editable switch shows its effective value, dependencies, impact, and restart target. A preview runs existing validation before changes are applied.</p>
+        <div id="config-panel" aria-live="polite"><p class="empty-state">Loading configuration registry…</p></div>
+      </section>
+
+      <section class="workspace" id="manual-sequence-page" aria-labelledby="sequence-title">
+        <div class="panel-head"><div><p class="eyebrow">REVIEW BEFORE INVOCATION</p><h2 id="sequence-title">Manual sequence</h2></div><span class="mono">CONFIRMATION REQUIRED</span></div>
+        <p class="section-lead">Build and preview a sequence of reviewed backend functions. Nothing runs until you confirm its preview.</p>
+        <div id="manual-sequence-root"></div>
+      </section>
+
+      <section class="workspace" aria-labelledby="dev-title">
+        <div class="panel-head"><div><p class="eyebrow">AGENT DEVELOPMENT CONTROL</p><h2 id="dev-title">Lite Mode</h2></div>
+          <div class="head-actions"><span id="lite-state" role="status">Loading…</span><button id="refresh-lite" type="button">Refresh</button></div></div>
+        <p class="section-lead">Controls the shared agent runtime's reduced calls and daily caps. Switching it off allows the full configured agent team and can increase provider spending. It does not change live trading or Manual Guard.</p>
+        <div class="control-row"><strong id="lite-value">Unknown</strong><button id="toggle-lite" type="button" disabled>Loading…</button></div>
+        <p id="lite-detail" class="section-lead" role="status">Reading agent runtime…</p>
+      </section>
+
+      <section class="workspace" aria-labelledby="credits-title">
+        <div class="panel-head"><div><p class="eyebrow">APP TEST CREDITS</p><h2 id="credits-title">Grant user credits</h2></div><span class="mono">CONVEX LEDGER</span></div>
+        <p class="section-lead">These credits pay for Moeazi analyses in the app. They are not USDC, venue funds, or a provider balance. Email lookup ignores letter case and lists matching accounts with their wallet, user ID, and balance.</p>
+        <div class="control-row"><strong id="charging-value">Charging: loading…</strong><button id="toggle-charging" type="button" disabled>Loading…</button></div>
+        <p id="charging-detail" class="section-lead" role="status">Reading credit control…</p>
+        <form id="credit-lookup-form" class="control-form">
+          <label for="credit-identifier">Magic wallet, email, or Convex user ID</label>
+          <div class="control-row"><input id="credit-identifier" type="text" autocomplete="off" required placeholder="0x… or user@example.com"><button type="submit">Find user</button></div>
+        </form>
+        <div id="credit-account" class="credit-account" role="status">No user selected.</div>
+        <form id="credit-grant-form" class="control-form" hidden>
+          <label for="credit-amount">Credits to add</label>
+          <div class="control-row"><input id="credit-amount" type="number" min="1" step="1" required placeholder="100"><button id="grant-credits" type="submit">Grant test credits</button></div>
+        </form>
+        <p id="credit-result" class="section-lead" role="status"></p>
+      </section>
+
+      <section class="workspace" aria-labelledby="providers-title">
+        <div class="panel-head"><div><p class="eyebrow">MOEAZI-OWNED CREDENTIALS</p><h2 id="providers-title">Mobile agent providers</h2></div>
+          <div class="head-actions"><span id="providers-state" role="status">Loading…</span><button id="refresh-providers" type="button">Refresh</button></div></div>
+        <p class="section-lead">Add a Moeazi-owned key here, then <a href="#mobile-model-editor">choose the provider and model for each mobile agent role</a>. Customer BYOK connections are separate.</p>
+        <div id="providers-list" class="spec-list" aria-live="polite"><p class="empty-state">Loading providers…</p></div>
+      </section>
+
+      <section class="workspace" aria-labelledby="programs-title">
+        <div class="panel-head"><div><p class="eyebrow">FROZEN PROGRAMS</p><h2 id="programs-title">Strategy &amp; policy versions</h2></div>
+          <div class="head-actions"><span id="program-state" role="status">Loading…</span><button id="refresh-programs" type="button">Refresh</button></div></div>
+        <p class="section-lead">Shows your programs and Moeazi's internal mobile program, including frozen model routes. Assignment and live trading status require separate account evidence.</p>
+        <div id="program-list" class="spec-list" aria-live="polite"><p class="empty-state">Loading programs…</p></div>
+      </section>
+
+      <section class="workspace" aria-labelledby="catalog-title">
+        <div class="panel-head"><div><p class="eyebrow">OWNED VERSION REFERENCES</p><h2 id="catalog-title">Program &amp; experiment specs</h2></div>
+          <div class="head-actions"><span id="catalog-state" role="status">Loading…</span><button id="refresh-specs" type="button">Refresh</button></div></div>
+        <p class="section-lead">The API lists up to 50 owned experiment specs, each pointing to a saved managed-program or agent-team version. It does not show the account's current assignment.</p>
+        <div id="spec-list" class="spec-list" aria-live="polite"><p class="empty-state">Loading owned specs…</p></div>
+      </section>
+
+      <section class="workspace" aria-labelledby="review-title">
+        <div class="panel-head"><div><p class="eyebrow">RECORDED RUNS</p><h2 id="review-title">Status &amp; outcome comparison</h2></div><span class="mono">REVIEW ONLY</span></div>
+        <p class="section-lead">Choose each experiment spec, then enter the run ID and manifest hash from its recorded run. The app rechecks ownership and lineage.</p>
+        <div class="lane-grid">
+          <article class="lane" data-lane="A">
+            <div class="lane-head"><h3>Experiment A</h3><span id="lane-a-state" class="status-pill">No run loaded</span></div>
+            <label for="lane-a-spec">Experiment spec</label><select id="lane-a-spec" class="spec-select"><option value="">Select an owned spec</option></select>
+            <label for="lane-a-run">Run ID</label><input id="lane-a-run" autocomplete="off" placeholder="Recorded run ID">
+            <label for="lane-a-manifest">Manifest hash</label><input id="lane-a-manifest" autocomplete="off" placeholder="64-character hash">
+            <div class="actions"><button type="button" data-action="status" data-variant="A">Read status</button><button type="button" data-action="outcome" data-variant="A">Read outcome</button></div>
+            <dl id="lane-a-result" class="lane-result"><dt>Run status</dt><dd>Unknown</dd><dt>Dataset</dt><dd>Unknown</dd><dt>Strategy artifact</dt><dd>Unknown</dd><dt>Policy</dt><dd>Not returned by this read API</dd></dl>
+          </article>
+          <article class="lane" data-lane="B">
+            <div class="lane-head"><h3>Experiment B</h3><span id="lane-b-state" class="status-pill">No run loaded</span></div>
+            <label for="lane-b-spec">Experiment spec</label><select id="lane-b-spec" class="spec-select"><option value="">Select an owned spec</option></select>
+            <label for="lane-b-run">Run ID</label><input id="lane-b-run" autocomplete="off" placeholder="Recorded run ID">
+            <label for="lane-b-manifest">Manifest hash</label><input id="lane-b-manifest" autocomplete="off" placeholder="64-character hash">
+            <div class="actions"><button type="button" data-action="status" data-variant="B">Read status</button><button type="button" data-action="outcome" data-variant="B">Read outcome</button></div>
+            <dl id="lane-b-result" class="lane-result"><dt>Run status</dt><dd>Unknown</dd><dt>Dataset</dt><dd>Unknown</dd><dt>Strategy artifact</dt><dd>Unknown</dd><dt>Policy</dt><dd>Not returned by this read API</dd></dl>
+          </article>
+        </div>
+        <div id="comparison" class="comparison" aria-live="polite"><strong>Comparison unavailable</strong><span>Read both run statuses and verified outcomes to compare their dataset and scenario lineage.</span></div>
+        <p class="microcopy">Native-asset results are not a shared return measure. Aggregate P&amp;L and return on equity remain unknown unless the backend provides a common valuation basis.</p>
+      </section>
+
+      <footer><span>127.0.0.1:3104</span><span>Identity stays with the Moeazi Monad session.</span></footer>
+    </main>
+  </body>
+</html>

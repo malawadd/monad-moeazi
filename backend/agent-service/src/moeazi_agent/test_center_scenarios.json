@@ -1,0 +1,6 @@
+{"schemaVersion":1,"scenarios":[
+  {"id":"dependency-safety-v2-healthy","operation":"analyze","scope":{"kind":"account","key":"account:test-account","strategy_account_id":"test-account"},"bindings":{"market":"BTC"},"statuses":{},"expectedOutcome":"allow"},
+  {"id":"stale-owner-receipt-blocks","operation":"analyze","scope":{"kind":"account","key":"account:test-account","strategy_account_id":"test-account"},"bindings":{"market":"BTC"},"statuses":{"credits":"stale"},"expectedOutcome":"block"},
+  {"id":"submit-outage-reconcile-open","operation":"reconcile","scope":{"kind":"venue","key":"account:test-account:venue:synthetic","strategy_account_id":"test-account","venue":"synthetic"},"bindings":{"venue":"synthetic","account":"test-account"},"statuses":{},"expectedOutcome":"allow"},
+  {"id":"render-previous-boundary","operation":"render_previous","scope":{"kind":"account","key":"account:test-account","strategy_account_id":"test-account"},"bindings":{"market":"BTC","snapshot_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"statuses":{"convex_product_state":"open"},"expectedOutcome":"block"}
+]}

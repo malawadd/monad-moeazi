@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "origin": "local_fixture",
+  "scope": "experiment_only",
+  "description": "Adversarial acceptance expectations independent of Stage 3 implementation",
+  "cases": [
+    {
+      "id": "partial_entry_worker_restart",
+      "initial": "Buy 0.2 BTC with one durable client ID and an admitted 0.2 BTC-sized reservation",
+      "inject": "First immutable source fill is 0.1 BTC, then terminate the dedicated worker before the second fill; restart it with the same SQL and Temporal histories",
+      "mustHold": ["One 0.1 BTC position exists exactly once", "Unfilled 0.1 BTC still consumes its reservation", "Protection obligation for the filled 0.1 BTC survives process replacement", "No new entry is admitted while financial reconciliation is incomplete", "Cancelling the originating research job does not cancel protection or close exposure"],
+      "evidence": "Actual SQL and Temporal history before/after a real worker restart; fresh repository and worker instance"
+    },
+    {
+      "id": "response_lost_before_acceptance",
+      "initial": "Submission intent, request hash, client ID and reservation commit before simulator transport",
+      "inject": "Drop response before simulator acceptance",
+      "mustHold": ["Order is uncertain, not filled or rejected by assumption", "Original economic/client identity is retained", "No blind second submit", "Authoritative lookup or bounded reconciliation resolves the attempt before hold release or retry"],
+      "evidence": "Persisted order/attempt/hold rows and one simulator acceptance count"
+    },
+    {
+      "id": "response_lost_after_acceptance",
+      "initial": "Submission intent and reservation already durable",
+      "inject": "Simulator accepts order; drop acknowledgement before worker receives it",
+      "mustHold": ["Stable simulator order identity is found after restart", "At most one order and one economic reservation exist", "Duplicate transport delivery returns same accepted order", "No terminal success is inferred until fill/rejection evidence arrives"],
+      "evidence": "Simulator event and SQL identity counts across independent connections"
+    },
+    {
+      "id": "duplicate_and_reordered_fills",
+      "initial": "Order for 0.2 BTC has source sequence 1 for 0.1 BTC fill and sequence 2 for another 0.1 BTC fill",
+      "inject": "Observe sequence 2 first, then sequence 1, then replay both and mutate sequence 1 content under its old source ID",
+      "mustHold": ["Out-of-order arrival cannot mint clean risk or skip sequence 1", "Once both authentic fills arrive cumulative quantity is 0.2 BTC, never 0.3 or 0.4", "Exact duplicates are idempotent", "Changed economics under an existing source identity conflicts rather than appending a fill", "Every admitted fill has one balanced journal effect"],
+      "evidence": "Source-event, order, journal and reservation rows before and after replay"
+    },
+    {
+      "id": "cancel_remainder_protection_rejected",
+      "initial": "0.2 BTC entry has filled 0.1 BTC and retained a 0.1 BTC remainder",
+      "inject": "Cancel the unfilled remainder while a protective order is requested then rejected",
+      "mustHold": ["Cancellation releases only the provably unfilled remainder", "The 0.1 BTC position remains open", "Intended/requested protection never becomes confirmed protection", "Rejected protection leaves a visible unresolved obligation and blocks new entry", "A bounded protective reduction follows explicit policy; failure remains visible"],
+      "evidence": "Independent order terminality, position inventory, protection state and hold rows"
+    },
+    {
+      "id": "stale_or_revoked_authority",
+      "initial": "Experiment account has fresh entry intent and an existing partially filled position",
+      "inject": "Advance authority epoch, stop account, expire market evidence and revoke simulated permit",
+      "mustHold": ["Old entry permit is refused at dispatch and after restart", "No caller-selected ratio, mode or epoch restores authority", "Stop-new-entry does not erase exposure", "Protective reduction uses a distinct fresh policy decision", "Revoked native authority is not fabricated for an exit; unresolved exposure remains visible"],
+      "evidence": "Stored epoch/mode/evidence and order/position state with denial reason"
+    },
+    {
+      "id": "customer_modes_separate",
+      "initial": "Same synthetic intent, financial state and experiment scope in Shadow, Approval and Autopilot",
+      "inject": "Approval expires, changes payload, or is supplied for another controller version; development Manual Guard and Lite Mode remain enabled",
+      "mustHold": ["Shadow records simulation provenance only and never live financial projection", "Approval needs review of the exact current payload before simulated dispatch", "Expired/foreign/changed approval cannot authorize an order", "Autopilot omits per-trade customer review only; every financial, authority and development gate still applies", "Customer mode cannot select live environment"],
+      "evidence": "Actual API/context/workflow decisions, not DTO labels alone"
+    },
+    {
+      "id": "research_outage_console_closed",
+      "initial": "Entry is partially filled and has a protection obligation",
+      "inject": "Cancel research job, exhaust model budget, fail research service and close browser while dedicated supervisor continues",
+      "mustHold": ["Durable supervisor still processes protection and reconciliation", "No provider or browser state owns the position", "No new analysis credit is needed for an authorized protective decision", "Unknown protection outcome stays unresolved, not silently successful"],
+      "evidence": "Dedicated queue/Temporal history plus actual SQL rows after worker continuation"
+    },
+    {
+      "id": "experiment_namespace_escape",
+      "initial": "Two same-owner experiments and one live account share a strategy-account identity",
+      "inject": "Replay an experiment A event/permit into B, claim live environment in caller JSON, and offer a signer/venue transport path",
+      "mustHold": ["A cannot mutate B or live journal/order/projection", "Server-authenticated scope and immutable event identity prevail over caller JSON", "Research/simulation worker cannot construct a signer, private venue client or live transport", "Unknown mechanics or missing scope fail closed"],
+      "evidence": "Actual SQL isolation and API/worker capability boundary; no provider, signer or venue call"
+    }
+  ]
+}

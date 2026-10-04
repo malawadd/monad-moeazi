@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "origin": "local_fixture",
+  "authority": "experiment_only",
+  "description": "Independent exact-unit economic expectations; no native venue or production parity claim",
+  "assets": {
+    "BTC": {"decimals": 8},
+    "USDC": {"decimals": 6},
+    "ETH": {"decimals": 18}
+  },
+  "spot": {
+    "accounting": "weighted_average_gross_basis; fees separately charged; third-asset value requires fresh mark",
+    "initial": {
+      "wallet": {"USDC": "10000000000", "BTC": "0", "ETH": "10000000000000000"},
+      "btcMarkUsdcPerBtc": "25000",
+      "ethMarkUsdcPerEth": "2000",
+      "equityUsdcUnits": "10020000000"
+    },
+    "events": [
+      {"sourceEventId": "spot-fill-1", "kind": "buy", "baseUnits": "10000000", "priceUsdcPerBtc": "25000", "quoteUnits": "2500000000", "feeAsset": "USDC", "feeUnits": "2500000"},
+      {"sourceEventId": "spot-fill-2", "kind": "buy", "baseUnits": "10000000", "priceUsdcPerBtc": "26000", "quoteUnits": "2600000000", "feeAsset": "ETH", "feeUnits": "1000000000000000"},
+      {"sourceEventId": "spot-fill-3", "kind": "sell", "baseUnits": "10000000", "priceUsdcPerBtc": "27000", "quoteUnits": "2700000000", "feeAsset": "USDC", "feeUnits": "2700000"},
+      {"sourceEventId": "spot-fill-4", "kind": "sell", "baseUnits": "10000000", "priceUsdcPerBtc": "26800", "quoteUnits": "2680000000", "feeAsset": "USDC", "feeUnits": "2680000"}
+    ],
+    "afterTwoBuys": {
+      "wallet": {"USDC": "4897500000", "BTC": "20000000", "ETH": "9000000000000000"},
+      "grossBasisUsdcUnits": "5100000000",
+      "quoteFeeUsdcUnits": "2500000",
+      "ethFeeUnits": "1000000000000000"
+    },
+    "afterFirstSell": {
+      "wallet": {"USDC": "7594800000", "BTC": "10000000", "ETH": "9000000000000000"},
+      "grossBasisRemainingUsdcUnits": "2550000000",
+      "realizedGrossUsdcUnits": "150000000",
+      "unrealizedGrossUsdcUnitsAtBtcMark27000": "150000000",
+      "quoteFeesUsdcUnits": "5200000",
+      "ethFeeUsdcUnitsAtFreshMark2000": "2000000",
+      "equityUsdcUnitsAtFreshMarks": "10312800000",
+      "adjustedGainVsInitialUsdcUnits": "292800000"
+    },
+    "afterClose": {
+      "wallet": {"USDC": "10272120000", "BTC": "0", "ETH": "9000000000000000"},
+      "realizedGrossUsdcUnits": "280000000",
+      "unrealizedGrossUsdcUnits": "0",
+      "quoteFeesUsdcUnits": "7880000",
+      "ethFeeUsdcUnitsAtFreshMark2000": "2000000",
+      "equityUsdcUnitsAtFreshEthMark": "10290120000",
+      "adjustedGainVsInitialUsdcUnits": "270120000"
+    },
+    "missingEthMark": {
+      "ethUnitsRemainKnown": "9000000000000000",
+      "portfolioEquity": "unknown",
+      "thirdAssetFeeUsdcValue": "unknown"
+    }
+  },
+  "linearPerp": {
+    "model": "USDC-settled linear long, 0.01 BTC per contract, weighted average entry, no liquidation rule asserted",
+    "contractBaseBtcUnits": "1000000",
+    "initialMarginBps": 2000,
+    "feeBps": 10,
+    "initialWalletUsdcUnits": "10000000000",
+    "events": [
+      {"sourceEventId": "perp-open", "kind": "open", "contracts": "10", "priceUsdcPerBtc": "25000", "notionalUsdcUnits": "2500000000", "marginTransferUsdcUnits": "500000000", "feeUsdcUnits": "2500000"},
+      {"sourceEventId": "perp-increase", "kind": "increase", "contracts": "5", "priceUsdcPerBtc": "26000", "notionalUsdcUnits": "1300000000", "marginTransferUsdcUnits": "260000000", "feeUsdcUnits": "1300000"},
+      {"sourceEventId": "perp-funding", "kind": "funding_debit", "fundingUsdcUnits": "3000000"},
+      {"sourceEventId": "perp-reduce", "kind": "reduce", "contracts": "6", "priceUsdcPerBtc": "27000", "notionalUsdcUnits": "1620000000", "basisUsdcUnits": "1520000000", "realizedGrossUsdcUnits": "100000000", "marginReleaseUsdcUnits": "304000000", "feeUsdcUnits": "1620000"},
+      {"sourceEventId": "perp-close", "kind": "close", "contracts": "9", "priceUsdcPerBtc": "28000", "notionalUsdcUnits": "2520000000", "basisUsdcUnits": "2280000000", "realizedGrossUsdcUnits": "240000000", "marginReleaseUsdcUnits": "456000000", "feeUsdcUnits": "2520000"}
+    ],
+    "afterIncreaseAtMark26000": {
+      "contracts": "15", "walletUsdcUnits": "9236200000", "collateralUsdcUnits": "760000000",
+      "grossBasisUsdcUnits": "3800000000", "unrealizedGrossUsdcUnits": "100000000",
+      "equityUsdcUnits": "10096200000"
+    },
+    "afterFundingAndReduceAtMark27000": {
+      "contracts": "9", "walletUsdcUnits": "9538580000", "collateralUsdcUnits": "553000000",
+      "grossBasisRemainingUsdcUnits": "2280000000", "realizedGrossUsdcUnits": "100000000",
+      "unrealizedGrossUsdcUnits": "150000000", "feesUsdcUnits": "5420000",
+      "fundingPaidUsdcUnits": "3000000", "equityUsdcUnits": "10241580000"
+    },
+    "afterClose": {
+      "contracts": "0", "walletUsdcUnits": "10329060000", "collateralUsdcUnits": "0",
+      "realizedGrossUsdcUnits": "340000000", "unrealizedGrossUsdcUnits": "0",
+      "feesUsdcUnits": "7940000", "fundingPaidUsdcUnits": "3000000",
+      "equityUsdcUnits": "10329060000", "adjustedGainUsdcUnits": "329060000"
+    },
+    "missingOrStaleMark": {"contractsRemainKnown": "9", "equity": "unknown", "unrealizedPnl": "unknown"}
+  },
+  "cashFlowAdjustment": {
+    "exampleDepositUsdcUnits": "500000000",
+    "equityAfterPerpCloseAndDepositUsdcUnits": "10829060000",
+    "investmentGainAfterAdjustmentUsdcUnits": "329060000"
+  }
+}

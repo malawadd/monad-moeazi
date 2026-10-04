@@ -1,0 +1,23 @@
+[
+  {
+    "name": "micro-and-exponent-thresholds",
+    "operation": "simulate",
+    "request": {"values": [0.000001, 1e-7, 1e20, 1e21]},
+    "bindings": {"account": "acct-a", "analysis_id": "analysis-a", "market": "BTC", "quote_reference": "q1", "venue": "uniswap"},
+    "expectedHash": "85a051ec79e34798777e4cc627878e12a9ddf9ab465266c0ca2f4fcc50888b46"
+  },
+  {
+    "name": "large-safe-and-negative-zero",
+    "operation": "propose",
+    "request": {"large": 9007199254740991, "negativeZero": -0.0},
+    "bindings": {"analysis_decision_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "market": "ETH", "policy_version": "7", "venue": "uniswap"},
+    "expectedHash": "1d96e2b8c44226d4c8c9668d73c1b5fa9529fc885f2965242ec2317f277ef7d9"
+  },
+  {
+    "name": "ordinary-proposal-floats-and-nesting",
+    "operation": "request_approval",
+    "request": {"proposal": {"confidence": 0.875, "entry": 1234.56789, "legs": [{"ratio": 0.125}, {"ratio": 0.75}]}, "flags": [true, false, null]},
+    "bindings": {"analysis_decision_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "market": "ETH-USDC", "policy_version": "2", "venue": "uniswap"},
+    "expectedHash": "2b11de1426f41cedf920bcc63a313a1064cbaea4f5abaf69ef49904d82eae2d1"
+  }
+]

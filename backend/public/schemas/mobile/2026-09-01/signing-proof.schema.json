@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-01/signing-proof.schema.json",
+  "title": "SigningProofPrepared",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "proofId", "owner", "chainId", "expiresAt", "typedData", "rootHash"],
+  "properties": {
+    "schemaVersion": {"const": "2026-09-01"},
+    "proofId": {"type": "string", "pattern": "^proof:[0-9a-f-]{36}$"},
+    "owner": {"type": "string", "pattern": "^0x[a-f0-9]{40}$"},
+    "chainId": {"const": 42161},
+    "expiresAt": {"type": "string", "format": "date-time"},
+    "typedData": {"type": "object"},
+    "rootHash": {"type": "string", "pattern": "^0x[a-fA-F0-9]{64}$"}
+  }
+}

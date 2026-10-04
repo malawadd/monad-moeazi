@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.app/schemas/mobile/2026-09-01/ua-prepared-operation.schema.json",
+  "title": "UaPreparedOperation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "operationId", "idempotencyKey", "owner", "universalAccount", "chainId", "normalizedIntentHash", "rootHash", "signingRequests", "expiresAt", "fees", "quote", "effectiveLimits"],
+  "properties": {
+    "schemaVersion": {"const": "2026-09-01"},
+    "operationId": {"type": "string", "minLength": 8},
+    "idempotencyKey": {"type": "string", "pattern": "^mobile:[A-Za-z0-9:_-]{16,160}$"},
+    "owner": {"type": "string", "pattern": "^0x[a-f0-9]{40}$"},
+    "universalAccount": {"type": "string", "pattern": "^0x[a-f0-9]{40}$"},
+    "chainId": {"const": 42161},
+    "normalizedIntentHash": {"type": "string"},
+    "rootHash": {"type": "string"},
+    "signingRequests": {
+      "type": "array", "minItems": 1,
+      "items": {"oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["id", "kind", "message"], "properties": {"id": {"type": "string", "minLength": 1}, "kind": {"enum": ["personal", "root_hash"]}, "message": {"type": "string"}}},
+        {"type": "object", "additionalProperties": false, "required": ["id", "kind", "typedData"], "properties": {"id": {"type": "string", "minLength": 1}, "kind": {"const": "typed_data"}, "typedData": {"type": "object"}}},
+        {"type": "object", "additionalProperties": false, "required": ["id", "kind", "contractAddress", "chainId"], "properties": {"id": {"type": "string", "minLength": 1}, "kind": {"const": "eip7702"}, "contractAddress": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"}, "chainId": {"const": 42161}, "nonce": {"type": "integer", "minimum": 0}}}
+      ]}
+    },
+    "expiresAt": {"type": "string", "format": "date-time"},
+    "fees": {"type": "object"},
+    "quote": {"type": "object"},
+    "effectiveLimits": {"type": "object"}
+  }
+}

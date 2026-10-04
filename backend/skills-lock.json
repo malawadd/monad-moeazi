@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "huashu-design": {
+      "source": "alchaincyf/huashu-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "d7c78973485ab1744b2bc7fb70f15d365f6565d3377052da3a8d5c033277f25a"
+    },
+    "swap-integration": {
+      "source": "uniswap/uniswap-ai",
+      "sourceType": "github",
+      "skillPath": "packages/plugins/uniswap-trading/skills/swap-integration/SKILL.md",
+      "computedHash": "093f10ec4ac9b71cfd5716c3a95a85323be6d594334bd35d714b592e3d1d51ba"
+    }
+  }
+}

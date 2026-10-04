@@ -1,0 +1,88 @@
+name: Publish main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check token
+        id: config
+        shell: bash
+        env:
+          TARGET_TOKEN: ${{ secrets.MOWAZI_PUSH_TOKEN }}
+        run: |
+          if [ -z "$TARGET_TOKEN" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::MOWAZI_PUSH_TOKEN is not configured; skipping."
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Publish main
+        if: steps.config.outputs.enabled == 'true'
+        shell: bash
+        env:
+          TARGET_TOKEN: ${{ secrets.MOWAZI_PUSH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          target_url="https://x-access-token:${TARGET_TOKEN}@github.com/malawadd/mowazi.git"
+          target_dir="$RUNNER_TEMP/publish-target"
+          message_file="$RUNNER_TEMP/source-commit-message.txt"
+
+          git log -1 --pretty=%B > "$message_file"
+
+          author_name="$(git log -1 --format=%an)"
+          author_email="$(git log -1 --format=%ae)"
+          author_date="$(git log -1 --format=%aI)"
+          committer_name="$(git log -1 --format=%cn)"
+          committer_email="$(git log -1 --format=%ce)"
+          committer_date="$(git log -1 --format=%cI)"
+
+          if git ls-remote --exit-code --heads "$target_url" main >/dev/null 2>&1; then
+            git clone --depth 1 --branch main "$target_url" "$target_dir"
+          else
+            mkdir "$target_dir"
+            git -C "$target_dir" init -b main
+            git -C "$target_dir" remote add origin "$target_url"
+          fi
+
+          git -C "$target_dir" rm -r --quiet --ignore-unmatch .
+          git archive --format=tar HEAD | tar -x -C "$target_dir"
+          git -C "$target_dir" add -A
+
+          if git -C "$target_dir" diff --cached --quiet; then
+            echo "::notice::No tracked file changes to publish."
+            exit 0
+          fi
+
+          git -C "$target_dir" config user.name "$committer_name"
+          git -C "$target_dir" config user.email "$committer_email"
+
+          GIT_AUTHOR_DATE="$author_date" GIT_COMMITTER_DATE="$committer_date" \
+            git -C "$target_dir" commit \
+              --author="$author_name <$author_email>" \
+              -F "$message_file"
+
+          git -C "$target_dir" push origin main

@@ -807,6 +807,17 @@ export default defineSchema({
     .index("by_userId_deviceId", ["userId", "deviceId"])
     .index("by_userId_status", ["userId", "status"]),
 
+  mobileAuthChallenges: defineTable({
+    challengeHash: v.string(),
+    userId: v.id("users"),
+    deviceId: v.string(),
+    expiresAt: v.number(),
+    consumedAt: v.number(),
+    createdAt: v.number(),
+  }).index("by_challengeHash", ["challengeHash"])
+    .index("by_userId", ["userId"])
+    .index("by_expiresAt", ["expiresAt"]),
+
   mobileSigningProofs: defineTable({
     userId: v.id("users"),
     proofId: v.string(),

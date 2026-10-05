@@ -6,13 +6,13 @@ const MOBILE_ACCESS_TTL_SECONDS = 60 * 15;
 const MOBILE_REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30;
 const MOBILE_REFRESH_AUDIENCE = "moeazi-mobile-refresh";
 
-export type AppAuthProvider = "particle" | "magic" | "wallet";
+export type AppAuthProvider = "particle" | "magic" | "mera" | "wallet" | "local_operator";
 
 export type ParticleSessionPayload = JWTPayload & {
   sub: string;
   authProvider: AppAuthProvider;
   walletAddress?: string;
-  particleWalletAddress: string;
+  particleWalletAddress?: string;
   particleUuid?: string;
   email?: string;
   name?: string;
@@ -75,7 +75,7 @@ async function signSession(input: ParticleSessionInput, options: {
   let signer = new SignJWT({
     authProvider,
     walletAddress: normalizedAddress,
-    particleWalletAddress: normalizedAddress,
+    particleWalletAddress: authProvider === "particle" ? normalizedAddress : undefined,
     particleUuid: input.particleUuid,
     email: input.email,
     name: input.name,
@@ -117,6 +117,11 @@ export async function verifyMobileRefreshToken(token: string) {
   const payload = verified.payload as ParticleSessionPayload;
   if (payload.tokenUse !== "mobile_refresh" || !payload.deviceId || !payload.jti) {
     throw new Error("Mobile refresh token is invalid.");
+  }
+  const address = String(payload.walletAddress ?? "").toLowerCase();
+  if (payload.authProvider !== "mera" || !/^0x[a-f0-9]{40}$/.test(address)
+      || payload.sub !== `mera:${address}`) {
+    throw new Error("Mobile refresh token is not a Mera session.");
   }
   return payload;
 }

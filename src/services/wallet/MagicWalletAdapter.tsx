@@ -1,7 +1,5 @@
-import React from 'react';
 import {Magic} from '@magic-sdk/react-native-bare';
 import type {Send7702TransactionRequest, Sign7702AuthorizationRequest} from '@magic-sdk/react-native-bare';
-import DeviceInfo from 'react-native-device-info';
 import {encodeFunctionData} from 'viem';
 import {ARBITRUM_CHAIN_ID, ARBITRUM_RPC_URL, MAGIC_PUBLISHABLE_KEY} from '../../config';
 import {WalletAdapter, WalletIdentity} from './WalletAdapter';
@@ -91,11 +89,5 @@ export class MagicWalletAdapter implements WalletAdapter {
   }
   async logout() { if (magic) await magic.user.logout(); }
 }
-
-export async function getDeviceIdentity() {
-  return {deviceId: await DeviceInfo.getUniqueId(), deviceName: await DeviceInfo.getDeviceName()};
-}
-
-export function MagicRelayer() { return magic ? <magic.Relayer /> : null; }
 
 export const magicWallet = new MagicWalletAdapter();

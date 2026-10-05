@@ -73,10 +73,10 @@ test("route adaptation preserves a webhook request body byte-for-byte", async ()
   assert.deepEqual(await response.json(), { body, providerId: "provider-x", eventId: "e1" });
 });
 
-test("Hono registers the complete mobile API and JWKS inventory", async () => {
+test("Hono registers Mera auth, JWKS, and rejects legacy mobile APIs", async () => {
   await loadMonadEnvironment();
   const app = new Hono();
-  assert.equal(await registerLegacyRoutes(app), 56);
+  assert.equal(await registerLegacyRoutes(app), 5);
   const jwks = await app.request("/api/auth/jwks");
   assert.equal(jwks.status, 200);
   const publicKeys = await jwks.json() as { keys: Array<{ kid: string; alg: string; kty: string }> };
@@ -88,5 +88,8 @@ test("Hono registers the complete mobile API and JWKS inventory", async () => {
   });
   assert.equal(challenge.status, 400);
   const home = await app.request("/api/mobile/home");
-  assert.equal(home.status, 401);
+  assert.equal(home.status, 404);
+  const refresh = await app.request("/api/mobile/auth/refresh", {method: "POST",
+    headers: {"content-type": "application/json"}, body: "{}"});
+  assert.equal(refresh.status, 400);
 });

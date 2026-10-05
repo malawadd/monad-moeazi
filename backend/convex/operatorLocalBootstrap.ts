@@ -12,7 +12,14 @@ function assertLocalOperatorEnabled() {
 
 async function requireLocalOperator(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity || identity.subject !== LOCAL_OPERATOR_SUBJECT) {
+  const issuer = process.env.PARTICLE_CONVEX_JWT_ISSUER ?? "";
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):3102$/.test(issuer)) {
+    throw new Error("Local operator actions require the local Moeazi Monad API issuer.");
+  }
+  // Convex validates the JWT issuer against auth.config.ts; additionally require
+  // that this deployment itself is the loopback Monad API instance.
+  if (!identity || identity.subject !== LOCAL_OPERATOR_SUBJECT
+      || (identity.issuer && identity.issuer !== issuer)) {
     throw new Error("The local operator identity is required.");
   }
   assertLocalOperatorEnabled();
@@ -119,6 +126,73 @@ export const workspace = query({
       policies: policies.map((policy) => ({ policyId: policy._id, version: policy.version,
         status: policy.status, policyJson: policy.policyJson, createdAt: policy.createdAt })),
     };
+  },
+});
+
+async function magicMobileRows(ctx: any) {
+  const users = (await ctx.db.query("users").collect()).filter((user: any) =>
+    user.authProvider === "magic" && typeof user.authSubject === "string"
+      && user.authSubject.startsWith("magic:"));
+  return await Promise.all(users.map(async (user: any) => ({user, records: {
+    mobileSessions: await ctx.db.query("mobileSessions")
+      .withIndex("by_userId_status", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileAuthChallenges: await ctx.db.query("mobileAuthChallenges")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileSigningProofs: await ctx.db.query("mobileSigningProofs")
+      .withIndex("by_userId_status", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileUaOperations: await ctx.db.query("mobileUaOperations")
+      .withIndex("by_userId_operationId", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileWalletWithdrawals: await ctx.db.query("mobileWalletWithdrawals")
+      .withIndex("by_userId_operationId", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileNotificationDevices: await ctx.db.query("mobileNotificationDevices")
+      .withIndex("by_userId_deviceId", (q: any) => q.eq("userId", user._id)).collect(),
+    mobileConnectorOperations: await ctx.db.query("mobileConnectorOperations")
+      .withIndex("by_subject", (q: any) => q.eq("subject", user.authSubject)).collect(),
+    accountWallets: await ctx.db.query("accountWallets")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id)).collect(),
+    strategyAccounts: await ctx.db.query("strategyAccounts")
+      .withIndex("by_userId", (q: any) => q.eq("userId", user._id)).collect(),
+  }})));
+}
+
+function magicMobileCleanupCounts(rows: any[]) {
+  const counts: Record<string, number> = {users: rows.length};
+  for (const table of ["mobileSessions", "mobileAuthChallenges", "mobileSigningProofs",
+    "mobileUaOperations", "mobileWalletWithdrawals", "mobileNotificationDevices", "mobileConnectorOperations",
+    "accountWallets", "strategyAccounts"]) {
+    counts[table] = rows.reduce((total, row) => total + row.records[table].length, 0);
+  }
+  return counts;
+}
+
+/** Local Monad operator report for the legacy Magic mobile identity purge. */
+export const magicMobileCleanupReport = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireLocalOperator(ctx);
+    return magicMobileCleanupCounts(await magicMobileRows(ctx));
+  },
+});
+
+/** Deletes legacy Magic mobile identities and only their mobile-owned rows. */
+export const cleanupMagicMobileRecords = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireLocalOperator(ctx);
+    const rows = await magicMobileRows(ctx);
+    const deleted = magicMobileCleanupCounts(rows);
+    if (deleted.accountWallets || deleted.strategyAccounts) {
+      throw new Error("Magic user cleanup is blocked while account wallets or strategy accounts are linked. Review and remove chain state through its dedicated migration first.");
+    }
+    for (const {user, records} of rows) {
+      const mobileRecords = Object.entries(records).filter(([table]) =>
+        table.startsWith("mobile")).map(([, values]) => values) as any[][];
+      for (const values of mobileRecords) {
+        for (const record of values) await ctx.db.delete(record._id);
+      }
+      await ctx.db.delete(user._id);
+    }
+    return {deleted};
   },
 });
 

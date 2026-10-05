@@ -7,7 +7,7 @@ type Row = Record<string, any> & { _id: string };
 type Handler = { _handler: (ctx: unknown, args: Record<string, never>) => Promise<any> };
 const call = (ctx: unknown) => (ensureLocalOperator as Handler)._handler(ctx, {});
 
-function fixture(subject: string | null) {
+function fixture(subject: string | null, issuer = "http://127.0.0.1:3102") {
   const rows = new Map<string, Row[]>();
   let next = 0;
   const db = {
@@ -32,7 +32,7 @@ function fixture(subject: string | null) {
   };
   return {
     rows,
-    ctx: { auth: { getUserIdentity: async () => subject ? { subject } : null }, db },
+    ctx: { auth: { getUserIdentity: async () => subject ? { subject, issuer } : null }, db },
   };
 }
 
@@ -40,15 +40,19 @@ async function withBootstrapEnvironment(run: () => Promise<void>) {
   const before = {
     enabled: process.env.MONAD_LOCAL_OPERATOR_BOOTSTRAP_ENABLED,
     operators: process.env.PROGRAM_OPERATOR_SUBJECTS,
+    issuer: process.env.PARTICLE_CONVEX_JWT_ISSUER,
   };
   process.env.MONAD_LOCAL_OPERATOR_BOOTSTRAP_ENABLED = "true";
   process.env.PROGRAM_OPERATOR_SUBJECTS = LOCAL_OPERATOR_SUBJECT;
+  process.env.PARTICLE_CONVEX_JWT_ISSUER = "http://127.0.0.1:3102";
   try { await run(); }
   finally {
     if (before.enabled === undefined) delete process.env.MONAD_LOCAL_OPERATOR_BOOTSTRAP_ENABLED;
     else process.env.MONAD_LOCAL_OPERATOR_BOOTSTRAP_ENABLED = before.enabled;
     if (before.operators === undefined) delete process.env.PROGRAM_OPERATOR_SUBJECTS;
     else process.env.PROGRAM_OPERATOR_SUBJECTS = before.operators;
+    if (before.issuer === undefined) delete process.env.PARTICLE_CONVEX_JWT_ISSUER;
+    else process.env.PARTICLE_CONVEX_JWT_ISSUER = before.issuer;
   }
 }
 
@@ -83,3 +87,15 @@ test("local operator bootstrap denies other subjects and disabled deployments", 
   });
 });
 
+test("local operator identity is rejected outside the local API issuer", async () => {
+  await withBootstrapEnvironment(async () => {
+    const foreign = fixture(LOCAL_OPERATOR_SUBJECT, "https://api.example.com");
+    await assert.rejects(call(foreign.ctx), /local operator identity/);
+    assert.equal(foreign.rows.size, 0);
+
+    process.env.PARTICLE_CONVEX_JWT_ISSUER = "https://api.example.com";
+    const remote = fixture(LOCAL_OPERATOR_SUBJECT, "https://api.example.com");
+    await assert.rejects(call(remote.ctx), /local Moeazi Monad API issuer/);
+    assert.equal(remote.rows.size, 0);
+  });
+});

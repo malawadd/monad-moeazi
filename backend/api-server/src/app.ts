@@ -4,6 +4,7 @@ import { registerLegacyRoutes } from "./legacy-route-loader.js";
 import { requireOperatorBridge } from "./operator/auth.js";
 import { registerOperatorRoutes } from "./operator/index.js";
 import { registerManualSequenceRoutes } from "./sequences/index.js";
+import { registerMeraAssociationRoutes } from "./well-known.js";
 import { LOCAL_OPERATOR_SUBJECT } from "@/lib/operatorIdentity";
 
 export const OPERATOR_SUBJECT = LOCAL_OPERATOR_SUBJECT;
@@ -38,6 +39,7 @@ export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
 
   registerOperatorRoutes(app);
   registerManualSequenceRoutes(app);
+  registerMeraAssociationRoutes(app);
   const count = await registerLegacyRoutes(app, `${apiRoot}/app/api`);
 
   app.notFound((context) => context.json({ error: "Route not found." }, 404));

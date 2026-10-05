@@ -2,8 +2,10 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getUserByAuthSubject } from "./model";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 
 async function viewer(ctx: any) {
+  assertMobileChainActionsPaused();
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Authentication is required.");
   const user = await getUserByAuthSubject(ctx, identity.subject);

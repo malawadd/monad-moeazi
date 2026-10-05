@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { assertUnsignedInteger, decimalFromRaw, fundingObservationDisposition, MOBILE_FUNDING_CHAIN_ID,
   MOBILE_FUNDING_REGISTRY_VERSION, MOBILE_FUNDING_USDC_ADDRESS } from "./helpers/mobileFunding";
 import { getUserByAuthSubject } from "./model";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 
 const STALE_AFTER_MS = 60_000;
 
@@ -55,6 +56,7 @@ export const getWalletForSubject = internalQuery({
 export const getSnapshot = query({
   args: {},
   handler: async (ctx) => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication is required.");
     const result = await walletForSubject(ctx, identity.subject);

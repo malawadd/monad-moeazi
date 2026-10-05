@@ -3,12 +3,14 @@
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { readArbitrumFundingBalances, type MobileFundingSnapshot } from "./helpers/mobileFunding";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 
 const RPC_TIMEOUT_MS = 8_000;
 
 export const refresh = action({
   args: {},
   handler: async (ctx): Promise<MobileFundingSnapshot> => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication is required.");
     const wallet = await ctx.runQuery(internal.mobileFundingModel.getWalletForSubject,

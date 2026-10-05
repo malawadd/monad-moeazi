@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { formatUnits } from "viem";
@@ -6,10 +6,11 @@ import { getUserByAuthSubject } from "./model";
 import { controllerHash, mobileAssignmentState } from "../lib/programOwnership";
 import { DEFAULT_AUTOMATION_POLICY, parseAutomationPolicy } from "./helpers/agentPolicy";
 import { getManagedProgramScheduleState } from "./managedProgramCadence";
-import { hasObservedMagicDelegation, mobileMagicAccount, mobileMagicWallet,
+import { hasObservedMagicDelegation, mobileMagicWallet,
   selectMobileMagicWallet } from "./mobileMagicWallet";
 import { managedAgentReleaseSummary } from "./helpers/managedAgentRelease";
 import { verifyFrozenProgramVersion } from "./helpers/frozenProgramVersion";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 export { verifyFrozenProgramVersion } from "./helpers/frozenProgramVersion";
 
 const SCHEMA_VERSION = "2026-09-01" as const;
@@ -17,14 +18,16 @@ const SCHEMA_VERSION = "2026-09-01" as const;
 async function viewer(ctx: any, create = false) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Authentication is required.");
+  const address = String(identity.walletAddress ?? "").toLowerCase();
+  if (identity.authProvider !== "mera" || !/^0x[a-f0-9]{40}$/.test(address)
+      || identity.subject !== `mera:${address}`) {
+    throw new Error("A valid Mera mobile identity is required.");
+  }
   let user = await getUserByAuthSubject(ctx, identity.subject);
   if (!user && create) {
-    const address = String(identity.walletAddress ?? identity.particleWalletAddress ?? "").toLowerCase();
-    if (!/^0x[a-f0-9]{40}$/.test(address)) throw new Error("Authenticated wallet address is invalid.");
     const now = Date.now();
     const userId = await ctx.db.insert("users", {
-      authSubject: identity.subject, authProvider: String(identity.authProvider ?? "magic"),
-      walletAddress: address, particleWalletAddress: address,
+      authSubject: identity.subject, authProvider: "mera", walletAddress: address,
       email: typeof identity.email === "string" ? identity.email : undefined,
       displayName: typeof identity.name === "string" ? identity.name : undefined,
       createdAt: now, updatedAt: now,
@@ -32,8 +35,10 @@ async function viewer(ctx: any, create = false) {
     user = await ctx.db.get(userId);
   }
   if (!user) throw new Error("Moeazi account is not provisioned.");
-  const state = await mobileMagicAccount(ctx, user, identity.walletAddress);
-  return { identity, user, strategyAccount: state.strategyAccount };
+  if (user.authProvider !== "mera" || String(user.walletAddress ?? "").toLowerCase() !== address) {
+    throw new Error("Mera account identity does not match its wallet.");
+  }
+  return { identity, user, strategyAccount: null as any };
 }
 
 function money(value: number) { return Math.max(0, value).toFixed(2); }
@@ -193,6 +198,7 @@ function exactGrantUnits(value: unknown) {
 
 /** Viewer-only context for preparing an owner-signed, one-call Uniswap grant. */
 export const getUniswapGrantContext = query({ args: {}, handler: async (ctx) => {
+  assertMobileChainActionsPaused();
   const { identity, user, strategyAccount } = await viewer(ctx);
   const blocked = (code: string, blockingReason: string) => ({ contextAvailable: false as const, code, blockingReason });
   if (!strategyAccount) return blocked("managed_assignment_required", "Finish Magic account setup before preparing a managed venue grant.");
@@ -474,7 +480,13 @@ export const registerSession = mutation({
   handler: async (ctx, args) => {
     const { user } = await viewer(ctx, true); const now = Date.now();
     const existing = await ctx.db.query("mobileSessions").withIndex("by_userId_deviceId", (q: any) => q.eq("userId", user._id).eq("deviceId", args.deviceId)).first();
-    if (existing?.lastAuthChallengeHash === args.authChallengeHash) throw new Error("This sign-in challenge was already used.");
+    if (!/^[a-f0-9]{64}$/.test(args.authChallengeHash)) throw new Error("The sign-in challenge hash is invalid.");
+    const usedChallenge = await ctx.db.query("mobileAuthChallenges")
+      .withIndex("by_challengeHash", (q: any) => q.eq("challengeHash", args.authChallengeHash)).first();
+    if (usedChallenge) throw new Error("This sign-in challenge was already used.");
+    await ctx.db.insert("mobileAuthChallenges", { challengeHash: args.authChallengeHash,
+      userId: user._id, deviceId: args.deviceId, expiresAt: now + 5 * 60_000,
+      consumedAt: now, createdAt: now });
     const { authChallengeHash, ...session } = args;
     const values = { ...session, lastAuthChallengeHash: authChallengeHash, userId: user._id, status: "active" as const, revokedAt: undefined, updatedAt: now, createdAt: existing?.createdAt ?? now };
     if (existing) { await ctx.db.patch(existing._id, values); return existing._id; }
@@ -501,9 +513,21 @@ export const revokeSession = mutation({ args: { deviceId: v.string() }, handler:
   return { revoked: Boolean(session) };
 } });
 
-export const getHome = query({ args: {}, handler: buildHome });
+export const pruneExpiredAuthChallenges = internalMutation({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(500, Math.floor(args.limit ?? 500)));
+    const expired = await ctx.db.query("mobileAuthChallenges")
+      .withIndex("by_expiresAt", (q: any) => q.lte("expiresAt", Date.now())).take(limit);
+    for (const row of expired) await ctx.db.delete(row._id);
+    return { deleted: expired.length, limit };
+  },
+});
+
+export const getHome = query({ args: {}, handler: async () => assertMobileChainActionsPaused() });
 
 export const getAutopilotLimits = query({ args: {}, handler: async (ctx) => {
+  assertMobileChainActionsPaused();
   const { identity, user, strategyAccount } = await viewer(ctx); if (!strategyAccount) return null;
   const [credit, policy, config, venues, mandates] = await Promise.all([
     ctx.db.query("creditAccounts").withIndex("by_userId", (q: any) => q.eq("userId", user._id)).first(),
@@ -556,12 +580,14 @@ export const getAutopilotLimits = query({ args: {}, handler: async (ctx) => {
 } });
 
 export const getUaOperation = query({ args: { operationId: v.string() }, handler: async (ctx, args) => {
+  assertMobileChainActionsPaused();
   const { user } = await viewer(ctx); const operation = await ctx.db.query("mobileUaOperations").withIndex("by_userId_operationId", (q: any) => q.eq("userId", user._id).eq("operationId", args.operationId)).first();
   if (!operation) return null;
   return { operationId: operation.operationId, status: operation.status, chainId: operation.chainId, normalizedIntentHash: operation.normalizedIntentHash, expiresAt: operation.expiresAt, updatedAt: operation.updatedAt };
 } });
 
 export const startAutopilot = mutation({ args: { confirmed: v.boolean() }, handler: async (ctx, args) => {
+  assertMobileChainActionsPaused();
   if (!args.confirmed) throw new Error("Review and accept the current limits before starting.");
   const { user, strategyAccount } = await viewer(ctx); if (!strategyAccount) throw new Error("Strategy account is not ready.");
   const moneyOperations = await ctx.db.query("mobileConnectorOperations").withIndex("by_subject", (q: any) => q.eq("subject", user.authSubject ?? "")).collect();
@@ -596,6 +622,7 @@ export const startAutopilot = mutation({ args: { confirmed: v.boolean() }, handl
 
 /** Records the customer's requested mode while keeping a staged assignment paused. */
 export const confirmAutopilotMode = mutation({ args: { confirmed: v.boolean() }, handler: async (ctx, args) => {
+  assertMobileChainActionsPaused();
   if (!args.confirmed) throw new Error("Confirm the managed program's Autopilot mode to continue.");
   const { user, strategyAccount } = await viewer(ctx);
   if (!strategyAccount) throw new Error("Strategy account is not ready.");
@@ -632,6 +659,7 @@ export const confirmAutopilotMode = mutation({ args: { confirmed: v.boolean() },
 } });
 
 export const stopAutopilot = mutation({ args: {}, handler: async (ctx) => {
+  assertMobileChainActionsPaused();
   const { user, strategyAccount } = await viewer(ctx); if (!strategyAccount) throw new Error("Strategy account is not ready."); const now = Date.now();
   const selected = await assignmentForAccount(ctx, strategyAccount._id, user._id);
   const current = selected.assignment ?? selected.staged;
@@ -709,6 +737,7 @@ export const stopAutopilot = mutation({ args: {}, handler: async (ctx) => {
 } });
 
 export const registerNotificationDevice = mutation({ args: { deviceId: v.string(), pushToken: v.string(), preferencesJson: v.string() }, handler: async (ctx, args) => {
+  assertMobileChainActionsPaused();
   const { user } = await viewer(ctx); const now = Date.now(); const existing = await ctx.db.query("mobileNotificationDevices").withIndex("by_userId_deviceId", (q: any) => q.eq("userId", user._id).eq("deviceId", args.deviceId)).first();
   const values = { ...args, userId: user._id, platform: "android" as const, status: "active" as const, createdAt: existing?.createdAt ?? now, updatedAt: now };
   if (existing) { await ctx.db.patch(existing._id, values); return existing._id; } return await ctx.db.insert("mobileNotificationDevices", values);

@@ -38,12 +38,5 @@ function context(subject: string, owner: string, attemptState = "verifying") {
 }
 
 test("mobile binding identifies only the current owned verifying setup", async () => {
-  const owner = "0x1111111111111111111111111111111111111111";
-  assert.deepEqual(await handler(context("subject-a", owner), { attemptId: "attempt-a" }), {
-    attemptId: "attempt-a", ownerAddress: owner, authorityMode: "approval",
-  });
-  assert.equal(await handler(context("subject-b", owner), { attemptId: "attempt-a" }), null);
-  assert.equal(await handler(context("subject-a", "0x2222222222222222222222222222222222222222"),
-    { attemptId: "attempt-a" }), null);
-  assert.equal(await handler(context("subject-a", owner, "ready"), { attemptId: "attempt-a" }), null);
+  await assert.rejects(handler({}, {attemptId: "attempt-a"}), /Mobile chain actions are paused/);
 });

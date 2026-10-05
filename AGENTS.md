@@ -26,6 +26,14 @@ This repository is an independent mobile and backend project. Read
 - Metro listens on `8082`. The emulator API base is `http://10.0.2.2:3102`.
 - Keep local session and secure-storage keys namespaced to the Monad app.
 
+## Local Android passkey test credentials
+
+- On the `Moeazi_API_36` emulator, KeePassDX's offline test-vault password is
+  `MoeaziTestVault2026`; the Android screen-lock PIN is `648291`.
+- These are test-only local emulator credentials. No Google account is required;
+  the KeePassDX vault and passkey stay on the emulator. Never use these for
+  production.
+
 ## Future implementation requests
 
 The user requests GPT-6 Luna to perform future implementation work at its highest

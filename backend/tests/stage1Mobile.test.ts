@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test as nodeTest } from "node:test";
 import { getAutopilotLimits, getHome, managedProgramActivationAuthorityHash,
   confirmAutopilotMode, getUniswapGrantContext, startAutopilot, stopAutopilot } from "../convex/mobile";
 import { bootstrap as mobileBootstrap } from "../convex/mobileAccount";
@@ -10,6 +10,8 @@ import { prepare as prepareMobileWithdrawal } from "../convex/mobileWithdrawals"
 
 type Row = Record<string, any> & { _id: string };
 const handler = (fn: unknown) => (fn as { _handler: (ctx: unknown, args: any) => Promise<any> })._handler;
+const test = (name: string, body: () => Promise<void>) => nodeTest(name,
+  {skip: "Legacy mobile chain behavior is paused during the Mera auth-only rollout."}, body);
 
 function accountFixture() {
   const rows = new Map<string, Row[]>();
@@ -72,6 +74,18 @@ function accountFixture() {
         scheduled.push({ delay, args });
       } } }, add, rows, patches, scheduled };
 }
+
+nodeTest("legacy mobile account and chain entrypoints fail closed during Mera rollout", async () => {
+  const calls: Array<[unknown, Record<string, unknown>]> = [
+    [getHome, {}], [getAutopilotLimits, {}], [getUniswapGrantContext, {}],
+    [startAutopilot, {confirmed: true}], [confirmAutopilotMode, {confirmed: true}],
+    [stopAutopilot, {}], [mobileBootstrap, {}],
+    [prepareMobileWithdrawal, {amount: "1", destination: "0x", idempotencyKey: "test-request-123456"}],
+  ];
+  for (const [entry, args] of calls) {
+    await assert.rejects(handler(entry)({}, args), /Mobile chain actions are paused/);
+  }
+});
 
 const frozenPolicy = JSON.stringify({
   allowedMarkets: ["BTC-PERP"], allowedVenues: ["uniswap"], maxOrderUsd: 25,

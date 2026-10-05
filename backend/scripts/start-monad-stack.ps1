@@ -138,9 +138,12 @@ $web = Read-Env $localEnvPath
 foreach ($name in @('WORKER_SHARED_SECRET', 'CONVEX_SELF_HOSTED_URL', 'NEXT_PUBLIC_CONVEX_URL')) {
   if (-not $web[$name]) { throw "Missing local web setting $name; rerun scripts/setup-monad-local.ps1." }
 }
-if (-not $web.NEXT_PUBLIC_MAGIC_API_KEY) {
-  Write-Warning 'Magic sign-in is not configured. Set NEXT_PUBLIC_MAGIC_API_KEY in ignored .env.local and rerun setup.'
-}
+  if (-not $web.MERA_ANDROID_SHA256_CERT_FINGERPRINTS) {
+    Write-Warning 'Android passkey association is unavailable until MERA_ANDROID_SHA256_CERT_FINGERPRINTS is set in ignored .env.local.'
+  }
+  if (-not $web.MERA_IOS_TEAM_ID) {
+    Write-Warning 'iOS passkey association is unavailable until MERA_IOS_TEAM_ID is set in ignored .env.local.'
+  }
 $agentValues = Import-MonadComposeEnvironment $root
 
 New-Item -ItemType Directory -Path $dataDir -Force | Out-Null

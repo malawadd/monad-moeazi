@@ -8,6 +8,7 @@ jest.mock('../src/services/sessionStore', () => ({
 }));
 
 test('concurrent expired requests share one rotating refresh token', async () => {
+  const walletAddress = `0x${'a'.repeat(40)}`;
   let access = 'expired';
   let refresh = 'old-refresh';
   let refreshCalls = 0;
@@ -22,7 +23,7 @@ test('concurrent expired requests share one rotating refresh token', async () =>
       refreshCalls++;
       return {ok: true, status: 200, json: async () => ({
         accessToken: 'renewed', refreshToken: 'new-refresh', expiresIn: 600,
-        session: {subject: 'owner', walletAddress: 'wallet', deviceId: 'device'},
+        session: {subject: `mera:${walletAddress}`, walletAddress, deviceId: 'device'},
       })} as Response;
     }
     if (String((init.headers as Record<string, string>).Authorization).endsWith('expired')) {

@@ -1,11 +1,13 @@
 import { query } from "./_generated/server";
 import { getUserByAuthSubject } from "./model";
 import { mobileMagicAccount } from "./mobileMagicWallet";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 
 /** Owner-scoped facts for the mobile Autopilot story. No model reasoning or secrets. */
 export const getManagedJourney = query({
   args: {},
   handler: async (ctx) => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity || identity.authProvider !== "magic") return null;
     const owner = String(identity.walletAddress ?? "").toLowerCase();

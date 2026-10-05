@@ -27,7 +27,9 @@ export async function requireMobileBearer(request: Request) {
   const token = header.slice(7).trim();
   try {
     const payload = await verifyParticleSessionToken(token);
-    if (payload.tokenUse !== "mobile_access" || payload.authProvider !== "magic" || !payload.deviceId) {
+    const address = String(payload.walletAddress ?? "").toLowerCase();
+    if (payload.tokenUse !== "mobile_access" || payload.authProvider !== "mera" || !payload.deviceId
+        || !/^0x[a-f0-9]{40}$/.test(address) || payload.sub !== `mera:${address}`) {
       throw new Error("Not a mobile access token.");
     }
     return { token, payload };
@@ -49,7 +51,7 @@ export function mobileError(error: unknown) {
 export function sessionInput(payload: ParticleSessionPayload) {
   if (!payload.sub || !payload.walletAddress || !payload.deviceId) throw new MobileAuthError("Mobile session claims are incomplete.", 401);
   return {
-    subject: payload.sub, authProvider: "magic" as const,
+    subject: payload.sub, authProvider: "mera" as const,
     walletAddress: payload.walletAddress, email: payload.email, name: payload.name,
     deviceId: payload.deviceId,
   };

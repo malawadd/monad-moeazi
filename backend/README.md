@@ -1,9 +1,9 @@
 # Moeazi Monad backend copy
 
 This backend is an isolated Monad workspace. Its Compose project, data volumes,
-Convex deployment, generated secrets, cookies, and host ports are isolated. It
-currently preserves Arbitrum product behavior; the Monad chain migration is a
-later milestone.
+Convex deployment, generated secrets, and host ports are isolated. Mobile
+authentication uses Mera passkeys; mobile chain actions remain paused for the
+later Monad execution migration.
 
 ## Local lifecycle
 
@@ -24,10 +24,10 @@ The API build check is `npm run api:build`; a standalone Hono process can be
 started with `npm run api:start`. The active Hono route loader has focused
 coverage in `tests/api-server-route-loader.test.ts`.
 
-The setup script reuses only the Magic publishable key. If it is not already
-configured, set the publishable key in ignored `.env.local` and rerun
-`scripts/setup-monad-local.ps1`; it also updates the ignored Android local
-properties file. Provider keys and paid provider calls are disabled by default.
+The setup script writes the ignored Android API base property. No Magic
+publishable key is required for mobile login. Configure the Mera RP association
+values in ignored `.env.local` as described in [`../LOCAL_STACK.md`](../LOCAL_STACK.md).
+Provider keys and paid provider calls are disabled by default.
 Funded setup, venue setup, and live execution are disabled; Manual Guard and Lite
 Mode remain on.
 
@@ -64,7 +64,7 @@ Xcode for iOS verification.
 `android/local.properties`. The setup generates a fresh RSA JWT signing pair,
 Convex instance secret, worker secret, wallet key, database password, and
 service credentials. Do not commit these files or copy backend secrets from the
-Arbitrum deployment. Only the existing Magic publishable key is shared.
+Arbitrum deployment.
 
 The host API accesses local Convex at `127.0.0.1:3310` and site actions at
 `127.0.0.1:3311`. Containers use `convex:3211` for site actions and
@@ -83,9 +83,10 @@ stops its recorded API process, lightweight console PID, and named Compose
 project. Details and troubleshooting are in [`../LOCAL_STACK.md`](../LOCAL_STACK.md)
 and [the runtime guide](docs/agent-guide/runtime.md).
 
-The mobile API uses Hono with the Node adapter; it imports the existing mobile
-route handlers through a small Next-compatible request shim. Shared Convex and
-mobile route modules remain active.
+The mobile API uses Hono with the Node adapter; it imports only the Mera
+challenge, session, refresh, logout, and JWKS handlers through a small
+Next-compatible request shim. The two Mera association routes are served by
+Hono. Legacy mobile chain handlers are not registered.
 
 ## Backend structure
 

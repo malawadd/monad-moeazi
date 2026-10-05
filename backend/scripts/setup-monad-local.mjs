@@ -70,8 +70,8 @@ if (rotateSecrets || !operatorAdminSecret) {
 const byokKey = rotateSecrets || !agentPrevious.MASTER_KEY
   ? `${randomBytes(32).toString("base64url")}=`
   : agentPrevious.MASTER_KEY;
-const magicKey = previous.NEXT_PUBLIC_MAGIC_API_KEY || process.env.MOEAZI_MAGIC_PUBLISHABLE_KEY || "";
 const arbRpc = "https://arb1.arbitrum.io/rpc";
+const meraRpId = "moeazi-monad.kiyan.finance";
 
 const webEnv = {
   CONVEX_SELF_HOSTED_URL: "http://127.0.0.1:3310",
@@ -83,10 +83,10 @@ const webEnv = {
   NEXT_PUBLIC_CLIENT_KEY: "",
   NEXT_PUBLIC_APP_ID: "",
   PARTICLE_PROJECT_SERVER_KEY: "",
-  NEXT_PUBLIC_MAGIC_API_KEY: magicKey,
-  NEXT_PUBLIC_MAGIC_DELEGATION_CHAIN_ID: "42161",
-  NEXT_PUBLIC_MAGIC_RPC_URL: arbRpc,
   NEXT_PUBLIC_ARB_RPC_URL: arbRpc,
+  MERA_RP_ID: meraRpId,
+  MERA_IOS_TEAM_ID: preserved("MERA_IOS_TEAM_ID", "", previous),
+  MERA_ANDROID_SHA256_CERT_FINGERPRINTS: preserved("MERA_ANDROID_SHA256_CERT_FINGERPRINTS", "", previous),
   PARTICLE_CONVEX_JWT_ISSUER: "http://127.0.0.1:3102",
   PARTICLE_CONVEX_JWKS_URL: "http://host.docker.internal:3102/api/auth/jwks",
   PARTICLE_CONVEX_JWT_PRIVATE_KEY_PEM: privateKey,
@@ -237,10 +237,8 @@ const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 const properties = [
   sdk ? `sdk.dir=${sdk.replace(/\\/g, "\\\\")}` : "",
   "moeazi.apiBaseUrl=http://10.0.2.2:3102",
-  `moeazi.magicPublishableKey=${magicKey}`,
-  `moeazi.arbitrumRpcUrl=${arbRpc}`,
 ].filter(Boolean).join("\n") + "\n";
 await writeFile(path.join(mobileRoot, "android", "local.properties"), properties, { mode: 0o600 });
 
 console.log("Monad local configuration created. Provider calls, venue setup, and live execution are disabled.");
-if (!magicKey) console.log("Set MOEAZI_MAGIC_PUBLISHABLE_KEY and rerun setup to enable Magic sign-in.");
+console.log("Mera passkey sign-in is configured. Add MERA_ANDROID_SHA256_CERT_FINGERPRINTS and MERA_IOS_TEAM_ID to .env.local to publish the app association files.");

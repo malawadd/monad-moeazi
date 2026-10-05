@@ -12,12 +12,8 @@ if (Test-Path -LiteralPath $propertiesPath) {
 
 # Gradle prefers local.properties over environment variables. Match that order here.
 $apiUrl = if ($properties['moeazi.apiBaseUrl']) { $properties['moeazi.apiBaseUrl'] } else { $env:MOEAZI_API_BASE_URL }
-$magicKey = if ($properties['moeazi.magicPublishableKey']) { $properties['moeazi.magicPublishableKey'] } else { $env:MOEAZI_MAGIC_PUBLISHABLE_KEY }
 if (-not $apiUrl -or $apiUrl -notmatch '^https://[^/]+') {
   throw 'Phone builds require a phone-reachable HTTPS moeazi.apiBaseUrl in android/local.properties or MOEAZI_API_BASE_URL.'
-}
-if (-not $magicKey -or $magicKey -match '^pk_live_or_test_publishable_key$') {
-  throw 'Phone builds require the Magic publishable key in android/local.properties or MOEAZI_MAGIC_PUBLISHABLE_KEY.'
 }
 
 $javaHome = if ($env:JAVA_HOME) { $env:JAVA_HOME } else { 'C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot' }

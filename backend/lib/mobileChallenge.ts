@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from "jose";
-import { createParticleSignInMessage } from "./particleNonce";
 import { createPrivateKey, createPublicKey } from "crypto";
 
 const AUDIENCE = "moeazi-mobile-challenge";
@@ -11,7 +10,13 @@ function env(name: string) {
 }
 
 export async function createMobileChallenge(address: string, deviceId: string, nonce: string, issuedAt: string) {
-  const message = `${createParticleSignInMessage(address, nonce, issuedAt).replace("Particle sign-in", "mobile sign-in")}\nDevice: ${deviceId}`;
+  const message = [
+    "Moeazi Mera passkey sign-in",
+    `Address: ${address.toLowerCase()}`,
+    `Nonce: ${nonce}`,
+    `Issued At: ${issuedAt}`,
+    `Device: ${deviceId}`,
+  ].join("\n");
   const challengeToken = await new SignJWT({ address, deviceId, nonce, message })
     .setProtectedHeader({ alg: "RS256", kid: process.env.PARTICLE_CONVEX_JWT_KID || "particle-convex" })
     .setIssuer(env("PARTICLE_CONVEX_JWT_ISSUER"))

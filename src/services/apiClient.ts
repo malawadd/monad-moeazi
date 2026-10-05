@@ -13,6 +13,11 @@ import type {ManagedSpotMandate} from '../types/managedSpotMandate';
 type SessionResponse = {accessToken: string; refreshToken: string; expiresIn: number; session: {subject: string; walletAddress: string; deviceId: string}};
 let refreshInFlight: Promise<SessionResponse | null> | null = null;
 
+function isMeraSession(value: SessionResponse): boolean {
+  return /^0x[0-9a-f]{40}$/i.test(value.session.walletAddress)
+    && value.session.subject === `mera:${value.session.walletAddress.toLowerCase()}`;
+}
+
 export class MobileApiError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string, readonly body?: unknown) {
     super(message); this.name = 'MobileApiError';
@@ -64,12 +69,13 @@ async function performSessionRefresh(): Promise<SessionResponse | null> {
   const response = await fetch(`${API_BASE_URL}/api/mobile/auth/refresh`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({refreshToken})});
   if (!response.ok) { await clearSession(); return null; }
   const next = await response.json() as SessionResponse;
+  if (!isMeraSession(next)) { await clearSession(); return null; }
   await saveSession(next.accessToken, next.refreshToken);
   return next;
 }
 
 export type AccountBootstrap = {
-  ownerAddress: string; universalAccount: string; walletProvider: 'magic'; accountMode: 'eip7702';
+  ownerAddress: string; universalAccount: string; walletProvider: 'magic' | 'mera'; accountMode: 'eip7702';
   strategyReady: boolean; delegationState: 'required' | 'active'; recoveredExistingAccount: boolean;
   chainVerification?: 'finalized' | 'unavailable'; chainBlockNumber?: number | null;
   managedProgramEnrollment?: ManagedProgramEnrollment;
@@ -77,8 +83,9 @@ export type AccountBootstrap = {
 
 export const mobileApi = {
   challenge: (address: string, deviceId: string) => request<{message: string; challengeToken: string}>('/api/mobile/auth/challenge', {method: 'POST', body: JSON.stringify({address, deviceId})}),
-  createSession: async (input: {address: string; signature: string; challengeToken: string; deviceId: string; deviceName: string; email?: string}) => {
+  createSession: async (input: {address: string; signature: string; challengeToken: string; deviceId: string; deviceName: string}) => {
     const result = await request<SessionResponse>('/api/mobile/auth/session', {method: 'POST', body: JSON.stringify(input)});
+    if (!isMeraSession(result)) throw new Error('The service returned a non-Mera mobile session.');
     await saveSession(result.accessToken, result.refreshToken); return result;
   },
   logout: async () => { const refreshToken = await getRefreshToken(); try { await request('/api/mobile/auth/logout', {method: 'POST', body: JSON.stringify({refreshToken})}); } finally { await clearSession(); } },

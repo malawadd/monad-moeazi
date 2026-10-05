@@ -1,9 +1,9 @@
 # Moeazi Monad local stack
 
-This folder is an independent working copy for future Monad development. The
-mobile app is at the repository root and the full copied backend is in
-`backend/`. The stack preserves current Arbitrum application behavior until the
-separate Monad migration begins.
+This folder is an independent working copy for Monad development. The mobile
+app is at the repository root and the copied backend is in `backend/`. Mobile
+sign-in currently uses Mera passkeys; account funding, trading, activation, and
+other chain actions remain paused for the later Monad migration.
 
 ## Start and stop
 
@@ -20,10 +20,9 @@ First start creates ignored `.env.local`, `.env.agents.monad`, and
 starts the `moeazi-monad` Docker project, configures and deploys self-hosted local
 Convex, then starts the Hono API and lightweight operator console. The API is
 a separate TypeScript process using Hono's Node adapter; no Next.js server runs
-in the active stack. Setup reuses only the
-existing Magic **publishable** key; provider keys remain blank. Funded provider,
-venue setup, purchase, sponsorship, and live execution features stay disabled.
-Manual Guard and Lite Mode stay on.
+in the active stack. Mobile sign-in does not require a Magic key. Provider keys
+remain blank. Funded provider, venue setup, purchase, sponsorship, and live
+execution features stay disabled. Manual Guard and Lite Mode stay on.
 
 Open a second terminal at the repository root, then run the x86_64 emulator preview:
 
@@ -63,16 +62,53 @@ tables, Redis keys, and Temporal workflow state live in this isolated project.
 ## Configuration and diagnostics
 
 The generated backend files and `android/local.properties` are git-ignored. To
-refresh local values, run `backend/scripts/setup-monad-local.ps1`. To configure
-Magic manually, place only the publishable key in ignored
-`backend/.env.local` as `NEXT_PUBLIC_MAGIC_API_KEY`, then rerun setup so Android
-properties also receive it. Never copy provider, wallet, JWT, worker, or database
-secrets from the Arbitrum deployment.
+refresh local values, run `backend/scripts/setup-monad-local.ps1`. The app uses
+`API_BASE_URL`; no Magic key is needed. Never copy provider, wallet, JWT, worker,
+or database secrets from the Arbitrum deployment.
+
+### Mera passkey host
+
+Passkeys are permanently bound to `moeazi-monad.kiyan.finance`. Keep this
+hostname when the API moves off the tunnel. Configure the Cloudflare Tunnel
+hostname to forward to `http://localhost:3102`. The following paths must be
+public over HTTPS and served directly without redirects or a Cloudflare Access
+login gate:
+
+- `https://moeazi-monad.kiyan.finance/.well-known/assetlinks.json`
+- `https://moeazi-monad.kiyan.finance/.well-known/apple-app-site-association`
+
+The API returns status 503 with the missing setting name until each platform's
+association values are configured. In ignored `backend/.env.local`, set
+`MERA_RP_ID=moeazi-monad.kiyan.finance`,
+`MERA_ANDROID_SHA256_CERT_FINGERPRINTS` to comma-separated SHA-256 signing
+fingerprints, and `MERA_IOS_TEAM_ID` to the 10-character Apple Developer Team
+ID. Rerun local setup after changing these values so the isolated Convex/API
+configuration stays in sync.
+
+For the local Android debug signer, run
+`powershell -File scripts/ensure-android-debug-keystore.ps1`, then inspect its
+fingerprint with:
+
+```powershell
+keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android
+```
+
+Copy only the `SHA256` fingerprint into the ignored environment file. Add the
+release certificate fingerprint before distributing release builds. iOS uses
+`webcredentials:moeazi-monad.kiyan.finance` and requires the Apple Team ID in
+the association response. iOS device validation requires macOS and Xcode.
+
+For a local, scoped cleanup of legacy Magic mobile users, sessions, and their
+mobile records, run `npm run mobile:magic-cleanup` from `backend/`. It prints a
+count report first, refuses to run unless it targets the local Monad Convex/API,
+and aborts if account wallets or strategy accounts are still linked. With no
+Magic mobile users, it makes no changes. Operator and service configuration is
+preserved.
 
 To replace generated local credentials, first stop the target stack with
 `npm run stack:stop`, then run
 `powershell -File scripts/setup-monad-local.ps1 -RotateSecrets` from `backend/`.
-This preserves the public Magic key and rotates the local JWT pair, worker,
+This preserves the Mera RP and association settings and rotates the local JWT pair, worker,
 Convex, Timescale, wallet, gateway, and service secrets. Existing stateful
 services keep credentials already stored in their data volumes. To discard the
 local data and reinitialize services with the rotated credentials, run

@@ -103,8 +103,6 @@ android {
         versionCode 1
         versionName "1.0"
         buildConfigField "String", "MOEAZI_API_BASE_URL", "\"${moeaziConfig('moeazi.apiBaseUrl', 'MOEAZI_API_BASE_URL', 'http://10.0.2.2:3102')}\""
-        buildConfigField "String", "MOEAZI_MAGIC_PUBLISHABLE_KEY", "\"${moeaziConfig('moeazi.magicPublishableKey', 'MOEAZI_MAGIC_PUBLISHABLE_KEY', '')}\""
-        buildConfigField "String", "MOEAZI_ARBITRUM_RPC_URL", "\"${moeaziConfig('moeazi.arbitrumRpcUrl', 'MOEAZI_ARBITRUM_RPC_URL', 'https://arb1.arbitrum.io/rpc')}\""
         if (System.getProperty('os.name').toLowerCase().contains('windows')) {
             externalNativeBuild {
                 cmake {

@@ -1,11 +1,13 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getUserByAuthSubject } from "./model";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 
 /** Minimal owner proof for the mobile-to-gateway Hyperliquid binding bridge. */
 export const getHyperliquidBindingAttempt = query({
   args: { attemptId: v.id("venueSetupAttempts") },
   handler: async (ctx, { attemptId }) => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity?.subject || !identity.walletAddress) return null;
     const user = await getUserByAuthSubject(ctx, identity.subject);

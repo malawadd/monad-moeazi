@@ -3,6 +3,7 @@ import { mutation } from "./_generated/server";
 import { DEFAULT_STRATEGY_CONFIG, STRATEGY_HEALTH_STATUS, STRATEGY_SLUG } from "./constants";
 import { DEFAULT_AUTOMATION_POLICY, parseAutomationPolicy } from "./helpers/agentPolicy";
 import { getUserByAuthSubject } from "./model";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 import { operatorOwnedProgramSource, verifyFrozenProgramVersion } from "./mobile";
 
 const DEFAULT_MARKETS = DEFAULT_AUTOMATION_POLICY.allowedMarkets;
@@ -53,6 +54,7 @@ async function allowlistedManagedEnrollment(ctx: any, subject: string, userId: a
 export const bootstrap = mutation({
   args: {},
   handler: async (ctx) => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication is required.");
     const user = await getUserByAuthSubject(ctx, identity.subject);

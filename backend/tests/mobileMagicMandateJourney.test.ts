@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test as nodeTest } from "node:test";
 import { stageInternalSpot } from "../convex/internalSpotProgramBootstrap";
 import { confirmAutopilotMode } from "../convex/mobile";
 import { request, getProvisioningContext } from "../convex/managedSpotMandates";
@@ -8,6 +8,13 @@ import { resolveManagedProgramContext } from "../convex/managedProgramRuntime";
 const owner = "0x56b6c8ef6e04fa995f835f56c009f01623af5963";
 type Row = Record<string, any> & { _id: string };
 const handler = (fn: unknown) => (fn as { _handler: (ctx: any, args: any) => Promise<any> })._handler;
+const test = (name: string, body: () => Promise<void>) => nodeTest(name,
+  {skip: "Legacy Magic mandate behavior is paused during the Mera auth-only rollout."}, body);
+
+nodeTest("the former Magic mandate mobile entrypoint is paused", async () => {
+  await assert.rejects(handler(confirmAutopilotMode)({}, {confirmed: true}),
+    /Mobile chain actions are paused/);
+});
 
 function store() {
   const rows = new Map<string, Row[]>();

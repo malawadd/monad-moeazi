@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { createPublicClient, erc20Abi, formatUnits, http } from "viem";
 import { arbitrum } from "viem/chains";
 import { getUserByAuthSubject } from "./model";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 import { mobileMagicAccount } from "./mobileMagicWallet";
 import { ARBITRUM_USDC } from "../execution-sidecar/src/mobile/uniswapV3";
 
@@ -85,6 +86,7 @@ export const record = internalMutation({
 });
 
 export const sync = action({ args: {}, handler: async (ctx): Promise<MagicChainResult> => {
+  assertMobileChainActionsPaused();
   const identity = await ctx.auth.getUserIdentity();
   const ownerAddress = typeof identity?.walletAddress === "string"
     ? identity.walletAddress.toLowerCase() : "";

@@ -91,7 +91,8 @@ export async function invoke(handler: RouteHandler, request: Request, definition
 export async function registerLegacyRoutes(app: Hono<any>, root = path.resolve(process.cwd(), "app", "api")): Promise<number> {
   const files = (await routeFiles(root)).filter((file) => {
     const relative = path.relative(root, file).split(path.sep).join("/");
-    return relative.startsWith("mobile/") || relative === "auth/jwks/route.ts";
+    return relative === "auth/jwks/route.ts"
+      || /^mobile\/auth\/(challenge|session|refresh|logout)\/route\.ts$/.test(relative);
   }).sort((left, right) => {
     const specificity = (file: string) => {
       const segments = path.relative(root, file).split(path.sep).slice(0, -1);

@@ -2,6 +2,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { action } from "./_generated/server";
+import { assertMobileChainActionsPaused } from "./mobileAuthOnly";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { getAddress } from "ethers";
@@ -57,6 +58,7 @@ function preparedResponse(row: any) {
 export const prepare = action({
   args: { amount: v.string(), destination: v.string(), idempotencyKey: v.string() },
   handler: async (ctx, args): Promise<any> => {
+    assertMobileChainActionsPaused();
     assertEnabled();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication is required.");
@@ -149,6 +151,7 @@ async function findUncertainTransaction(url: string, row: any) {
 export const reconcile = action({
   args: { operationId: v.string() },
   handler: async (ctx, args): Promise<any> => {
+    assertMobileChainActionsPaused();
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication is required.");
     const context: any = await ctx.runQuery(internal.mobileWithdrawalModel.getContext, { subject: identity.subject });

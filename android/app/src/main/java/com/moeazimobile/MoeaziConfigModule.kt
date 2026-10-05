@@ -8,7 +8,5 @@ class MoeaziConfigModule(context: ReactApplicationContext) : ReactContextBaseJav
 
   override fun getConstants() = mapOf(
     "apiBaseUrl" to BuildConfig.MOEAZI_API_BASE_URL,
-    "magicPublishableKey" to BuildConfig.MOEAZI_MAGIC_PUBLISHABLE_KEY,
-    "arbitrumRpcUrl" to BuildConfig.MOEAZI_ARBITRUM_RPC_URL,
   )
 }

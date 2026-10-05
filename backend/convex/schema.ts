@@ -6,11 +6,13 @@ import { evidenceLifecycleTables } from "./evidenceLifecycleSchema";
 import { mobileConnectorTables } from "./mobileConnectorSchema";
 import { programTables } from "./programSchema";
 import { financeProjectionTables } from "./financeProjectionSchema";
+import { monadTables } from "./monadSchema";
 import { managedTradingVenue, managedVenueRole } from "./agentValidators";
 
 export default defineSchema({
   ...programTables,
   ...financeProjectionTables,
+  ...monadTables,
   devCreditControls: defineTable({
     key: v.string(), chargingEnabled: v.boolean(), version: v.number(),
     updatedAt: v.number(), updatedBy: v.string(),

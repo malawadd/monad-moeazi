@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "verified",
+  "addresses": {
+    "vault": "0xF7892969D4C2603801B3d14ae40EF5006C5e8C04",
+    "owner": "0xBB66E7bC26d8a81C36a2f900D141a1FA786a98D8",
+    "executor": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "adapterOwner": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "moeaziAmmAdapter": "0x78eFC817CE7f9322397D01D2235592AA8EC10B39",
+    "uniswapV4Adapter": "0x1C96602Ef4516C6021ac69F71D9c85FFD47453f6",
+    "v4Seeder": "0x04Da5099faB951B65ae43425447B0a296CcB0b51"
+  },
+  "codeHashes": {
+    "vault": "0x3a4482e28d85240bfb7a468b6a72273dab26e9d78b7cbde0fb7c708e0b136456",
+    "moeaziAmmAdapter": "0x07e82f7c566c1bfd7a7b02ed11ec2cf2b7addec9f138b004fa3bf3ef4014a54e",
+    "uniswapV4Adapter": "0x332f087fb2b088aae2fffb6bd4f65b3f19caabeaacac78a640b98bd4ac7ed901",
+    "v4Seeder": "0x37830be4e25c4ebc5443828eafcde8df035174c2d06b873f591aba685d730cfb"
+  },
+  "source": {
+    "revision": "8cced39188cbeb18c83d332e6da90c08f897c84d-dirty",
+    "foundry": "v1.8.4",
+    "solc": "0.8.26",
+    "evmVersion": "cancun",
+    "optimizer": true,
+    "optimizerRuns": 10000,
+    "contractSourceHash": "0xe3b5b1801a9923cb958e5261c4e7880ee66c2256f21bd4536d7710f0857c49b0",
+    "uniswapV4Core": "1.0.2",
+    "uniswapV4Periphery": "1.0.3",
+    "uniswapV4CoreIntegrity": "sha512-X15Tm2wWd+USAzEExMbo+g9naA6QN6mPgWm0MzDwRNlOfaNlepfUpSyt9RSrUfEODspwbyWbcLg6t5nwc/e7lg==",
+    "uniswapV4PeripheryIntegrity": "sha512-JxLL0Djv9XcMvI2PatEnWrCrxuEaYNVhHxstndBOP+aJfh1XLg5ec8SDZ0xyoVfg2ElJTvuKpBgnu90bNValsg==",
+    "dependencyLock": "backend/execution-sidecar/package-lock.json"
+  },
+  "deploymentTxHashes": {
+    "status": "verified",
+    "items": [
+      {
+        "contract": "MoeaziTestAmmAdapter",
+        "txHash": "0xe1b8f717bf812891d3ffa0f1af0696bfade236c36124d0c5d0e47a38a93e81d4",
+        "blockNumber": 68302887
+      },
+      {
+        "contract": "UniswapV4NoHookAdapter",
+        "txHash": "0x65b8c502f6ed2b3a10a5431160cb5dc90fd888b8a505e569fc108e1bc1701737",
+        "blockNumber": 68302895
+      },
+      {
+        "contract": "V4NoHookPoolSeeder",
+        "txHash": "0x278df5fa0b5e2b82e081c83eaa24a21bc108adad97f09a03969b6f01bb6e78d4",
+        "blockNumber": 68302897
+      },
+      {
+        "contract": "MoeaziTestnetVault",
+        "txHash": "0x6bbae56f5770b2d8db36cfee67557dab3dc17b8cbaa52f7ba0a877feac79a187",
+        "blockNumber": 68302899
+      }
+    ]
+  },
+  "v4Pool": {
+    "status": "initialized",
+    "manager": "0x451D64ab3b650040d2aE1886602b97ed6eDc643d",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "hooks": "0x0000000000000000000000000000000000000000",
+    "sqrtPriceX96": "25054084147398268684193622782902272",
+    "tick": "253296",
+    "liquidity": "1264908000000"
+  }
+}

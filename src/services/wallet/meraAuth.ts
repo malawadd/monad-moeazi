@@ -9,7 +9,10 @@ import {reactNativeWebAuthnClient} from '@category-labs/mera/react-native-webaut
 import {HDKey} from '@scure/bip32';
 import {entropyToMnemonic, mnemonicToSeedSync} from '@scure/bip39';
 import {wordlist} from '@scure/bip39/wordlists/english.js';
-import {hashMessage, hexToBytes, toHex} from 'viem';
+import {hashMessage, hashTypedData, hexToBytes, toHex} from 'viem';
+import type {Hex, TypedDataDefinition} from 'viem';
+import type {MonadEip1559Transaction} from '../../types/monad';
+import {signPreparedMonadTransaction} from '../monadTransaction';
 
 export const MERA_RP_ID = 'moeazi-monad.kiyan.finance';
 const RP_NAME = 'Moeazi Monad';
@@ -20,6 +23,8 @@ export type PasskeyAction = 'create' | 'signin';
 export type MeraSigningSession = {
   address: string;
   signMessage(message: string): Promise<string>;
+  signEip1559Transaction(chainId: number, transaction: MonadEip1559Transaction): Promise<string>;
+  signTypedData(chainId: number, payload: TypedDataDefinition): Promise<string>;
   end(): void;
 };
 
@@ -44,14 +49,30 @@ export async function openMeraSigningSession(action: PasskeyAction): Promise<Mer
     if (!privateKey) throw new Error('Mera could not derive the account key.');
     session = createSecp256k1SigningSession({privateKey});
     const signingSession = session;
+    const signDigest = async (digest: Hex) => signingSession.signDigest(hexToBytes(digest));
     return {
       address: getEvmAddress(signingSession.publicKey).toLowerCase(),
       async signMessage(message) {
-        const digest = hexToBytes(hashMessage(message));
-        const signature = await signingSession.signDigest(digest);
+        const signature = await signDigest(hashMessage(message));
         const encoded = new Uint8Array(65);
         encoded.set(signature.compact);
         encoded[64] = signature.recovery + 27;
+        return toHex(encoded);
+      },
+      async signEip1559Transaction(chainId, transaction) {
+        return signPreparedMonadTransaction(chainId, transaction, digest => signingSession.signDigest(digest));
+      },
+      async signTypedData(chainId, payload) {
+        if (chainId !== 10143) throw new Error('The mandate is not for Monad Testnet (10143).');
+        const domainChainId = payload.domain?.chainId;
+        if (Number(domainChainId) !== chainId) {
+          throw new Error('The mandate signing domain does not match Monad Testnet.');
+        }
+        const signature = await signDigest(hashTypedData(payload));
+        const encoded = new Uint8Array(65);
+        encoded.set(signature.compact);
+        encoded[64] = signature.recovery + 27;
+        signature.compact.fill(0);
         return toHex(encoded);
       },
       end: () => signingSession.end(),
@@ -65,6 +86,7 @@ export async function openMeraSigningSession(action: PasskeyAction): Promise<Mer
     privateKey?.fill(0);
   }
 }
+
 
 function describePasskeyError(error: unknown): Error {
   const code = typeof error === 'object' && error !== null && 'code' in error

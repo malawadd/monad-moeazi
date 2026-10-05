@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "draft; verify receipts before marking complete",
+  "addresses": {
+    "vault": "0x0000000000000000000000000000000000000000",
+    "owner": "0x0000000000000000000000000000000000000000",
+    "executor": "0x0000000000000000000000000000000000000000",
+    "adapterOwner": "0x0000000000000000000000000000000000000000",
+    "moeaziAmmAdapter": "0x0000000000000000000000000000000000000000",
+    "uniswapV4Adapter": "0x0000000000000000000000000000000000000000",
+    "v4Seeder": "0x0000000000000000000000000000000000000000"
+  },
+  "codeHashes": {
+    "vault": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "moeaziAmmAdapter": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "uniswapV4Adapter": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "v4Seeder": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "deploymentTxHashes": { "status": "pending receipt verification", "items": [] },
+  "source": {
+    "revision": "replace-with-source-revision",
+    "foundry": "v1.8.4",
+    "solc": "0.8.26",
+    "evmVersion": "cancun",
+    "optimizer": true,
+    "optimizerRuns": 10000,
+    "contractSourceHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "uniswapV4Core": "1.0.2",
+    "uniswapV4Periphery": "1.0.3",
+    "uniswapV4CoreIntegrity": "sha512-X15Tm2wWd+USAzEExMbo+g9naA6QN6mPgWm0MzDwRNlOfaNlepfUpSyt9RSrUfEODspwbyWbcLg6t5nwc/e7lg==",
+    "uniswapV4PeripheryIntegrity": "sha512-JxLL0Djv9XcMvI2PatEnWrCrxuEaYNVhHxstndBOP+aJfh1XLg5ec8SDZ0xyoVfg2ElJTvuKpBgnu90bNValsg==",
+    "dependencyLock": "backend/execution-sidecar/package-lock.json"
+  },
+  "v4Pool": {
+    "status": "uninitialized",
+    "manager": "0x451D64ab3b650040d2aE1886602b97ed6eDc643d",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "hooks": "0x0000000000000000000000000000000000000000",
+    "sqrtPriceX96": "0",
+    "tick": "0",
+    "liquidity": "0"
+  }
+}

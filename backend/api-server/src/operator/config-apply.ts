@@ -35,9 +35,10 @@ async function readFileValues(root: string, name: string) {
   if (!metadata.isFile()) throw new Error(`Local configuration ${name} is not a regular file.`);
   return { file, text: await readFile(file, "utf8") };
 }
-function valueFor(entry: ConfigEntry, agents: Record<string, string>, convex: Record<string, string>) {
-  return entry.file === "convex" ? convex[entry.key] ?? entry.defaultValue
-    : agents[entry.key] ?? convex[entry.key] ?? entry.defaultValue;
+function valueFor(entry: ConfigEntry, agents: Record<string, string>, convex: Record<string, string>, local: Record<string, string> = {}) {
+  return entry.file === "local" ? local[entry.key] ?? entry.defaultValue
+    : entry.file === "convex" ? convex[entry.key] ?? entry.defaultValue
+      : agents[entry.key] ?? convex[entry.key] ?? entry.defaultValue;
 }
 
 export async function getConfigState(root = process.cwd()) {
@@ -67,11 +68,12 @@ export async function getConfigState(root = process.cwd()) {
   };
   return { registry: CONFIG_REGISTRY.map((entry) => ({ ...entry,
     currentValue: Object.hasOwn(local, entry.key) ? local[entry.key] : valueFor(entry, agents, convex),
-    configuredValue: valueFor(entry, agents, convex),
+    configuredValue: valueFor(entry, agents, convex, local),
     effectiveValue: effectiveFor(entry),
     runtimeStatus: effectiveFor(entry) === null ? "unavailable / not introspected" : "agent runtime introspection",
-    source: entry.file === "both" ? ".env.agents.monad + local Convex environment"
-      : entry.file === "convex" ? "local Convex environment" : ".env.agents.monad",
+    source: entry.file === "local" ? ".env.local (Hono API)"
+      : entry.file === "both" ? ".env.agents.monad + local Convex environment"
+        : entry.file === "convex" ? "local Convex environment" : ".env.agents.monad",
   })),
   readOnly: Object.entries(CONFIG_READ_ONLY).map(([key, reason]) => ({ key, reason })),
   sourceHash: digest({ local: localFile.text, agents: agentFile.text, convex: convexFile.text }),
@@ -87,7 +89,7 @@ function normalizedUpdates(value: unknown): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, raw] of entries) {
     const entry = CONFIG_REGISTRY.find((item) => item.key === key);
-    if (!entry || entry.editable === false) throw new Error(`${key} is read-only.`);
+    if (!entry || entry.editable === false || entry.file === "local") throw new Error(`${key} is read-only.`);
     if (typeof raw !== "string" || raw.length > 100 || /[\r\n\0]/.test(raw)) throw new Error(`Invalid value for ${key}.`);
     if (entry.kind === "boolean" && raw !== "true" && raw !== "false") throw new Error(`${key} must be true or false.`);
     if (entry.kind === "choice" && !entry.choices?.includes(raw)) throw new Error(`${key} must use a listed option.`);

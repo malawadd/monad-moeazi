@@ -1,0 +1,20 @@
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+cache_path = "cache"
+solc_version = "0.8.26"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10000
+chain_id = 10143
+fs_permissions = [
+  { access = "read", path = "./" },
+  { access = "write", path = "../../.data" }
+]
+libs = ["../../execution-sidecar/node_modules"]
+remappings = [
+  "@uniswap/v4-core/=../../execution-sidecar/node_modules/@uniswap/v4-core/",
+  "@uniswap/v4-periphery/=../../execution-sidecar/node_modules/@uniswap/v4-periphery/"
+]

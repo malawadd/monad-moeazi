@@ -1,44 +1,55 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
-import {useApp} from '../state/AppContext';
-import {colors, spacing, type} from '../theme/tokens';
+import {monadApi} from '../services/monadApi';
+import type {MonadActivityEvent} from '../types/monad';
+import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
-import {haptics} from '../services/haptics';
 
-const filters = ['All', 'AI', 'Trades', 'Money', 'Credits', 'Safety'] as const;
+function eventTime(value: string) {
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toLocaleString() : 'Time not returned';
+}
 
 export function ActivityScreen() {
-  const navigation = useNavigation<any>(); const {activity, refreshActivity, refreshHome, home, mode} = useApp(); const [filter, setFilter] = useState<(typeof filters)[number]>('All'); const [refreshing, setRefreshing] = useState(false); const [error, setError] = useState('');
-  const refreshRef = useRef(refreshActivity); refreshRef.current = refreshActivity;
-  const homeRef = useRef(refreshHome); homeRef.current = refreshHome;
-  useFocusEffect(useCallback(() => {
-    if (mode !== 'authenticated') return;
-    refreshRef.current().catch(() => setError('Could not load the latest activity. Pull down to retry.'));
-    homeRef.current().catch(() => undefined);
-  }, [mode]));
-  const rows = filter === 'All' ? activity : activity.filter(item => item.category === filter);
-  const refresh = async () => { setRefreshing(true); setError(''); try { await refreshActivity(); } catch (reason) { haptics.reject(); setError(reason instanceof Error ? reason.message : 'Could not refresh activity.'); } finally { setRefreshing(false); } };
-  return <Screen refreshing={refreshing} onRefresh={refresh}>
-    <PageHeader kicker="Activity" title="What happened" copy="One readable timeline for AI work, trades, money, credits, and safety." />
-    {home.analysisProviderStatus === 'unavailable' ? <Notice live tone="rose" title="Market checks cannot finish right now" message="Moeazi's analysis provider is unavailable. Your Autopilot schedule is still on; this status does not confirm any trade." /> : null}
-    <View style={styles.filters}>{filters.map(item => <Pressable accessibilityRole="button" accessibilityState={{selected: filter === item}} key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.selected]}><Text style={styles.filterText}>{item}</Text></Pressable>)}</View>
-    {error ? <Notice live tone="rose" title="Activity is not current" message={error} actionLabel="Retry" onAction={refresh} /> : null}
-    {rows.length === 0 ? <Card><Text style={s.strong}>{filter === 'All' ? 'No activity recorded yet.' : `No ${filter.toLowerCase()} events recorded yet.`}</Text><Text style={s.body}>When Moeazi checks a market, reserves credits, moves money, or confirms a trade, the recorded steps appear here. Pull down to refresh.</Text></Card> : null}
-    <View style={styles.timeline}>{rows.map(item => <Pressable accessibilityRole="button" accessibilityLabel={`Open activity: ${item.title}`} key={item.id} onPress={() => navigation.navigate('ActivityDetail', {itemId: item.id})} style={({pressed}) => [styles.timelineRow, pressed && styles.timelinePressed]}><View style={styles.rail}><View style={styles.marker} /></View><View style={styles.timelineBody}><View style={s.row}><StatusBadge label={item.category} tone={item.category === 'Safety' ? 'rose' : item.category === 'Money' ? 'mint' : 'sky'} /><Text style={s.meta}>{item.timeLabel}</Text></View><Text style={s.subheading}>{item.title}</Text><Text style={s.body}>{item.summary}</Text><Text style={s.strong}>{item.result}</Text></View></Pressable>)}</View>
+  const navigation = useNavigation<any>();
+  const [events, setEvents] = useState<MonadActivityEvent[]>([]);
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true); setError('');
+    try { setEvents(await monadApi.activity()); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Activity could not be loaded.'); }
+    finally { setRefreshing(false); }
+  }, []);
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+
+  return <Screen refreshing={refreshing} onRefresh={() => { void refresh(); }}>
+    <PageHeader kicker="Activity · on-chain and service events" title="What happened" copy="Events shown here come from the authenticated Monad activity endpoint. A hash appears only when the service reports one." />
+    {error ? <Notice live tone="rose" title="Activity unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    {!events.length && !refreshing && !error ? <Card><Text style={s.strong}>The service returned no activity events.</Text><Text style={s.body}>New events appear after the backend records an operation, receipt, or agent status change.</Text></Card> : null}
+    <View style={styles.timeline}>{events.map(event => <Pressable accessibilityRole="button" accessibilityLabel={`Open event: ${event.title}`} key={event.id} onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id})} style={({pressed}) => [styles.row, pressed && styles.pressed]}>
+      <View style={styles.rail}><View style={styles.marker} /></View>
+      <View style={styles.copy}>
+        <View style={styles.metaRow}><StatusBadge label={event.kind} tone={event.fundsMoved ? 'mint' : 'sky'} /><Text style={s.meta}>{eventTime(event.occurredAt)}</Text></View>
+        <Text style={s.subheading}>{event.title}</Text>
+        <Text style={s.body}>{event.summary}</Text>
+        <Text style={s.meta}>Status · {event.status}</Text>
+        {event.amount && event.asset ? <Text style={s.strong}>{event.amount} {event.asset}</Text> : null}
+        {event.transactionHash ? <Text selectable style={s.meta}>Tx · {event.transactionHash}</Text> : null}
+      </View>
+    </Pressable>)}</View>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  filters: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm},
-  filter: {minHeight: 48, justifyContent: 'center', paddingHorizontal: 13, borderWidth: 3, borderColor: colors.ink, backgroundColor: colors.paper},
-  selected: {backgroundColor: colors.pink},
-  filterText: {...type.meta, color: colors.ink, fontSize: 11, textTransform: 'uppercase'},
   timeline: {borderTopWidth: 3, borderColor: colors.ink},
-  timelineRow: {minHeight: 108, flexDirection: 'row', backgroundColor: colors.paper},
-  timelinePressed: {backgroundColor: colors.cream},
+  row: {minHeight: 112, flexDirection: 'row', backgroundColor: colors.paper},
+  pressed: {backgroundColor: colors.cream},
   rail: {width: 28, alignItems: 'center', borderRightWidth: 3, borderColor: colors.ink},
   marker: {width: 12, height: 12, marginTop: 21, marginRight: -15, backgroundColor: colors.yellow, borderWidth: 3, borderColor: colors.ink},
-  timelineBody: {flex: 1, gap: spacing.sm, padding: spacing.md, borderBottomWidth: 2, borderColor: colors.ink},
+  copy: {flex: 1, gap: spacing.sm, padding: spacing.md, borderBottomWidth: 2, borderColor: colors.ink},
+  metaRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap'},
 });

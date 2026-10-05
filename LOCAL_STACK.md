@@ -2,8 +2,9 @@
 
 This folder is an independent working copy for Monad development. The mobile
 app is at the repository root and the copied backend is in `backend/`. Mobile
-sign-in currently uses Mera passkeys; account funding, trading, activation, and
-other chain actions remain paused for the later Monad migration.
+sign-in uses Mera passkeys. Owner-reviewed sends, wrap/unwrap, vault custody,
+and USDC/WMON swaps run on Monad Testnet (`10143`) when their local testnet
+gates are enabled. Automated agents remain inactive.
 
 ## Start and stop
 
@@ -21,8 +22,8 @@ starts the `moeazi-monad` Docker project, configures and deploys self-hosted loc
 Convex, then starts the Hono API and lightweight operator console. The API is
 a separate TypeScript process using Hono's Node adapter; no Next.js server runs
 in the active stack. Mobile sign-in does not require a Magic key. Provider keys
-remain blank. Funded provider, venue setup, purchase, sponsorship, and live
-execution features stay disabled. Manual Guard and Lite Mode stay on.
+remain blank. Fiat purchase, mainnet venues, and live agent execution stay
+disabled. Manual Guard and Lite Mode stay on.
 
 Open a second terminal at the repository root, then run the x86_64 emulator preview:
 
@@ -65,6 +66,40 @@ The generated backend files and `android/local.properties` are git-ignored. To
 refresh local values, run `backend/scripts/setup-monad-local.ps1`. The app uses
 `API_BASE_URL`; no Magic key is needed. Never copy provider, wallet, JWT, worker,
 or database secrets from the Arbitrum deployment.
+
+### Monad Testnet operations
+
+The [verified deployment manifest](backend/contracts/monad-testnet/deployments/manifest.testnet.json)
+pins the owner vault, both swap adapters, the v4 seeder, chain ID, code hashes,
+and deployment receipts. The [acceptance record](docs/MONAD_TESTNET_ACCEPTANCE.md)
+and [live receipts](docs/MONAD_TESTNET_RECEIPTS.md) cover funding, owner
+transactions, both venues, custody, and finality. The operator key remains in
+ignored `backend/.data`; never add it or generated environment files to Git.
+
+`backend/.env.local` holds three distinct local gates, all generated as `false`:
+
+- `MONAD_TESTNET_ACTIONS_ENABLED` allows reviewed owner operation preparation.
+- `MONAD_TESTNET_BROADCAST_ENABLED` allows broadcasting exact Mera-signed owner
+  transactions after API verification.
+- `MONAD_TESTNET_OPERATOR_TRADES_ENABLED` separately allows the local operator
+  bridge to prepare and submit capped vault trades. It is `false` after the
+  testnet acceptance run.
+
+The local Android acceptance setup has the first two gates enabled so a tester
+can use the app. A new stack setup starts with them disabled. The managed vault
+is currently stopped onchain with zero USDC and WMON balances; its old signed
+mandates cannot trade. To use it again, the Mera owner must explicitly resume
+it and sign a fresh mandate. Each mandate fixes one input direction and caps;
+USDC→WMON and WMON→USDC require separate reviews and signatures. Vault quotes
+on mobile are read-only; only the local operator bridge can trigger vault test
+trades. Wallet quotes lead to a fresh Mera transaction signature.
+
+The bridge-only Hono routes under `/api/operator/monad/vault-trades` list active
+mandates, obtain a fresh venue quote, prepare a capped order, broadcast its
+exact signed payload, and reconcile status. They require the existing private
+operator console bridge identity. A fresh quote expires quickly; prepare and
+broadcast before expiry, then check the same operation ID instead of preparing
+a second trade after any uncertain response.
 
 ### Mera passkey host
 

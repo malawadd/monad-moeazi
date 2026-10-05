@@ -1,20 +1,55 @@
 import React from 'react';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {StyleSheet, Text, View} from 'react-native';
 import {AccountScreen} from '../screens/AccountScreen';
+import {ActivityDetailScreen} from '../screens/ActivityDetailScreen';
+import {ActivityScreen} from '../screens/ActivityScreen';
+import {AgentScreen} from '../screens/AgentScreen';
+import {AgentSettingsScreen} from '../screens/AgentSettingsScreen';
+import {ManagedVaultScreen} from '../screens/ManagedVaultScreen';
+import {MarketsScreen} from '../screens/MarketsScreen';
+import {MonadFundingScreen} from '../screens/MonadFundingScreen';
+import {MonadHomeScreen} from '../screens/MonadHomeScreen';
+import {OperationReviewScreen} from '../screens/OperationReviewScreen';
+import {SendScreen} from '../screens/SendScreen';
+import {TradeReviewScreen} from '../screens/TradeReviewScreen';
+import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
+import {WrapScreen} from '../screens/WrapScreen';
 import {useApp} from '../state/AppContext';
 import {colors, type} from '../theme/tokens';
+import {TypographicTabBar} from './TypographicTabBar';
 
 const Stack = createNativeStackNavigator();
+const Tabs = createBottomTabNavigator();
+
+function AuthenticatedTabs() {
+  return <Tabs.Navigator initialRouteName="Home" screenOptions={{headerShown: false}} tabBar={props => <TypographicTabBar {...props} />}>
+    <Tabs.Screen name="Home" component={MonadHomeScreen} />
+    <Tabs.Screen name="Markets" component={MarketsScreen} />
+    <Tabs.Screen name="Agent" component={AgentScreen} />
+    <Tabs.Screen name="Activity" component={ActivityScreen} />
+    <Tabs.Screen name="Account" component={AccountScreen} />
+  </Tabs.Navigator>;
+}
 
 export function RootNavigator() {
   const {mode} = useApp();
   if (mode === 'loading') return <View style={styles.loading}><Text style={styles.loadingText}>OPENING MOEAZI</Text></View>;
   return <Stack.Navigator screenOptions={{headerShown: false}}>
-    {mode === 'authenticated'
-      ? <Stack.Screen name="Account" component={AccountScreen} />
-      : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
+    {mode === 'authenticated' ? <>
+      <Stack.Screen name="Main" component={AuthenticatedTabs} />
+      <Stack.Screen name="Funding" component={MonadFundingScreen} />
+      <Stack.Screen name="Send" component={SendScreen} />
+      <Stack.Screen name="OperationReview" component={OperationReviewScreen} />
+      <Stack.Screen name="Wrap" component={WrapScreen} />
+      <Stack.Screen name="ManagedVault" component={ManagedVaultScreen} />
+      <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
+      <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
+      <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+      <Stack.Screen name="AgentSettings" component={AgentSettingsScreen} />
+    </> : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
   </Stack.Navigator>;
 }
 

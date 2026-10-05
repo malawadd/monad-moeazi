@@ -1,6 +1,6 @@
 export type ConfigKind = "boolean" | "choice" | "number" | "text";
 export type ConfigEntry = {
-  key: string; label: string; kind: ConfigKind; file: "agents" | "convex" | "both"; editable?: boolean;
+  key: string; label: string; kind: ConfigKind; file: "agents" | "convex" | "both" | "local"; editable?: boolean;
   defaultValue: string; choices?: string[]; minimum?: number; maximum?: number;
   services: string[]; impact: string; dependsOn: string[]; safetyGate?: string;
 };
@@ -61,6 +61,9 @@ export const CONFIG_REGISTRY: ConfigEntry[] = [
   locked("PROGRAM_RESEARCH_SUBJECTS", "Program research subjects", "moeazi:operator:local", "Research identity allowlists are fixed by local setup.", "convex"),
   locked("PROGRAM_RELEASE_SUBJECTS", "Program release subjects", "moeazi:operator:local", "Release identity allowlists are fixed by local setup.", "convex"),
   locked("MONAD_LOCAL_OPERATOR_BOOTSTRAP_ENABLED", "Local operator bootstrap", "true", "Operator bootstrap authority is fixed by local setup.", "convex", ["convex"], "boolean"),
+  locked("MONAD_TESTNET_ACTIONS_ENABLED", "Monad Testnet actions", "false", "Opens local owner-reviewed Monad Testnet action preparation; controlled only in the ignored Hono environment.", "local", ["api"], "boolean"),
+  locked("MONAD_TESTNET_BROADCAST_ENABLED", "Monad Testnet broadcast", "false", "Opens local Monad Testnet broadcast after exact transaction review; controlled only in the ignored Hono environment.", "local", ["api"], "boolean"),
+  locked("MONAD_TESTNET_OPERATOR_TRADES_ENABLED", "Monad Testnet operator trades", "false", "Opens the separate operator-only managed-vault trade gate; controlled only in the ignored Hono environment.", "local", ["api"], "boolean"),
   locked("TEST_CENTER_OPERATOR_SUBJECTS", "Test Center operator and fixture subjects", "moeazi:operator:local,moeazi:fixture:manual-sequence", "The fixed operator identity reads the registry; the isolated fixture identity runs only reviewed fixtures. No customer subject is allowed.", "agents"),
   locked("AGENT_TEST_CENTER_OPERATOR_SUBJECTS", "Agent Test Center subjects", "moeazi:operator:local,moeazi:fixture:manual-sequence", "The local setup limits agent Test Center tools to the operator and isolated fixture identity.", "agents"),
   locked("EVALUATION_OPERATOR_SUBJECTS", "Evaluation operator subjects", "", "Evaluation identity allowlists are fixed by local setup.", "agents"),

@@ -72,6 +72,9 @@ yarn-error.log
 /.bundle/
 /.ignore/
 /.codex-*
+/backend/contracts/monad-testnet/cache/
+/backend/contracts/monad-testnet/out/
+/backend/contracts/monad-testnet/broadcast/
 
 # Yarn
 .yarn/*

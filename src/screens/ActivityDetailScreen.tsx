@@ -1,18 +1,41 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {Text} from 'react-native';
-import {useRoute} from '@react-navigation/native';
-import {Card, DataRow, FlowScreen, PageHeader} from '../components/Ui';
-import {useApp} from '../state/AppContext';
+import {useFocusEffect, useRoute} from '@react-navigation/native';
+import {Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader} from '../components/Ui';
+import {monadApi} from '../services/monadApi';
+import type {MonadActivityEvent} from '../types/monad';
 import {screenStyles as s} from '../theme/screenStyles';
 
 export function ActivityDetailScreen() {
-  const route = useRoute<any>(); const {activity} = useApp(); const requestedId = route.params?.itemId; const item = requestedId ? activity.find(row => row.id === requestedId) : activity[0];
-  if (!item) return <FlowScreen><PageHeader kicker="Activity" title="Activity unavailable" copy="Reload authenticated state before opening this notification detail." /></FlowScreen>;
+  const route = useRoute<any>();
+  const itemId = route.params?.itemId;
+  const [event, setEvent] = useState<MonadActivityEvent | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const events = await monadApi.activity();
+      setEvent(events.find(item => item.id === itemId) ?? null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'This event could not be loaded.'); }
+    finally { setLoading(false); }
+  }, [itemId]);
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+
+  if (loading) return <FlowScreen><PageHeader kicker="Activity" title="Loading event" /><LoadingBlock label="Checking recorded event" /></FlowScreen>;
+  if (error) return <FlowScreen><PageHeader kicker="Activity" title="Event unavailable" /><Notice live tone="rose" title="Could not load event" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /></FlowScreen>;
+  if (!event) return <FlowScreen><PageHeader kicker="Activity" title="Event not found" copy="The activity service did not return this event." /></FlowScreen>;
+
   return <FlowScreen>
-    <PageHeader kicker={item.category} title={item.title} copy={item.summary} />
-    <Card><DataRow label="What was the result?" value={item.result} /><DataRow label="Did funds move?" value={item.fundsMoved ? 'Yes' : 'No'} /><DataRow label="Do you need to act?" value={item.requiresAction ? 'Yes' : 'No'} /><DataRow label="When?" value={item.timeLabel} /></Card>
-    <Card><Text style={s.strong}>Recorded facts</Text>{item.details?.length
-      ? item.details.map((entry, index) => <DataRow key={`${entry.label}:${index}`} label={entry.label} value={entry.value} />)
-      : <Text style={s.body}>No further verified detail was recorded for this event.</Text>}</Card>
+    <PageHeader kicker={event.kind} title={event.title} copy={event.summary} />
+    <Card>
+      <DataRow label="Status" value={event.status} />
+      <DataRow label="Funds moved" value={event.fundsMoved ? 'Yes · recorded by service' : 'No successful movement recorded'} />
+      <DataRow label="When" value={new Date(event.occurredAt).toLocaleString()} />
+      {event.amount && event.asset ? <DataRow label="Amount" value={`${event.amount} ${event.asset}`} /> : null}
+      {event.blockNumber !== undefined && event.blockNumber !== null ? <DataRow label="Block" value={String(event.blockNumber)} /> : null}
+      {event.transactionHash ? <DataRow label="Transaction hash" value={event.transactionHash} /> : <Text style={s.body}>No transaction hash was returned for this event.</Text>}
+    </Card>
+    {event.details?.length ? <Card><Text style={s.strong}>Recorded facts</Text>{event.details.map((detail, index) => <DataRow key={`${detail.label}:${index}`} label={detail.label} value={detail.value} />)}</Card> : null}
   </FlowScreen>;
 }

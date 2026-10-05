@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moeazi Monad testnet contract deployment manifest",
+  "type": "object",
+  "required": ["schemaVersion", "network", "chainId", "deploymentStatus", "addresses", "codeHashes", "deploymentTxHashes", "source", "v4Pool"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "network": { "const": "monad-testnet" },
+    "chainId": { "const": 10143 },
+    "deploymentStatus": { "enum": ["draft; verify receipts before marking complete", "verified"] },
+    "addresses": {
+      "type": "object",
+      "required": ["vault", "owner", "executor", "adapterOwner", "moeaziAmmAdapter", "uniswapV4Adapter", "v4Seeder"],
+      "properties": {
+        "vault": { "$ref": "#/$defs/address" }, "owner": { "$ref": "#/$defs/address" },
+        "executor": { "$ref": "#/$defs/address" }, "adapterOwner": { "$ref": "#/$defs/address" },
+        "moeaziAmmAdapter": { "$ref": "#/$defs/address" }, "uniswapV4Adapter": { "$ref": "#/$defs/address" },
+        "v4Seeder": { "$ref": "#/$defs/address" }
+      },
+      "additionalProperties": false
+    },
+    "codeHashes": {
+      "type": "object",
+      "required": ["vault", "moeaziAmmAdapter", "uniswapV4Adapter", "v4Seeder"],
+      "properties": {
+        "vault": { "$ref": "#/$defs/hash" }, "moeaziAmmAdapter": { "$ref": "#/$defs/hash" },
+        "uniswapV4Adapter": { "$ref": "#/$defs/hash" }, "v4Seeder": { "$ref": "#/$defs/hash" }
+      },
+      "additionalProperties": false
+    },
+    "deploymentTxHashes": {
+      "type": "object",
+      "required": ["status", "items"],
+      "properties": {
+        "status": { "enum": ["pending receipt verification", "verified"] },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/transaction" } }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["revision", "foundry", "solc", "evmVersion", "optimizer", "optimizerRuns", "contractSourceHash", "uniswapV4Core", "uniswapV4Periphery", "uniswapV4CoreIntegrity", "uniswapV4PeripheryIntegrity", "dependencyLock"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1 }, "foundry": { "const": "v1.8.4" },
+        "solc": { "const": "0.8.26" }, "evmVersion": { "const": "cancun" },
+        "optimizer": { "const": true }, "optimizerRuns": { "const": 10000 },
+        "contractSourceHash": { "$ref": "#/$defs/hash" }, "uniswapV4Core": { "const": "1.0.2" },
+        "uniswapV4Periphery": { "const": "1.0.3" },
+        "uniswapV4CoreIntegrity": { "const": "sha512-X15Tm2wWd+USAzEExMbo+g9naA6QN6mPgWm0MzDwRNlOfaNlepfUpSyt9RSrUfEODspwbyWbcLg6t5nwc/e7lg==" },
+        "uniswapV4PeripheryIntegrity": { "const": "sha512-JxLL0Djv9XcMvI2PatEnWrCrxuEaYNVhHxstndBOP+aJfh1XLg5ec8SDZ0xyoVfg2ElJTvuKpBgnu90bNValsg==" },
+        "dependencyLock": { "const": "backend/execution-sidecar/package-lock.json" }
+      },
+      "additionalProperties": false
+    },
+    "v4Pool": {
+      "type": "object",
+      "required": ["status", "manager", "fee", "tickSpacing", "hooks", "sqrtPriceX96", "tick", "liquidity"],
+      "properties": {
+        "status": { "enum": ["uninitialized", "initialized"] }, "manager": { "$ref": "#/$defs/address" },
+        "fee": { "const": 3000 }, "tickSpacing": { "const": 60 }, "hooks": { "$ref": "#/$defs/address" },
+        "sqrtPriceX96": { "type": "string", "pattern": "^[0-9]+$" },
+        "tick": { "type": "string", "pattern": "^-?[0-9]+$" },
+        "liquidity": { "type": "string", "pattern": "^[0-9]+$" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "transaction": {
+      "type": "object", "required": ["contract", "txHash", "blockNumber"],
+      "properties": { "contract": { "type": "string" }, "txHash": { "$ref": "#/$defs/hash" }, "blockNumber": { "type": "integer", "minimum": 0 } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

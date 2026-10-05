@@ -19,7 +19,7 @@ export function AccountScreen() {
     </Panel>
     <Panel tone="yellow">
       <Text style={s.subheading}>This release</Text>
-      <Text style={s.body}>Account sign-in is ready. Funding and trading will be added with the Monad migration.</Text>
+      <Text style={s.body}>This Mera address is used on Monad Testnet (chain 10143). Signing requests open short-lived sessions; private keys are not stored by Moeazi.</Text>
     </Panel>
     <Button label="Sign out on this device" variant="secondary" loading={busy} onPress={() => {void signOut();}} />
   </Screen>;

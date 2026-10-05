@@ -1,20 +1,35 @@
-import React, {useState} from 'react';
-import {Text} from 'react-native';
-import {Button, Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
-import {previewLimits} from '../state/AppContext';
-import {colors} from '../theme/tokens';
+import React, {useCallback, useState} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
+import {Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
+import {monadApi} from '../services/monadApi';
+import type {MonadAgentSnapshot} from '../types/monad';
 import {screenStyles as s} from '../theme/screenStyles';
-import {CalmReveal} from '../components/Motion';
 
 export function AgentSettingsScreen() {
-  const [advanced, setAdvanced] = useState(false);
-  const [message, setMessage] = useState('');
+  const [agent, setAgent] = useState<MonadAgentSnapshot | null>(null);
+  const [error, setError] = useState('');
+  const refresh = useCallback(async () => {
+    setError('');
+    try {
+      const snapshot = await monadApi.agent();
+      if (snapshot.enabled !== false) throw new Error('Agent settings are not in the expected disabled state.');
+      setAgent(snapshot);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent setup status could not be loaded.'); }
+  }, []);
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   return <FlowScreen>
-    <PageHeader kicker="Agent settings" title="Limits you control" copy="Values shown here are returned by the server. The phone never invents safe limits." />
-    <Card tint={colors.lilacTint}><DataRow label="Managed amount" value={`$${previewLimits.managedAmountUsd}`} /><DataRow label="Maximum position" value={`$${previewLimits.maxPositionUsd}`} /><DataRow label="Daily-loss stop" value={previewLimits.dailyLossStopPercent} /><DataRow label="Allowed markets" value={previewLimits.allowedMarkets.join(', ')} /><DataRow label="Cadence" value={previewLimits.cadenceLabel} /></Card>
-    {message ? <Notice live tone="lilac" title="Limit changes are not available yet" message={message} /> : null}
-    <Button label="Request a limit change" variant="secondary" onPress={() => setMessage('The authenticated change-request endpoint must be configured before the phone can submit new limits.')} />
-    <Button label={advanced ? 'Hide advanced' : 'Show advanced'} variant="secondary" onPress={() => setAdvanced(!advanced)} />
-    {advanced ? <CalmReveal><Card><Text style={s.strong}>Advanced models and providers</Text><Text style={s.body}>Provider routing, model configuration, bring-your-own keys, and structured traces live here. Wallet keys and hidden chain-of-thought are never available to models.</Text></Card></CalmReveal> : null}
+    <PageHeader kicker="Agent settings · read only" title="Execution stays off" copy="Manual Guard and Lite Mode remain enabled. This screen has no activation or configuration controls." />
+    {error ? <Notice live tone="orange" title="Settings unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    {agent ? <Card>
+      <DataRow label="Agent state" value={agent.state} />
+      <DataRow label="Enabled" value="No" />
+      <DataRow label="Provider keys" value="Not configured in mobile" />
+      <DataRow label="Live execution" value="Disabled" />
+      <DataRow label="Observed at" value={agent.observedAt ? new Date(agent.observedAt).toLocaleString() : 'Not returned'} />
+      <DataRow label="Current blocker count" value={String(agent.blockers.length)} />
+      <PageHeader kicker="Service summary" title="Status" copy={agent.summary} />
+    </Card> : null}
+    <Card><PageHeader kicker="Safety" title="Manual Guard + Lite Mode" copy="Funded setup, provider keys, mainnet venue setup, and live execution remain disabled by default." /></Card>
+    {agent?.blockers.map((blocker, index) => <Card key={`${index}:${blocker}`}><PageHeader kicker={`Blocker ${index + 1}`} title={blocker} /></Card>)}
   </FlowScreen>;
 }

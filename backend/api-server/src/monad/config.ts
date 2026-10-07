@@ -23,6 +23,14 @@ export function assertMonadBroadcastEnabled(operator = false) {
   }
 }
 
+export function assertMonadAutonomyEnabled(requireBroadcast = false) {
+  assertMonadActionsEnabled();
+  if (!enabled("MONAD_TESTNET_AUTONOMY_ENABLED")) {
+    throw new MonadApiError("Monad Testnet autonomy is disabled by its separate local testnet gate.", 503, "autonomy_disabled");
+  }
+  if (requireBroadcast) assertMonadBroadcastEnabled(true);
+}
+
 export function rpcUrl() {
   const value = process.env.MONAD_TESTNET_RPC_URL?.trim() || MONAD_TESTNET_RPC_URL;
   let url: URL;
@@ -34,6 +42,8 @@ export function rpcUrl() {
 }
 
 export function configuredVault() { return configuredAddress("MONAD_TESTNET_VAULT_ADDRESS"); }
+
+export function configuredAutonomyFactory() { return configuredAddress("MONAD_TESTNET_AUTONOMY_FACTORY_ADDRESS"); }
 
 export function configuredAdapter(venue: MonadVenue): string | null {
   const name = venue === "uniswap_v4_testnet"

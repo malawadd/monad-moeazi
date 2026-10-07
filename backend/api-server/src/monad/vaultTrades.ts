@@ -23,7 +23,7 @@ const parseJson = (value: unknown) => {
   catch { return {}; }
 };
 
-async function operatorWallet() {
+export async function operatorWallet() {
   const configured = process.env.MONAD_TESTNET_OPERATOR_KEY_PATH?.trim() || ".data/testnet-operator.json";
   const keyPath = path.resolve(backendRoot, configured);
   const dataPath = path.resolve(backendRoot, ".data");

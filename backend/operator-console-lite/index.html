@@ -6,12 +6,14 @@
     <title>Moeazi · Local operations</title>
     <link rel="stylesheet" href="/app.css">
     <link rel="stylesheet" href="/manual-sequence.css">
+    <link rel="stylesheet" href="/autonomy.css">
     <script src="/operator-auth.js" defer></script>
     <script src="/app.js" defer></script>
     <script src="/programs.js" defer></script>
     <script src="/dev-controls.js" defer></script>
     <script src="/manual-sequence.js" defer></script>
     <script src="/console-pages.js" defer></script>
+    <script src="/autonomy-controls.js" defer></script>
   </head>
   <body>
     <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
@@ -36,6 +38,7 @@
         <a href="#health">Health &amp; monitoring</a><a href="#workspace-page">Programs &amp; teams</a>
         <a href="#testing-page">Experiments &amp; Test Center</a><a href="#credits-title">Credits &amp; providers</a>
         <a href="#config-page">Configuration</a><a href="#manual-sequence-page">Manual sequence</a>
+        <a href="#autonomy-page">Autonomy testnet</a>
       </nav>
 
       <section class="intro">
@@ -85,6 +88,38 @@
         <div class="panel-head"><div><p class="eyebrow">REVIEW BEFORE INVOCATION</p><h2 id="sequence-title">Manual sequence</h2></div><span class="mono">CONFIRMATION REQUIRED</span></div>
         <p class="section-lead">Build and preview a sequence of reviewed backend functions. Nothing runs until you confirm its preview.</p>
         <div id="manual-sequence-root"></div>
+      </section>
+
+      <section class="workspace" id="autonomy-page" aria-labelledby="autonomy-title">
+        <div class="panel-head"><div><p class="eyebrow">MONAD TESTNET · FUNDED SWAPS</p><h2 id="autonomy-title">Autonomy pool controls</h2></div>
+          <div class="head-actions"><span id="autonomy-pool-state" role="status">Not loaded</span><button id="autonomy-refresh-pools" type="button">Refresh pools</button></div></div>
+        <div class="autonomy-warning"><strong>TESTNET ONLY · SWAPS MOVE POOL PRICES</strong>
+          <span>Each control submits real Monad Testnet transactions using operator inventory. Test assets can lose value or become illiquid. MON is used for gas. Never use this panel for mainnet funds.</span>
+          <span id="autonomy-observation" class="mono">Pool observation not loaded.</span></div>
+        <div id="autonomy-pools" class="autonomy-pools" aria-live="polite"><p class="empty-state">Loading pool state…</p></div>
+
+        <div class="autonomy-controls">
+          <form id="autonomy-price-form" class="autonomy-form">
+            <p class="eyebrow">ONE FUNDED PRICE MOVE</p><h3>Move one pool</h3>
+            <label for="autonomy-price-token">Approved pool</label><select id="autonomy-price-token" required disabled><option value="">Load pools first</option></select>
+            <label for="autonomy-price-direction">Direction</label><select id="autonomy-price-direction"><option value="up">Rise · spend USDC</option><option value="down">Fall · sell token</option></select>
+            <label for="autonomy-price-amount">Swap input amount in base units</label><input id="autonomy-price-amount" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" placeholder="USDC has 6 decimals; token uses raw units">
+            <p id="autonomy-price-hint" class="autonomy-hint">Up uses USDC base units. The backend checks inventory and pool liquidity.</p>
+            <button id="autonomy-price-submit" type="submit" disabled>Review price move</button>
+            <div id="autonomy-price-result" class="autonomy-result" role="status" aria-live="polite">No move submitted.</div>
+          </form>
+          <form id="autonomy-scenario-form" class="autonomy-form">
+            <p class="eyebrow">REPEATABLE TEST SCENARIO</p><h3>Run a price path</h3>
+            <label for="autonomy-scenario-token">Approved pool</label><select id="autonomy-scenario-token" required disabled><option value="">Load pools first</option></select>
+            <label for="autonomy-scenario-direction">Scenario</label><select id="autonomy-scenario-direction"><option value="rising">Rising · buy USDC</option><option value="flat">Flat · alternating funded swaps</option><option value="falling">Falling · sell token</option></select>
+            <label for="autonomy-scenario-steps">Steps <span id="autonomy-step-limit">1–20 swaps</span></label><input id="autonomy-scenario-steps" type="number" min="1" max="20" step="1" value="3" required>
+            <label for="autonomy-scenario-interval">Interval between swaps (seconds)</label><input id="autonomy-scenario-interval" type="number" min="15" max="120" step="1" value="15" required>
+            <label for="autonomy-scenario-amount">Swap input in base units</label><input id="autonomy-scenario-amount" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" placeholder="Set by scenario direction">
+            <p id="autonomy-scenario-hint" class="autonomy-hint">Rising uses USDC base units. Backend checks live operator inventory and liquidity.</p>
+            <button id="autonomy-scenario-submit" type="submit" disabled>Review scenario</button>
+            <div id="autonomy-scenario-result" class="autonomy-result" role="status" aria-live="polite">No scenario submitted.</div>
+          </form>
+        </div>
       </section>
 
       <section class="workspace" aria-labelledby="dev-title">

@@ -37,6 +37,33 @@ export async function requireMonadOperator(ctx: any) {
   return identity;
 }
 
+export async function reserveAutonomyOperatorLease(ctx: any, input: {
+  executorAddress: string; orderId: string; workflow: "autonomy" | "scenario"; expiresAt: number;
+}) {
+  const key = "monad-autonomy-executor";
+  const lease = await ctx.db.query("monadAutonomyOperatorLease")
+    .withIndex("by_key", (q: any) => q.eq("key", key)).first();
+  const now = Date.now();
+  const unresolved = lease && ["prepared", "broadcasting", "submitted", "uncertain"].includes(lease.status);
+  if (unresolved && lease.orderId !== input.orderId) {
+    if (lease.status === "prepared" && lease.expiresAt !== undefined && lease.expiresAt <= now) {
+      await ctx.db.patch(lease._id, { status: "failed", updatedAt: now });
+    } else {
+      throw new Error("Another Monad autonomy operator transaction is unresolved; reconcile it before preparing another.");
+    }
+  }
+  const value = { key, executorAddress: input.executorAddress.toLowerCase(), orderId: input.orderId,
+    workflow: input.workflow, status: "prepared", expiresAt: input.expiresAt, updatedAt: now };
+  if (lease) await ctx.db.patch(lease._id, value);
+  else await ctx.db.insert("monadAutonomyOperatorLease", { ...value, createdAt: now });
+}
+
+export async function updateAutonomyOperatorLease(ctx: any, orderId: string, status: string) {
+  const lease = await ctx.db.query("monadAutonomyOperatorLease")
+    .withIndex("by_key", (q: any) => q.eq("key", "monad-autonomy-executor")).first();
+  if (lease?.orderId === orderId) await ctx.db.patch(lease._id, { status, updatedAt: Date.now() });
+}
+
 export async function appendMonadActivity(ctx: any, input: {
   userId: any; ownerAddress: string; activityId: string; kind: string; status: string;
   summary: string; operationId?: string; mandateId?: string; txHash?: string; dataJson?: string;

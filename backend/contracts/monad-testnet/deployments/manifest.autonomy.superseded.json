@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "superseded",
+  "verified": true,
+  "enrollmentEnabled": false,
+  "addresses": {
+    "administrator": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "executor": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "factory": "0x53A901bB622CEF1862725275cA2bE52259b43A7f",
+    "tokens": [
+      {
+        "index": 0,
+        "name": "Moeazi Alpha",
+        "symbol": "MZA",
+        "address": "0x6066304d0F155997fEf48f9e889727251e413F76",
+        "pool": "0x231A6D5d9A932Fbc59B00DCEEdFf4dAd22a4669D"
+      },
+      {
+        "index": 1,
+        "name": "Moeazi Beta",
+        "symbol": "MZB",
+        "address": "0x0D338e26AC7f45f515095D6948a366f9eA9249d8",
+        "pool": "0xF1A074bb11e9131B4f006265EB01fD46e6a9Ef0c"
+      },
+      {
+        "index": 2,
+        "name": "Moeazi Gamma",
+        "symbol": "MZG",
+        "address": "0xf8c903C04492C0e8e85F9d9D55984590429b2107",
+        "pool": "0x9DfB4156525774A1B69c4835F6748e9385Bd5a1f"
+      }
+    ]
+  },
+  "codeHashes": {
+    "factory": "0x5b9c4f4b5b7522c8f2aad288cce7148e9cdfb2fb85554bbe72354fa0ccc67461",
+    "tokens": [
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a"
+    ],
+    "pools": [
+      "0x50f03c6f85c50aa10e7c2dac84406cff6a656667f8303e23e10429045207297a",
+      "0xd722a80741bd9c3f13a0b8887969d492e1b27864163a56dc9a008260454ec855",
+      "0xd8ee92ff2556e5ae3ddf762a04cb2209f430bd9d5cad339c325a4768cccb71d2"
+    ]
+  },
+  "seed": {
+    "usdcPerPool": "6000000",
+    "tokensPerPool": "6000000000000000000000"
+  },
+  "source": {
+    "revision": "working-tree-389d35b",
+    "solc": "0.8.26",
+    "foundry": "v1.8.4",
+    "foundryTomlHash": "0x66d3015d37f601ef0205ad146a2edf9ca208ea812900361636ad87dfba4f90c7"
+  },
+  "deploymentTxHashes": {
+    "status": "verified",
+    "items": [
+      {
+        "label": "deploy_token_MZA",
+        "txHash": "0x420f597cb531ce4f02093aadafce46341a9c473197299a21174f3441099ffa39",
+        "blockNumber": 68791010,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZA",
+        "txHash": "0x4d4b2afdd435bbbfa5c25811b5851e6ce3f3cb191285f0a2d4b9f8a93914d669",
+        "blockNumber": 68791018,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZA",
+        "txHash": "0xc5de9000fee9a445ae2a937184865585daed80a306febd55cea3514cc9c65c08",
+        "blockNumber": 68791026,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZA",
+        "txHash": "0x2bb10e1be4166213c8621b8add837bd54088b03fa1da6f0474d2ca573849d8a9",
+        "blockNumber": 68791034,
+        "status": 1
+      },
+      {
+        "label": "seed_MZA",
+        "txHash": "0x7f012a6ac28a8f360afc786870ed6c2e17d61848938fdb0caead820f13e92924",
+        "blockNumber": 68791040,
+        "status": 1
+      },
+      {
+        "label": "deploy_token_MZB",
+        "txHash": "0x7eb28eec03eca498157b796a98ddfb94f834aa3ca0d1340365591f9717ef49ac",
+        "blockNumber": 68791045,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZB",
+        "txHash": "0x785bf01c852ccea50187c9dd52a76733e95a3f40b5dd9b6d4ad1c8195de06ba9",
+        "blockNumber": 68791047,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZB",
+        "txHash": "0xa73e5723fe0662b832c391a16995bb29cafa4a04001544ffd45abf5b85a9d7d6",
+        "blockNumber": 68791049,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZB",
+        "txHash": "0x5e1c041815d7f5aa8d5ef9a4ac05d3d96a0dd40ec1cb019e5ffd36174dc0853d",
+        "blockNumber": 68791051,
+        "status": 1
+      },
+      {
+        "label": "seed_MZB",
+        "txHash": "0x9c4481e18e4ad4c7c2f477d91b4daf1052a53008d95fff5ac30c40819fcae912",
+        "blockNumber": 68791053,
+        "status": 1
+      },
+      {
+        "label": "deploy_token_MZG",
+        "txHash": "0x86e236b6e748edd95e6fc41ddd5cf883f66a72ac7f889d5a8cc471e77c9e9f41",
+        "blockNumber": 68791055,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZG",
+        "txHash": "0x240dfdbbc67c19c89f4d1dc5bf2aa1c757cf4dc346c1fcc02c755f137f9ed893",
+        "blockNumber": 68791057,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZG",
+        "txHash": "0x059a4afed76839ebe9e74cabee6a5f556c0e5cd29089e437f726e12127b1771c",
+        "blockNumber": 68791059,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZG",
+        "txHash": "0x04345c4ecdcd10eda0ac65a0bf365ca9964b705776f2a9517c81878a2e141db1",
+        "blockNumber": 68791061,
+        "status": 1
+      },
+      {
+        "label": "seed_MZG",
+        "txHash": "0x267b1b16668708464ac655ab1e87f264068b233a878d3b0ddc2b4c1a592caf9b",
+        "blockNumber": 68791063,
+        "status": 1
+      },
+      {
+        "label": "deploy_factory",
+        "txHash": "0x85e96be7a37a762a22ff26d2a2d49ae2e2f6c29086a5136c1ea28c8dae33e564",
+        "blockNumber": 68791065,
+        "status": 1
+      }
+    ]
+  },
+  "supersessionEvidence": {
+    "reason": "Superseded because the prior pool implementation allowed owner liquidity withdrawal.",
+    "oldFactoryEnrollmentEnabled": false,
+    "recoveryReceipts": [
+      {
+        "symbol": "MZA",
+        "pool": "0x231A6D5d9A932Fbc59B00DCEEdFf4dAd22a4669D",
+        "txHash": "0xe1849c504088e151b2da50e40d22999086e28008741f3ee87d8c7a453325c9e7",
+        "blockNumber": 68793063,
+        "status": 1
+      },
+      {
+        "symbol": "MZB",
+        "pool": "0xF1A074bb11e9131B4f006265EB01fD46e6a9Ef0c",
+        "txHash": "0xc85d52d3dab1f32d0642ca9a86e00a2734eee79b151fbb95fdfdaba4e5fb348a",
+        "blockNumber": 68793067,
+        "status": 1
+      },
+      {
+        "symbol": "MZG",
+        "pool": "0x9DfB4156525774A1B69c4835F6748e9385Bd5a1f",
+        "txHash": "0xf1e8554dbe7aa7825e129b8c887cb0fc24ad8becafe6d6be5b7acf076d7ca2da",
+        "blockNumber": 68793084,
+        "status": 1
+      }
+    ],
+    "oldPoolReservesAfterRecovery": [
+      {
+        "symbol": "MZA",
+        "usdcReserve": "0",
+        "tokenReserve": "0"
+      },
+      {
+        "symbol": "MZB",
+        "usdcReserve": "0",
+        "tokenReserve": "0"
+      },
+      {
+        "symbol": "MZG",
+        "usdcReserve": "0",
+        "tokenReserve": "0"
+      }
+    ]
+  }
+}

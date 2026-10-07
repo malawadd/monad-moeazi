@@ -23,6 +23,12 @@ export async function meraQuery(token: string, moduleName: string, functionName:
   return await (meraConvex(token) as any).query(ref, args);
 }
 
+export async function meraMutation(token: string, moduleName: string, functionName: string, args: unknown) {
+  const ref = api[moduleName]?.[functionName];
+  if (!ref) throw new Error("Monad Convex mutation is unavailable.");
+  return await (meraConvex(token) as any).mutation(ref, args);
+}
+
 export async function operatorQuery(moduleName: string, functionName: string, args: unknown) {
   const ref = api[moduleName]?.[functionName];
   if (!ref) throw new Error("Monad Convex service query is unavailable.");

@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "verified",
+  "verified": true,
+  "enrollmentEnabled": false,
+  "addresses": {
+    "administrator": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "executor": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "factory": "0x75C18E5c80814ed117d26bD0cA223f11737852Fb",
+    "tokens": [
+      {
+        "index": 0,
+        "name": "Moeazi Alpha",
+        "symbol": "MZA",
+        "address": "0xB0D15CD776D568905e00d60416799EFd66987228",
+        "pool": "0xE8DF45ff208620ae9E6d4aD5801cc88710854EdE"
+      },
+      {
+        "index": 1,
+        "name": "Moeazi Beta",
+        "symbol": "MZB",
+        "address": "0x8703470FAB62804783C414861654775814cD0051",
+        "pool": "0x7dfE00261533476E799dA11C3B2BCa7C5ab79D3A"
+      },
+      {
+        "index": 2,
+        "name": "Moeazi Gamma",
+        "symbol": "MZG",
+        "address": "0xAf1121C6c3b31b7A06e074b49772DE91bd766867",
+        "pool": "0x365E629607033322dc6d57b8f14fD84947431105"
+      }
+    ]
+  },
+  "codeHashes": {
+    "factory": "0x5b9c4f4b5b7522c8f2aad288cce7148e9cdfb2fb85554bbe72354fa0ccc67461",
+    "tokens": [
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a"
+    ],
+    "pools": [
+      "0x59d6434de39825b6ef37eb345402f6f350b042632a3a2dc427cdea37c7728afa",
+      "0xfb812226bea6c7b34f3eb6a65f93b5c7b42e36831c1db28d652348cb46eca34e",
+      "0x7ae0150b15aa5a5611b239a960ca502ca6c443c73a5d974bdf312627fcb0d279"
+    ]
+  },
+  "seed": {
+    "usdcPerPool": "6000000",
+    "tokensPerPool": "6000000000000000000000"
+  },
+  "source": {
+    "revision": "working-tree-389d35b-pool-withdrawal-removed",
+    "solc": "0.8.26",
+    "foundry": "v1.8.4",
+    "foundryTomlHash": "0x66d3015d37f601ef0205ad146a2edf9ca208ea812900361636ad87dfba4f90c7"
+  },
+  "deploymentTxHashes": {
+    "status": "verified",
+    "items": [
+      {
+        "label": "deploy_token_MZA",
+        "txHash": "0xd8a14e30cb74c105f6a9d24ff222b2e6518045041112d8d68c07b4156d04dfa8",
+        "blockNumber": 68793904,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZA",
+        "txHash": "0x50c8b1aa0b132e0623c8bcd7ee60ef06ad001d8f777d5e2921e2d9086498bbc9",
+        "blockNumber": 68793906,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZA",
+        "txHash": "0x3cabff41f38a303cc77eb3b9215b68ea3e532853578227f4cd6adea218562faa",
+        "blockNumber": 68793908,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZA",
+        "txHash": "0x9175819bdc822b01ab1c496cb3d1024bd1259df6a7ccb9b3f35219df2301f22a",
+        "blockNumber": 68793911,
+        "status": 1
+      },
+      {
+        "label": "seed_MZA",
+        "txHash": "0x5b313454d91e49ed5aa006c0db344763ac8013c2564527b00637e9929c7e77d2",
+        "blockNumber": 68793913,
+        "status": 1
+      },
+      {
+        "label": "deploy_token_MZB",
+        "txHash": "0xe80db598e0dbde27b7ed66de57ed972b11a890cb37eff992c2d785b801070ae0",
+        "blockNumber": 68793916,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZB",
+        "txHash": "0xa1d6fb019c303d4777937260b61ccdbd416525224194ada9d206b598889ca131",
+        "blockNumber": 68793921,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZB",
+        "txHash": "0xa86378486fdc554d4a4e2a5238e22ccf9593064031e81a190b42e4a67ad3a410",
+        "blockNumber": 68793923,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZB",
+        "txHash": "0x109aeab472f94af29d728e2c25be9fdcfccbc5ef3512ffe59403e31689a3b807",
+        "blockNumber": 68793926,
+        "status": 1
+      },
+      {
+        "label": "seed_MZB",
+        "txHash": "0x09841daea83cd8ef92846ece6362f79ee8c1da694b4372087ec81ef238d0880c",
+        "blockNumber": 68793928,
+        "status": 1
+      },
+      {
+        "label": "deploy_token_MZG",
+        "txHash": "0x5ddec215bd885e2103e698f85a2f51ea7572364bf09d1e787102ae311a27aeac",
+        "blockNumber": 68793930,
+        "status": 1
+      },
+      {
+        "label": "deploy_pool_MZG",
+        "txHash": "0x7d5f9eba5e1f5cb793b5552070cde401f978ed20d9ef9ed23bfe9d2b27e23806",
+        "blockNumber": 68793933,
+        "status": 1
+      },
+      {
+        "label": "approve_USDC_MZG",
+        "txHash": "0x3c5e5b7c5bbb83fecbbdedc719e392871956d91387307767bb04f56cac2881cd",
+        "blockNumber": 68793935,
+        "status": 1
+      },
+      {
+        "label": "approve_token_MZG",
+        "txHash": "0xd5f6e185269e6c8bbd86c10d03d7a9dfd90a82a7a600d151ee59d9ab9c049440",
+        "blockNumber": 68793938,
+        "status": 1
+      },
+      {
+        "label": "seed_MZG",
+        "txHash": "0x6a8cac709df3f00da92665a9da8cb008779f9d319a5f26bab043904e4cee0f57",
+        "blockNumber": 68793940,
+        "status": 1
+      },
+      {
+        "label": "deploy_factory",
+        "txHash": "0x87fac2be175f0cb2727b7eb9eeb5e60215da976fd34893b8ed7117823bc51054",
+        "blockNumber": 68793942,
+        "status": 1
+      }
+    ]
+  }
+}

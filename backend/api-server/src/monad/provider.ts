@@ -4,7 +4,7 @@ import { ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, USDC_DECIMALS,
 import { rpcUrl, MonadApiError } from "./config.js";
 
 export async function monadProvider() {
-  const provider = new JsonRpcProvider(rpcUrl());
+  const provider = new JsonRpcProvider(rpcUrl(), { chainId: MONAD_CHAIN_ID, name: "monad-testnet" }, { batchMaxCount: 1 });
   const network = await provider.getNetwork();
   if (network.chainId !== BigInt(MONAD_CHAIN_ID)) {
     await provider.destroy();

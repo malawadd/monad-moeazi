@@ -18,7 +18,7 @@ export const monadTables = {
     kind: v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("approve_token"), v.literal("wrap"),
       v.literal("unwrap"), v.literal("vault_deposit"), v.literal("vault_withdraw"),
       v.literal("swap"), v.literal("vault_trade"), v.literal("mandate_authorize"),
-      v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume")),
+      v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume"), v.literal("autonomy_recovery")),
     intentHash: v.string(), intentJson: v.string(), transactionJson: v.string(),
     expiresAt: v.number(), mandateId: v.optional(v.string()), amountIn: v.optional(v.string()),
     metadataJson: v.optional(v.string()),

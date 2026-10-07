@@ -33,7 +33,8 @@ export type MonadEip1559Transaction = {
 export type MonadOperationKind =
   | 'send_mon' | 'send_usdc' | 'wrap' | 'unwrap'
   | 'vault_deposit' | 'vault_return' | 'wallet_swap'
-  | 'approve_token' | 'mandate_authorize' | 'mandate_revoke' | 'vault_stop' | 'vault_resume';
+  | 'approve_token' | 'mandate_authorize' | 'mandate_revoke' | 'vault_stop' | 'vault_resume'
+  | 'autonomy_recovery';
 
 export type PreparedMonadOperation = {
   operationId: string;

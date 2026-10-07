@@ -100,3 +100,100 @@ hold both assets. `sqrtPriceX96ForWmonPerUsdc(uint256 priceWad)` accepts an
 `1_000_000 * 2**96`; `2**96` would price equal raw token units and skew the human
 price by `1e12` due to token decimals. Select and review the initial price before
 broadcasting; the seeder does not choose a price or add liquidity automatically.
+
+## Autonomous testnet enrollment
+
+These contracts are separately deployed for the autonomous testnet flow. The
+factory and vault enforce chain `10143` and canonical Circle test USDC. Enrollment
+is disabled in the constructor and must remain disabled until the supervisor
+verifies deployment receipts and enables the testnet autonomy gate.
+
+Factory constructor:
+
+```solidity
+AutonomousVaultFactory(
+    address administrator, address executor, address usdc,
+    address[3] tokens, address[3] pools
+)
+```
+
+The ordered pairs are `MZA`, `MZB`, `MZG`. `createAndEnroll(CircleAuthorization,
+StrategyMandate,bytes)` creates a deterministic vault using `CREATE2`, then calls
+Circle's `receiveWithAuthorization` from that vault in the same transaction.
+Circle authorization tuple order is:
+
+```solidity
+struct CircleAuthorization {
+    address from;
+    address to;
+    uint256 value;
+    uint256 validAfter;
+    uint256 validBefore;
+    bytes32 nonce;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+}
+```
+
+Circle EIP-712 domain: name `USDC`, version `2`, chain `10143`, verifying
+contract Circle test USDC. Primary type `ReceiveWithAuthorization` has fields
+`from,address`; `to,address`; `value,uint256`; `validAfter,uint256`;
+`validBefore,uint256`; `nonce,bytes32`. The payee is the predicted vault, so only
+the vault's atomic call can consume this authorization.
+
+The strategy EIP-712 domain is name `Moeazi Monad Testnet Autonomy`, version `1`,
+chain `10143`, verifying contract the predicted vault. Primary type
+`StrategyMandate` uses this exact field order and Solidity types:
+
+```solidity
+uint256 chainId;
+address owner;
+address vault;
+address usdc;
+address[3] tokens;
+address[3] pools;
+uint256 fundingAmount;
+uint64 durationSeconds;
+uint64 startBy;
+uint8 maxCycles;
+uint16 buySlippageBps;
+uint16 sellSlippageBps;
+uint256 nonce;
+```
+
+Funding is `100_000`–`10_000_000` raw USDC units; duration is 600–7200 seconds;
+setup deadline is at most five minutes; `maxCycles` must equal three; each
+slippage bound is at most 500 bps. Expiry is the actual atomic activation time
+plus the signed duration. A new enrollment gets a separate vault and owner nonce.
+
+Executor calls:
+
+```solidity
+buy(bytes32 orderId, uint8 tokenIndex, uint256 amountIn, uint256 expectedAmountOut)
+sell(bytes32 orderId, uint256 expectedAmountOut)
+settleExpired(bytes32 sellOrderId, uint256 expectedAmountOut)
+```
+
+Each buy is capped at the original funding amount, only one position can be
+open, and each order ID executes once. Quotes are fee-inclusive executable pool
+quotes; the contract rejects zero/stale quotes or a caller-supplied quote outside
+the owner's signed slippage bound. Sells remain permitted after expiry, while new
+buys are blocked. After cycle three or an expiry sale, all assets are returned.
+If an expiry sale cannot quote or execute, the vault returns residual USDC and
+the unsold mock token with `Incomplete` status. Only the owner may call
+`emergencyRecover()` during an active run. The executor has no withdrawal call.
+
+`MoeaziTestPairPool` exposes `quoteExactInput(tokenIn,tokenOut,amountIn)`,
+`quoteSpotExactInput(...)`, `swap(tokenIn,tokenOut,amountIn,minAmountOut)`,
+`getReserves()`, and `spotPriceUsdcPerTokenWad()`. Pool swaps emit `Swap` with
+caller, direction, input, and output. There is no liquidity removal or owner
+withdrawal method. Additional liquidity can only be added at the current reserve
+ratio. Seed liquidity is 6 USDC and 6,000 tokens per pool; pools charge 30 bps.
+The operator owns the fixed token supply and moves prices with funded swaps.
+
+Generated compact ABIs are under [`abi/`](abi/). The cross-language mandate
+vector is [here](test/autonomy/mandate-vector-autonomy.json), with its Solidity
+assertion in `test/autonomy/AutonomyMandateDigestVector.t.sol`. The separate
+deployment manifest uses `deployments/manifest.autonomy.schema.json`; it records
+all 16 deployment, approval, and pool-seed transaction receipts.

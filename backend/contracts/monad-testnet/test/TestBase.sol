@@ -7,6 +7,8 @@ interface VmTest {
     function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);
     function prank(address sender) external;
     function expectRevert(bytes4 selector) external;
+    function warp(uint256 timestamp) external;
+    function chainId(uint256 newChainId) external;
 }
 
 abstract contract TestBase {

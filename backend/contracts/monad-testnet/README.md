@@ -76,3 +76,33 @@ tokens. No script fabricates reserves or substitutes mock liquidity on Monad.
 See [ABI.md](ABI.md) for exact constructors, mandate fields, getters, and wallet
 call shapes. `deployments/manifest.schema.json` defines the deployment manifest;
 the example contains placeholders and is not evidence of a deployment.
+
+## Controlled autonomous testnet deployment
+
+`script/DeployAutonomyTestnet.s.sol` independently deploys the fixed-supply MZA,
+MZB, and MZG test tokens, one USDC pool for each, and an enrollment factory. It
+seeds 6 USDC and 6,000 mock tokens per pool (18 USDC total), requires the operator
+to hold at least that USDC, and leaves factory enrollment disabled. Pools have
+no removal or withdrawal method; additional liquidity must preserve the current
+ratio. The script
+requires `MONAD_AUTONOMY_OPERATOR_ADDRESS`, `MONAD_AUTONOMY_EXECUTOR_ADDRESS`,
+`MONAD_SOURCE_REVISION`, and `MONAD_TESTNET_RPC_URL`; it writes the unverified
+simulation/broadcast draft to `backend/.data/monad-autonomy-manifest.draft.json`.
+
+Run the dry run and inspect gas and draft addresses before broadcasting:
+
+```powershell
+& "../../.data/foundry-v1.8.4/bin/forge.exe" script script/DeployAutonomyTestnet.s.sol `
+  --rpc-url $env:MONAD_TESTNET_RPC_URL
+```
+
+One run broadcasts 16 transactions: three token deployments, three pool
+deployments, six token approvals, three pool seeds, and the factory deployment.
+Record all receipts in the separate
+`deployments/manifest.autonomy.testnet.json` after checking each receipt and
+runtime code hash against `deployments/manifest.autonomy.schema.json`. Never
+promote the `.data` draft as verified. The legacy `manifest.testnet.json` remains
+separate and unchanged. The factory exposes `setEnrollmentEnabled(bool)` to its
+administrator; leave it false until the explicit testnet autonomy gate is
+approved. See the autonomy section in [ABI.md](ABI.md) for signature and call
+shapes.

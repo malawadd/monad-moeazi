@@ -1,4 +1,7 @@
 import type {MonadOperationKind, MonadTypedData, MonadVenueId, PreparedMonadMandate, PreparedMonadOperation} from '../types/monad';
+import {toFunctionSelector} from 'viem';
+
+const AUTONOMY_RECOVERY_SELECTOR = toFunctionSelector('emergencyRecover()');
 
 export type MonadOperationExpectation = {
   ownerAddress: string;
@@ -40,6 +43,14 @@ export function validatePreparedMonadOperation(value: PreparedMonadOperation, ex
   }
   if (BigInt(tx.maxPriorityFeePerGas) > BigInt(tx.maxFeePerGas)) {
     throw new Error('The prepared priority fee exceeds the maximum fee.');
+  }
+
+  if (expected.kind === 'autonomy_recovery'
+      && (!expected.vaultAddress || !isAddress(expected.vaultAddress)
+        || tx.to.toLowerCase() !== expected.vaultAddress.toLowerCase()
+        || tx.data.toLowerCase() !== AUTONOMY_RECOVERY_SELECTOR.toLowerCase()
+        || BigInt(tx.value) !== 0n)) {
+    throw new Error('The recovery request must call emergencyRecover() on this exact vault with no native value.');
   }
 
   const review = value.review as (typeof value.review & Record<string, unknown>) | undefined;

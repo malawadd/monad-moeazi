@@ -1,0 +1,51 @@
+{
+  "domain": {
+    "name": "Moeazi Monad Testnet Autonomy",
+    "version": "1",
+    "chainId": 10143,
+    "verifyingContract": "0x1111111111111111111111111111111111111111"
+  },
+  "primaryType": "StrategyMandate",
+  "types": {
+    "StrategyMandate": [
+      { "name": "chainId", "type": "uint256" },
+      { "name": "owner", "type": "address" },
+      { "name": "vault", "type": "address" },
+      { "name": "usdc", "type": "address" },
+      { "name": "tokens", "type": "address[3]" },
+      { "name": "pools", "type": "address[3]" },
+      { "name": "fundingAmount", "type": "uint256" },
+      { "name": "durationSeconds", "type": "uint64" },
+      { "name": "startBy", "type": "uint64" },
+      { "name": "maxCycles", "type": "uint8" },
+      { "name": "buySlippageBps", "type": "uint16" },
+      { "name": "sellSlippageBps", "type": "uint16" },
+      { "name": "nonce", "type": "uint256" }
+    ]
+  },
+  "message": {
+    "chainId": 10143,
+    "owner": "0x2222222222222222222222222222222222222222",
+    "vault": "0x1111111111111111111111111111111111111111",
+    "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "tokens": [
+      "0x3333333333333333333333333333333333333333",
+      "0x4444444444444444444444444444444444444444",
+      "0x5555555555555555555555555555555555555555"
+    ],
+    "pools": [
+      "0x6666666666666666666666666666666666666666",
+      "0x7777777777777777777777777777777777777777",
+      "0x8888888888888888888888888888888888888888"
+    ],
+    "fundingAmount": "1234567",
+    "durationSeconds": "3600",
+    "startBy": "1700000300",
+    "maxCycles": 3,
+    "buySlippageBps": 250,
+    "sellSlippageBps": 300,
+    "nonce": "7"
+  },
+  "digest": "0xedbce9af03ffe02430874e78a19d90159bab5d7a97fa35275d8441566640e4da",
+  "verifiedWith": "viem 2.54.3 hashTypedData"
+}

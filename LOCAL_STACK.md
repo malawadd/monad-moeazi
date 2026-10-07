@@ -76,7 +76,7 @@ and [live receipts](docs/MONAD_TESTNET_RECEIPTS.md) cover funding, owner
 transactions, both venues, custody, and finality. The operator key remains in
 ignored `backend/.data`; never add it or generated environment files to Git.
 
-`backend/.env.local` holds three distinct local gates, all generated as `false`:
+`backend/.env.local` holds four distinct local gates, all generated as `false`:
 
 - `MONAD_TESTNET_ACTIONS_ENABLED` allows reviewed owner operation preparation.
 - `MONAD_TESTNET_BROADCAST_ENABLED` allows broadcasting exact Mera-signed owner
@@ -84,6 +84,10 @@ ignored `backend/.data`; never add it or generated environment files to Git.
 - `MONAD_TESTNET_OPERATOR_TRADES_ENABLED` separately allows the local operator
   bridge to prepare and submit capped vault trades. It is `false` after the
   testnet acceptance run.
+- `MONAD_TESTNET_AUTONOMY_ENABLED` separately allows the test-only mock-pair
+  enrollment and worker. It also needs the action, broadcast, and operator
+  trade gates for transactions, a receipt-verified autonomy manifest, and the
+  onchain factory enrollment switch. This gate is default-off.
 
 The local Android acceptance setup has the first two gates enabled so a tester
 can use the app. A new stack setup starts with them disabled. The managed vault
@@ -100,6 +104,23 @@ exact signed payload, and reconcile status. They require the existing private
 operator console bridge identity. A fresh quote expires quickly; prepare and
 broadcast before expiry, then check the same operation ID instead of preparing
 a second trade after any uncertain response.
+
+### Controlled autonomy test path
+
+The [autonomy deployment manifest](backend/contracts/monad-testnet/deployments/manifest.autonomy.testnet.json)
+pins three fixed-supply mock tokens, their Circle USDC pools, and the
+per-enrollment vault factory. The [superseded deployment record](backend/contracts/monad-testnet/deployments/manifest.autonomy.superseded.json)
+retains the unused first deployment and its seed-recovery receipts. The active
+pools have no operator liquidity-withdrawal function. See
+[the autonomy test guide](docs/AUTONOMY_TESTNET.md) for custody, decision rules,
+scenario controls, acceptance receipts, and the offline Android passkey flow.
+For a hands-on rerun, follow the [manual repeat guide](docs/REPEAT_CONTROLLED_AUTONOMY.md).
+The local operator console at `3104` can observe finalized pool prices with
+the autonomy gate off; funded moves and scenarios require all four transaction
+gates. Its bridge identity is local-only. The 15-second Convex worker calls the
+Hono API at `http://host.docker.internal:3102` with the generated private
+`MONAD_TESTNET_AUTONOMY_WORKER_SECRET`. Keep that secret synchronized in
+ignored `.env.local` and the local Convex deployment.
 
 ### Mera passkey host
 

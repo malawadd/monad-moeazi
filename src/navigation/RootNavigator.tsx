@@ -7,6 +7,8 @@ import {ActivityDetailScreen} from '../screens/ActivityDetailScreen';
 import {ActivityScreen} from '../screens/ActivityScreen';
 import {AgentScreen} from '../screens/AgentScreen';
 import {AgentSettingsScreen} from '../screens/AgentSettingsScreen';
+import {AutonomySetupScreen} from '../screens/AutonomySetupScreen';
+import {AutonomyStatusScreen} from '../screens/AutonomyStatusScreen';
 import {ManagedVaultScreen} from '../screens/ManagedVaultScreen';
 import {MarketsScreen} from '../screens/MarketsScreen';
 import {MonadFundingScreen} from '../screens/MonadFundingScreen';
@@ -45,6 +47,8 @@ export function RootNavigator() {
       <Stack.Screen name="OperationReview" component={OperationReviewScreen} />
       <Stack.Screen name="Wrap" component={WrapScreen} />
       <Stack.Screen name="ManagedVault" component={ManagedVaultScreen} />
+      <Stack.Screen name="AutonomySetup" component={AutonomySetupScreen} />
+      <Stack.Screen name="AutonomyStatus" component={AutonomyStatusScreen} />
       <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />

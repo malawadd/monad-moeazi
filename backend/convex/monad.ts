@@ -6,7 +6,7 @@ import { appendMonadActivity, MONAD_CHAIN_ID, requireMeraViewer,
 const operationKind = v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("approve_token"), v.literal("wrap"),
   v.literal("unwrap"), v.literal("vault_deposit"), v.literal("vault_withdraw"),
   v.literal("swap"), v.literal("vault_trade"), v.literal("mandate_authorize"),
-  v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume"));
+  v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume"), v.literal("autonomy_recovery"));
 function validateOperation(args: any) {
   const now = Date.now();
   if (args.chainId !== MONAD_CHAIN_ID || !/^[a-f0-9]{64}$/.test(args.intentHash)

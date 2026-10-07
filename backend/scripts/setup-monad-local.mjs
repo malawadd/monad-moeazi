@@ -52,6 +52,7 @@ const spotSecret = currentSecret("MANAGED_SPOT_INGRESS_SECRET");
 const convexInstanceSecret = currentSecret("CONVEX_INSTANCE_SECRET");
 const timescalePassword = currentSecret("TIMESCALE_PASSWORD");
 const operatorBridgeSecret = currentSecret("OPERATOR_CONSOLE_BRIDGE_SECRET");
+const autonomyWorkerSecret = currentSecret("MONAD_TESTNET_AUTONOMY_WORKER_SECRET");
 const operatorAdminSecretPath = path.join(backendRoot, ".data", "operator-console-admin.secret");
 let operatorAdminSecret = "";
 if (!rotateSecrets) {
@@ -107,6 +108,10 @@ const webEnv = {
   MONAD_TESTNET_ACTIONS_ENABLED: preserved("MONAD_TESTNET_ACTIONS_ENABLED", "false", previous),
   MONAD_TESTNET_BROADCAST_ENABLED: preserved("MONAD_TESTNET_BROADCAST_ENABLED", "false", previous),
   MONAD_TESTNET_OPERATOR_TRADES_ENABLED: preserved("MONAD_TESTNET_OPERATOR_TRADES_ENABLED", "false", previous),
+  MONAD_TESTNET_AUTONOMY_ENABLED: preserved("MONAD_TESTNET_AUTONOMY_ENABLED", "false", previous),
+  MONAD_TESTNET_AUTONOMY_WORKER_SECRET: autonomyWorkerSecret,
+  MONAD_TESTNET_AUTONOMY_FACTORY_ADDRESS: preserved("MONAD_TESTNET_AUTONOMY_FACTORY_ADDRESS", "", previous),
+  MONAD_TESTNET_AUTONOMY_MAX_USDC_UNITS: preserved("MONAD_TESTNET_AUTONOMY_MAX_USDC_UNITS", "10000000", previous),
   MONAD_TESTNET_VAULT_ADDRESS: preserved("MONAD_TESTNET_VAULT_ADDRESS", "", previous),
   MONAD_TESTNET_UNISWAP_V4_ADAPTER_ADDRESS: preserved("MONAD_TESTNET_UNISWAP_V4_ADAPTER_ADDRESS", "", previous),
   MONAD_TESTNET_MOEAZI_ADAPTER_ADDRESS: preserved("MONAD_TESTNET_MOEAZI_ADAPTER_ADDRESS", "", previous),
@@ -214,6 +219,8 @@ const convexEnv = {
   SIMULATION_WORKER_SECRET: simulationSecret,
   MANAGED_SPOT_INGRESS_SECRET: spotSecret,
   AGENT_API_URL: "http://api:8100",
+  MONAD_TESTNET_AUTONOMY_API_URL: "http://host.docker.internal:3102",
+  MONAD_TESTNET_AUTONOMY_WORKER_SECRET: autonomyWorkerSecret,
   ARBITRUM_RPC_URL: arbRpc,
   NEXT_PUBLIC_ARB_RPC_URL: arbRpc,
   AGENT_DEV_CONTROLS_ENABLED: preserved("AGENT_DEV_CONTROLS_ENABLED", "true", convexPrevious, previous, agentPrevious),

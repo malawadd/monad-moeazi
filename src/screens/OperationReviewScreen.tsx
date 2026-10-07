@@ -106,7 +106,7 @@ export function OperationReviewScreen() {
       <DataRow label="Action" value={title} />
       {expected.amount || prepared.review?.amount ? <DataRow label="Amount" value={`${amount} ${asset}`} /> : null}
       {expected.recipient || prepared.review?.recipient ? <DataRow label="Recipient" value={String(expected.recipient ?? prepared.review?.recipient)} /> : null}
-      {expected.vaultAddress || prepared.review?.vaultAddress ? <DataRow label="Managed vault" value={String(expected.vaultAddress ?? prepared.review?.vaultAddress)} /> : null}
+      {expected.vaultAddress || prepared.review?.vaultAddress ? <DataRow label={prepared.kind === 'autonomy_recovery' ? 'Autonomy vault' : 'Managed vault'} value={String(expected.vaultAddress ?? prepared.review?.vaultAddress)} /> : null}
       {expected.venue || prepared.review?.venue ? <DataRow label="Venue" value={String(expected.venue ?? prepared.review?.venue)} /> : null}
       {prepared.kind === 'wallet_swap' ? <>
         <DataRow label="Exact input" value={`${formatMonadUnits(String(expected.amountInUnits ?? prepared.review?.amountInUnits ?? '0'), expected.inputDecimals ?? 18)} ${inputSymbol}`} />
@@ -139,6 +139,7 @@ export function OperationReviewScreen() {
       && ['TradeReview', 'ManagedVault'].includes(afterApproval?.returnRoute ?? '')
       ? <Button label="Return to original action" variant="secondary" onPress={() => navigation.navigate(afterApproval?.returnRoute, afterApproval?.returnParams)} />
       : null}
+    {prepared.kind === 'autonomy_recovery' && result ? <Button label="Return to run status" variant="secondary" onPress={() => navigation.navigate('AutonomyStatus')} /> : null}
     <Button label="Open Activity" variant="secondary" onPress={() => navigation.navigate('Main', {screen: 'Activity'})} />
     <Text style={s.body}>Moeazi will verify your signature before it broadcasts. The Mera signing key stays in this short-lived passkey session and is cleared when signing ends.</Text>
   </FlowScreen>;

@@ -25,7 +25,7 @@ export function amountUnits(value: unknown, decimals: number): bigint {
 }
 
 export async function buildEip1559Transaction(provider: JsonRpcProvider, sender: string,
-  to: string, data: string, value = 0n): Promise<BuiltTransaction> {
+  to: string, data: string, value = 0n, maxGasLimit = 3_000_000n): Promise<BuiltTransaction> {
   const [network, nonce, fees] = await Promise.all([
     provider.getNetwork(), provider.getTransactionCount(getAddress(sender), "pending"), provider.getFeeData(),
   ]);
@@ -41,7 +41,7 @@ export async function buildEip1559Transaction(provider: JsonRpcProvider, sender:
   try { estimate = await provider.estimateGas(base); }
   catch { throw new MonadApiError("Monad Testnet could not estimate this exact transaction.", 409, "gas_estimate_failed"); }
   const gasLimit = (estimate * 115n + 99n) / 100n;
-  if (estimate <= 0n || gasLimit > 3_000_000n) {
+  if (estimate <= 0n || gasLimit > maxGasLimit) {
     throw new MonadApiError("Estimated gas is outside the reviewed Monad Testnet limit.", 409, "gas_limit_rejected");
   }
   return {

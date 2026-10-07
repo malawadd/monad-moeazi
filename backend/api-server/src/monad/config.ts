@@ -23,10 +23,26 @@ export function assertMonadBroadcastEnabled(operator = false) {
   }
 }
 
+/** Recovery-only broadcast gate for owner-authorized exits of already-funded runs. */
+export function assertMonadRecoveryBroadcastEnabled() {
+  if (!enabled("MONAD_TESTNET_BROADCAST_ENABLED") || !enabled("MONAD_TESTNET_OPERATOR_TRADES_ENABLED")) {
+    throw new MonadApiError("Owner recovery is disabled by the Monad Testnet broadcast or operator gate.", 503, "testnet_recovery_disabled");
+  }
+}
+
 export function assertMonadAutonomyEnabled(requireBroadcast = false) {
   assertMonadActionsEnabled();
   if (!enabled("MONAD_TESTNET_AUTONOMY_ENABLED")) {
     throw new MonadApiError("Monad Testnet autonomy is disabled by its separate local testnet gate.", 503, "autonomy_disabled");
+  }
+  if (requireBroadcast) assertMonadBroadcastEnabled(true);
+}
+
+/** Independent switch for the test-only mock perpetual clearinghouse. */
+export function assertMonadPerpAutonomyEnabled(requireBroadcast = false) {
+  assertMonadActionsEnabled();
+  if (!enabled("MONAD_TESTNET_PERP_AUTONOMY_ENABLED")) {
+    throw new MonadApiError("Monad Testnet perp autonomy is disabled by its separate local testnet gate.", 503, "perp_autonomy_disabled");
   }
   if (requireBroadcast) assertMonadBroadcastEnabled(true);
 }
@@ -44,6 +60,8 @@ export function rpcUrl() {
 export function configuredVault() { return configuredAddress("MONAD_TESTNET_VAULT_ADDRESS"); }
 
 export function configuredAutonomyFactory() { return configuredAddress("MONAD_TESTNET_AUTONOMY_FACTORY_ADDRESS"); }
+
+export function configuredPerpFactory() { return configuredAddress("MONAD_TESTNET_PERP_FACTORY_ADDRESS"); }
 
 export function configuredAdapter(venue: MonadVenue): string | null {
   const name = venue === "uniswap_v4_testnet"

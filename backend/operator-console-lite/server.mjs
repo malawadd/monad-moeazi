@@ -31,6 +31,8 @@ const STATIC = new Map([
   ["/manual-sequence.css", ["manual-sequence.css", "text/css; charset=utf-8"]],
   ["/autonomy-controls.js", ["autonomy-controls.js", "text/javascript; charset=utf-8"]],
   ["/autonomy.css", ["autonomy.css", "text/css; charset=utf-8"]],
+  ["/perp-scenarios.js", ["perp-scenarios.js", "text/javascript; charset=utf-8"]],
+  ["/perp-scenarios.css", ["perp-scenarios.css", "text/css; charset=utf-8"]],
   ["/fonts/syne.woff2", ["assets/syne.woff2", "font/woff2"]],
   ["/fonts/jakarta.woff2", ["assets/jakarta.woff2", "font/woff2"]],
   ["/fonts/plex.woff2", ["assets/plex.woff2", "font/woff2"]],

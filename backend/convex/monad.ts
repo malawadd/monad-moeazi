@@ -64,13 +64,15 @@ export const getAgents = query({ args: {}, handler: async (ctx) => {
 } });
 
 export const getActivity = query({
-  args: { limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()), cursor: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { user } = await requireMeraViewer(ctx);
     const limit = Math.max(1, Math.min(100, Math.floor(args.limit ?? 40)));
-    return await ctx.db.query("monadActivity")
+    const page = await ctx.db.query("monadActivity")
       .withIndex("by_userId_createdAt", (q: any) => q.eq("userId", user._id))
-      .order("desc").take(limit);
+      .order("desc").paginate({ numItems: limit, cursor: args.cursor ?? null });
+    return { rows: page.page, nextCursor: page.isDone ? null : page.continueCursor,
+      hasMore: !page.isDone };
   },
 });
 

@@ -89,6 +89,17 @@ ignored `backend/.data`; never add it or generated environment files to Git.
   trade gates for transactions, a receipt-verified autonomy manifest, and the
   onchain factory enrollment switch. This gate is default-off.
 
+### Mock Perp autonomy
+
+The separate Perp choice uses a per-owner USDC vault, the mock clearinghouse,
+and MZA/MZB/MZG pool prices. Its verified addresses and code hashes are in
+[the Perp manifest](backend/contracts/monad-testnet/deployments/manifest.perp.testnet.json).
+It has its own default-off `MONAD_TESTNET_PERP_AUTONOMY_ENABLED` gate and
+onchain factory enrollment switch. The action, broadcast, and operator-trade
+gates must also be enabled for funded runs. Spot and Perp mandates, vaults,
+workers, and records are separate. The [Perp test guide](docs/PERP_AUTONOMY_TESTNET.md)
+describes the policy, reserve, operator scripts, and shutdown sequence.
+
 The local Android acceptance setup has the first two gates enabled so a tester
 can use the app. A new stack setup starts with them disabled. The managed vault
 is currently stopped onchain with zero USDC and WMON balances; its old signed

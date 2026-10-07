@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "verified",
+  "verified": true,
+  "enrollmentEnabled": false,
+  "policy": {
+    "version": 1,
+    "minFunding": "100000",
+    "maxFunding": "10000000",
+    "minDurationSeconds": 600,
+    "maxDurationSeconds": 7200,
+    "maxLeverage": 10,
+    "maxPositionMarginMultiple": 1,
+    "maxPayoutMultiple": 5,
+    "reserveMultiple": 4
+  },
+  "addresses": {
+    "administrator": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "executor": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "factory": "0x960B3F45386903C830f65EBC2784992D40E72802",
+    "clearinghouse": "0xf4733b06e5359b324af00f27bA3066657A8684F8",
+    "markets": [
+      {
+        "index": 0,
+        "name": "Moeazi Alpha",
+        "symbol": "MZA",
+        "token": "0xB0D15CD776D568905e00d60416799EFd66987228",
+        "pool": "0xE8DF45ff208620ae9E6d4aD5801cc88710854EdE"
+      },
+      {
+        "index": 1,
+        "name": "Moeazi Beta",
+        "symbol": "MZB",
+        "token": "0x8703470FAB62804783C414861654775814cD0051",
+        "pool": "0x7dfE00261533476E799dA11C3B2BCa7C5ab79D3A"
+      },
+      {
+        "index": 2,
+        "name": "Moeazi Gamma",
+        "symbol": "MZG",
+        "token": "0xAf1121C6c3b31b7A06e074b49772DE91bd766867",
+        "pool": "0x365E629607033322dc6d57b8f14fD84947431105"
+      }
+    ]
+  },
+  "codeHashes": {
+    "factory": "0x55ac71f24592430e137842a58d14d4780afa332c0b1a9441b3797091442ea254",
+    "clearinghouse": "0x24bdd3b7df8cec24aa0ddac9c93bc71bc22db6d101b0abd05d3ff06f3a155c82",
+    "tokens": [
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a",
+      "0x6021552624b99fb7aae09cd1fbded8756e6e6996f98403dee63ebe935255574a"
+    ],
+    "pools": [
+      "0x59d6434de39825b6ef37eb345402f6f350b042632a3a2dc427cdea37c7728afa",
+      "0xfb812226bea6c7b34f3eb6a65f93b5c7b42e36831c1db28d652348cb46eca34e",
+      "0x7ae0150b15aa5a5611b239a960ca502ca6c443c73a5d974bdf312627fcb0d279"
+    ]
+  },
+  "reserve": {
+    "token": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "depositedUsdc": "0",
+    "committedUsdc": "0",
+    "availableUsdc": "0",
+    "status": "not_funded"
+  },
+  "source": {
+    "revision": "working-tree-02026a3-perp-v1",
+    "solc": "0.8.26",
+    "foundry": "v1.7.1",
+    "foundryTomlHash": "0x66d3015d37f601ef0205ad146a2edf9ca208ea812900361636ad87dfba4f90c7",
+    "autonomyManifestHash": "0xd1a45a0d70f9d699df845161756ec005051c71b7b41bb7a064d39c5a32094bc0",
+    "autonomyFactory": "0x75C18E5c80814ed117d26bD0cA223f11737852Fb"
+  },
+  "deploymentTxHashes": {
+    "status": "verified",
+    "items": [
+      {
+        "label": "deploy_perp_clearinghouse",
+        "txHash": "0xa2569531f691faa3970139fb475a223933e6d7a6e162aa8df9da61d0c1d6fb69",
+        "blockNumber": 68845720,
+        "status": 1
+      },
+      {
+        "label": "deploy_perp_factory",
+        "txHash": "0xd2d2c8388de9fc0892484cc23b3446e3b22aaaf02a8697a95fd0475248b597a5",
+        "blockNumber": 68845733,
+        "status": 1
+      },
+      {
+        "label": "set_perp_factory",
+        "txHash": "0x12726c17430e6a071cd59170d46b10743c9d52cd67e1305a821cd6b681219fd6",
+        "blockNumber": 68845746,
+        "status": 1
+      }
+    ]
+  }
+}

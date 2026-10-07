@@ -38,7 +38,7 @@ export async function requireMonadOperator(ctx: any) {
 }
 
 export async function reserveAutonomyOperatorLease(ctx: any, input: {
-  executorAddress: string; orderId: string; workflow: "autonomy" | "scenario"; expiresAt: number;
+  executorAddress: string; orderId: string; workflow: "autonomy" | "scenario" | "perp"; expiresAt: number;
 }) {
   const key = "monad-autonomy-executor";
   const lease = await ctx.db.query("monadAutonomyOperatorLease")

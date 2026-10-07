@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/app.css">
     <link rel="stylesheet" href="/manual-sequence.css">
     <link rel="stylesheet" href="/autonomy.css">
+    <link rel="stylesheet" href="/perp-scenarios.css">
     <script src="/operator-auth.js" defer></script>
     <script src="/app.js" defer></script>
     <script src="/programs.js" defer></script>
@@ -14,6 +15,7 @@
     <script src="/manual-sequence.js" defer></script>
     <script src="/console-pages.js" defer></script>
     <script src="/autonomy-controls.js" defer></script>
+    <script src="/perp-scenarios.js" defer></script>
   </head>
   <body>
     <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
@@ -38,7 +40,7 @@
         <a href="#health">Health &amp; monitoring</a><a href="#workspace-page">Programs &amp; teams</a>
         <a href="#testing-page">Experiments &amp; Test Center</a><a href="#credits-title">Credits &amp; providers</a>
         <a href="#config-page">Configuration</a><a href="#manual-sequence-page">Manual sequence</a>
-        <a href="#autonomy-page">Autonomy testnet</a>
+        <a href="#autonomy-page">Autonomy testnet</a><a href="#perp-scenarios-page">Mock perp scenarios</a>
       </nav>
 
       <section class="intro">
@@ -51,6 +53,22 @@
         <strong>Dedicated local operator identity</strong>
         <span>Console calls use a walletless, paused Monad-local workspace. Browser requests never receive Convex admin keys or service credentials.</span>
         <span class="scope">Customer identities and existing assignments are not used for operator-owned teams and programs.</span>
+      </section>
+
+      <section class="workspace" id="perp-scenarios-page" aria-labelledby="perp-scenarios-title">
+        <div class="panel-head"><div><p class="eyebrow">MONAD TESTNET · MOCK CLEARINGHOUSE</p><h2 id="perp-scenarios-title">Perp scenario runner</h2></div>
+          <div class="head-actions"><span id="perp-scenario-state" role="status">Not loaded</span><button id="perp-scenario-refresh" type="button">Refresh status</button></div></div>
+        <div class="perp-scenario-warning"><strong>Testnet only. This does not place Perpl orders.</strong>
+          <span>Starting a script lets the funded operator execute each step against the active signed perp vault. Owner stop still requires a fresh Mera signature in the mobile app.</span></div>
+        <form id="perp-scenario-form" class="perp-scenario-form">
+          <label for="perp-scenario-run">Active perp run ID</label><input id="perp-scenario-run" required autocomplete="off" placeholder="Copy from the app's Perp history">
+          <label for="perp-scenario-script">Scenario steps (JSON array)</label>
+          <textarea id="perp-scenario-script" rows="10" required spellcheck="false" placeholder='[{"action":"market_entry","params":{"marketIndex":0,"isLong":true,"leverage":2,"marginUsdcUnits":"10000"}},{"action":"close_position","params":{}}]'></textarea>
+          <p class="perp-scenario-hint">Supported actions include market/limit entry, limit fill/amend/cancel, size and margin changes, triggers, funding, close, liquidation, expiry, pool price move, hold, wait for expiry, and wait for owner stop. A price move step takes {"tokenIndex":0,"direction":"up","amountUnits":"100000"}. Steps that revert are shown as blocked or failed; they are never shown as fills.</p>
+          <div class="perp-scenario-actions"><button id="perp-scenario-submit" type="submit">Start script</button><input id="perp-scenario-key" required autocomplete="off" aria-label="Scenario idempotency key" placeholder="Scenario request key"></div>
+          <p id="perp-scenario-message" role="status" aria-live="polite">No perp scenario is running.</p>
+        </form>
+        <div id="perp-scenario-list" class="perp-scenario-list" aria-live="polite"><p class="empty-state">Load scenario status to continue.</p></div>
       </section>
 
       <section class="workspace" id="health" aria-labelledby="health-title">

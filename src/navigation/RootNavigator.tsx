@@ -9,11 +9,15 @@ import {AgentScreen} from '../screens/AgentScreen';
 import {AgentSettingsScreen} from '../screens/AgentSettingsScreen';
 import {AutonomySetupScreen} from '../screens/AutonomySetupScreen';
 import {AutonomyStatusScreen} from '../screens/AutonomyStatusScreen';
+import {AutonomyChoiceScreen} from '../screens/AutonomyChoiceScreen';
 import {ManagedVaultScreen} from '../screens/ManagedVaultScreen';
 import {MarketsScreen} from '../screens/MarketsScreen';
 import {MonadFundingScreen} from '../screens/MonadFundingScreen';
 import {MonadHomeScreen} from '../screens/MonadHomeScreen';
 import {OperationReviewScreen} from '../screens/OperationReviewScreen';
+import {PerpSetupScreen} from '../screens/PerpSetupScreen';
+import {PerpStatusScreen} from '../screens/PerpStatusScreen';
+import {PerpHistoryScreen} from '../screens/PerpHistoryScreen';
 import {SendScreen} from '../screens/SendScreen';
 import {TradeReviewScreen} from '../screens/TradeReviewScreen';
 import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
@@ -49,6 +53,10 @@ export function RootNavigator() {
       <Stack.Screen name="ManagedVault" component={ManagedVaultScreen} />
       <Stack.Screen name="AutonomySetup" component={AutonomySetupScreen} />
       <Stack.Screen name="AutonomyStatus" component={AutonomyStatusScreen} />
+      <Stack.Screen name="AutonomyChoice" component={AutonomyChoiceScreen} />
+      <Stack.Screen name="PerpSetup" component={PerpSetupScreen} />
+      <Stack.Screen name="PerpStatus" component={PerpStatusScreen} />
+      <Stack.Screen name="PerpHistory" component={PerpHistoryScreen} />
       <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />

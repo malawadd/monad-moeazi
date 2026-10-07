@@ -39,8 +39,11 @@ async function agents(context: any) {
 async function activity(context: any) {
   const auth = await requireMera(context);
   await reconcileOwnerPendingOperations(auth.token, auth.ownerAddress);
-  const rows: any[] = await meraQuery(auth.token, "monad", "getActivity", { limit: 60 });
-  return context.json(rows.map((row) => {
+  const rawLimit = Number(context.req.query("limit") ?? 60);
+  const limit = Number.isInteger(rawLimit) ? Math.max(1, Math.min(100, rawLimit)) : 60;
+  const cursor = context.req.query("cursor");
+  const page: any = await meraQuery(auth.token, "monad", "getActivity", { limit, ...(cursor ? { cursor } : {}) });
+  const events = page.rows.map((row: any) => {
     const data = jsonRecord(row.dataJson);
     const status = row.status === "authorized" ? "verified" : row.status;
     const receiptStatus = Number(data.receiptStatus);
@@ -52,9 +55,15 @@ async function activity(context: any) {
       transactionHash: row.txHash ?? null, amount, asset,
       blockNumber: typeof data.blockNumber === "number" ? data.blockNumber : null,
       details: Object.entries({ ...(asset ? { asset } : {}), ...(amount ? { amount } : {}),
+        ...(typeof data.market === "string" ? { market: data.market } : {}),
+        ...(typeof data.side === "string" ? { side: data.side } : {}),
+        ...(typeof data.leverage === "number" ? { leverage: `${data.leverage}x` } : {}),
+        ...(typeof data.marginUnits === "string" ? { marginUnits: data.marginUnits } : {}),
+        ...(typeof data.realizedPnlUnits === "string" ? { realizedPnlUnits: data.realizedPnlUnits } : {}),
         ...(typeof data.blockNumber === "number" ? { block: String(data.blockNumber) } : {}) })
         .map(([label, value]) => ({ label, value: String(value) })) };
-  }));
+  });
+  return context.json({ events, nextCursor: page.nextCursor ?? null, hasMore: Boolean(page.hasMore) });
 }
 
 async function quote(context: any) {

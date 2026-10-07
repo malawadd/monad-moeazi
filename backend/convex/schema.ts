@@ -8,6 +8,7 @@ import { programTables } from "./programSchema";
 import { financeProjectionTables } from "./financeProjectionSchema";
 import { monadTables } from "./monadSchema";
 import { monadAutonomyTables } from "./monadAutonomySchema";
+import { monadPerpTables } from "./monadPerpSchema";
 import { managedTradingVenue, managedVenueRole } from "./agentValidators";
 
 export default defineSchema({
@@ -15,6 +16,7 @@ export default defineSchema({
   ...financeProjectionTables,
   ...monadTables,
   ...monadAutonomyTables,
+  ...monadPerpTables,
   devCreditControls: defineTable({
     key: v.string(), chargingEnabled: v.boolean(), version: v.number(),
     updatedAt: v.number(), updatedBy: v.string(),

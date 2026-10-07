@@ -1,0 +1,13 @@
+.perp-scenario-warning{display:grid;gap:.35rem;padding:1rem;border:1px solid #d69b55;border-radius:14px;background:#fff7e9;color:#653d19;margin:1rem 0}
+.perp-scenario-form{display:grid;gap:.65rem;max-width:920px}
+.perp-scenario-form textarea{width:100%;resize:vertical;min-height:180px;padding:.8rem;border:1px solid #c9cbd2;border-radius:10px;font:500 .83rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.perp-scenario-form input{max-width:100%;padding:.65rem;border:1px solid #c9cbd2;border-radius:8px}
+.perp-scenario-hint{color:#555d69;font-size:.88rem;line-height:1.5}
+.perp-scenario-actions{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+.perp-scenario-actions input{min-width:260px}
+.perp-scenario-list{display:grid;gap:.75rem;margin-top:1rem}
+.perp-scenario-card{display:grid;gap:.55rem;padding:1rem;border:1px solid #d9dbe1;border-radius:14px;background:#fff}
+.perp-scenario-heading{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
+.perp-scenario-card pre{overflow:auto;padding:.75rem;border-radius:8px;background:#f5f5f7;font-size:.78rem}
+.perp-scenario-card code{overflow-wrap:anywhere}
+.perp-scenario-error{color:#9d2929}

@@ -1,7 +1,7 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {Button, Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {monadApi} from '../services/monadApi';
 import type {MonadActivityEvent} from '../types/monad';
 import {colors, spacing} from '../theme/tokens';
@@ -15,36 +15,71 @@ function eventTime(value: string) {
 export function ActivityScreen() {
   const navigation = useNavigation<any>();
   const [events, setEvents] = useState<MonadActivityEvent[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [scope, setScope] = useState<'all' | 'perp'>('all');
+  const pageGeneration = useRef(0);
 
   const refresh = useCallback(async () => {
+    const generation = ++pageGeneration.current;
     setRefreshing(true); setError('');
-    try { setEvents(await monadApi.activity()); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Activity could not be loaded.'); }
-    finally { setRefreshing(false); }
+    try {
+      const page = await monadApi.activity(60);
+      if (generation === pageGeneration.current) {
+        setEvents(page.events); setNextCursor(page.nextCursor); setHasMore(page.hasMore);
+      }
+    }
+    catch (reason) { if (generation === pageGeneration.current) setError(reason instanceof Error ? reason.message : 'Activity could not be loaded.'); }
+    finally { if (generation === pageGeneration.current) setRefreshing(false); }
   }, []);
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingMore) return;
+    const generation = pageGeneration.current;
+    setLoadingMore(true); setError('');
+    try {
+      const page = await monadApi.activity(60, nextCursor);
+      if (generation === pageGeneration.current) {
+        setEvents(previous => {
+          const seen = new Set(previous.map(event => event.id));
+          return [...previous, ...page.events.filter(event => !seen.has(event.id))];
+        });
+        setNextCursor(page.nextCursor); setHasMore(page.hasMore);
+      }
+    } catch (reason) { if (generation === pageGeneration.current) setError(reason instanceof Error ? reason.message : 'More activity could not be loaded.'); }
+    finally { setLoadingMore(false); }
+  }, [hasMore, nextCursor, loadingMore]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  const visibleEvents = scope === 'perp' ? events.filter(event => event.kind.startsWith('perp_')) : events;
 
   return <Screen refreshing={refreshing} onRefresh={() => { void refresh(); }}>
-    <PageHeader kicker="Activity · on-chain and service events" title="What happened" copy="Events shown here come from the authenticated Monad activity endpoint. A hash appears only when the service reports one." />
+    <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />
     {error ? <Notice live tone="rose" title="Activity unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    <View style={styles.filters}>
+      <Button label="All activity" variant={scope === 'all' ? 'primary' : 'secondary'} onPress={() => setScope('all')} />
+      <Button label="Perp only" variant={scope === 'perp' ? 'primary' : 'secondary'} onPress={() => setScope('perp')} />
+    </View>
     {!events.length && !refreshing && !error ? <Card><Text style={s.strong}>The service returned no activity events.</Text><Text style={s.body}>New events appear after the backend records an operation, receipt, or agent status change.</Text></Card> : null}
-    <View style={styles.timeline}>{events.map(event => <Pressable accessibilityRole="button" accessibilityLabel={`Open event: ${event.title}`} key={event.id} onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id})} style={({pressed}) => [styles.row, pressed && styles.pressed]}>
+    {scope === 'perp' && events.length > 0 && !visibleEvents.length ? <Card><Text style={s.body}>No Perp events are in the loaded pages yet.</Text></Card> : null}
+    <View style={styles.timeline}>{visibleEvents.map(event => <Pressable accessibilityRole="button" accessibilityLabel={`Open event: ${event.title}`} key={event.id} onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id, event})} style={({pressed}) => [styles.row, pressed && styles.pressed]}>
       <View style={styles.rail}><View style={styles.marker} /></View>
       <View style={styles.copy}>
-        <View style={styles.metaRow}><StatusBadge label={event.kind} tone={event.fundsMoved ? 'mint' : 'sky'} /><Text style={s.meta}>{eventTime(event.occurredAt)}</Text></View>
+        <View style={styles.metaRow}>{event.kind.startsWith('perp_') ? <StatusBadge label="Perp · test" tone="lilac" /> : null}<StatusBadge label={event.kind} tone={event.fundsMoved ? 'mint' : 'sky'} /><Text style={s.meta}>{eventTime(event.occurredAt)}</Text></View>
         <Text style={s.subheading}>{event.title}</Text>
         <Text style={s.body}>{event.summary}</Text>
-        <Text style={s.meta}>Status · {event.status}</Text>
+        <Text style={s.meta}>Status · {activityStatus(event)}</Text>
         {event.amount && event.asset ? <Text style={s.strong}>{event.amount} {event.asset}</Text> : null}
-        {event.transactionHash ? <Text selectable style={s.meta}>Tx · {event.transactionHash}</Text> : null}
+        {event.transactionHash && !isBlocked(event) ? <Text selectable style={s.meta}>Tx · {event.transactionHash}</Text> : null}
       </View>
     </Pressable>)}</View>
+    {hasMore ? <Button label="Load more activity" variant="secondary" onPress={() => { void loadMore(); }} loading={loadingMore} /> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
+  filters: {flexDirection: 'row', gap: spacing.sm},
   timeline: {borderTopWidth: 3, borderColor: colors.ink},
   row: {minHeight: 112, flexDirection: 'row', backgroundColor: colors.paper},
   pressed: {backgroundColor: colors.cream},
@@ -53,3 +88,11 @@ const styles = StyleSheet.create({
   copy: {flex: 1, gap: spacing.sm, padding: spacing.md, borderBottomWidth: 2, borderColor: colors.ink},
   metaRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap'},
 });
+
+function activityStatus(event: MonadActivityEvent) {
+  if (event.kind === 'perp_order_failed' || event.summary.toLowerCase().includes('transaction reverted')) {
+    return event.status === 'finalized' ? 'failed · reverted after finality' : 'reverted · awaiting finality';
+  }
+  return event.status;
+}
+function isBlocked(event: MonadActivityEvent) { return event.status === 'blocked' || event.kind.includes('blocked'); }

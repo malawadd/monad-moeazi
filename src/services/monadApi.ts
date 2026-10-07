@@ -1,6 +1,6 @@
 import {apiRequest, MobileApiError} from './apiClient';
 import type {
-  MonadActivityEvent, MonadAgentSnapshot, MonadMarketsResponse, MonadMandateResponse,
+  MonadActivityPage, MonadAgentSnapshot, MonadMarketsResponse, MonadMandateResponse,
   MonadMandate, MonadOperationKind, MonadOperationStatus, MonadQuote, MonadVenueId, MonadWalletSnapshot,
   PreparedMonadMandate, PreparedMonadOperation,
 } from '../types/monad';
@@ -54,7 +54,8 @@ export const monadApi = {
   wallet: () => apiRequest<MonadWalletSnapshot>(`${base}/wallet`),
   markets: () => apiRequest<MonadMarketsResponse>(`${base}/markets`),
   agent: () => apiRequest<MonadAgentSnapshot>(`${base}/agents`),
-  activity: () => apiRequest<MonadActivityEvent[]>(`${base}/activity`),
+  activity: (limit = 60, cursor?: string) => apiRequest<MonadActivityPage>(
+    `/api/mobile/monad/activity?${new URLSearchParams({limit: String(limit), ...(cursor ? {cursor} : {})}).toString()}`),
   quote: (input: MonadQuoteInput) => apiRequest<MonadQuote>(`${base}/quote`, {
     method: 'POST', body: JSON.stringify(input),
   }),

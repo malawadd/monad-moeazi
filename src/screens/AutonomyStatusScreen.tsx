@@ -79,7 +79,7 @@ export function AutonomyStatusScreen() {
       {priorRuns.map(run => <RunSummary key={run.enrollmentId} run={run} navigation={navigation} />)}
     </Card> : null}
     {updatedAt ? <Text style={s.meta}>Last refreshed {updatedAt} · finalized-chain data</Text> : null}
-    {canEnroll ? <Button label="Set up a new autonomous run" onPress={() => navigation.navigate('AutonomySetup')} />
+    {canEnroll ? <Button label="Choose Spot or Perp" onPress={() => navigation.navigate('AutonomyChoice')} />
       : <Button label="A run is still active" disabled />}
     <Button label="Manual markets and trade review" variant="secondary" onPress={() => navigation.navigate('Main', {screen: 'Markets'})} />
   </Screen>;

@@ -197,3 +197,81 @@ vector is [here](test/autonomy/mandate-vector-autonomy.json), with its Solidity
 assertion in `test/autonomy/AutonomyMandateDigestVector.t.sol`. The separate
 deployment manifest uses `deployments/manifest.autonomy.schema.json`; it records
 all 16 deployment, approval, and pool-seed transaction receipts.
+
+## Mock Perp autonomy (policy version 1)
+
+This separate test-only venue is on chain `10143`, collateral is Circle test USDC, and
+markets `0..2` are the ordered MZA, MZB, MZG pools pinned at deployment. The clearinghouse
+uses each pool's onchain `spotPriceUsdcPerTokenWad()` as its mark. No Perpl order is sent.
+The factory constructor leaves `enrollmentEnabled=false`; enable only after deployment
+review. Funding limits are `100_000..10_000_000` raw USDC (0.1..10 USDC), duration is
+10..120 minutes, policy version is `1`; one active run per owner. Leverage is 1..10x,
+position margin cannot exceed the run's original funding, and the clearinghouse commits
+4x extra reserve before entry to guarantee a 5x total payout cap. Withdrawals can use
+only `operatorReserve - reserveCommitted`.
+
+Factory constructor: `PerpVaultFactory(address administrator,address executor,address usdc,
+address clearinghouse,address[3] tokens,address[3] pools)`. Clearinghouse constructor:
+`PerpClearinghouse(address administrator,address usdc,address[3] tokens,address[3] pools)`.
+Call `clearinghouse.setFactory(factory)` once before enrollments. `createAndEnroll(
+CircleAuthorization,PerpMandate,bytes)` atomically deploys the predicted CREATE2 vault,
+registers it, consumes Circle `receiveWithAuthorization`, and activates the run.
+
+Mandate tuple order and Solidity types:
+
+```solidity
+uint256 chainId; address owner; address vault; address usdc;
+address clearinghouse; address executor; address[3] tokens; address[3] pools;
+uint256 fundingAmount; uint64 durationSeconds; uint64 setupDeadline;
+uint8 policyVersion; uint256 nonce;
+```
+
+EIP-712 domain: `Moeazi Monad Testnet Perp`, version `1`, chain `10143`, verifying
+contract the factory. Primary type string:
+`PerpMandate(uint256 chainId,address owner,address vault,address usdc,address clearinghouse,address executor,address[3] tokens,address[3] pools,uint256 fundingAmount,uint64 durationSeconds,uint64 setupDeadline,uint8 policyVersion,uint256 nonce)`.
+Each fixed array hashes as `keccak256(abi.encode(array))`. Circle uses the EIP-3009
+`ReceiveWithAuthorization` tuple and the existing `USDC` / `2` Circle domain.
+
+Executor calls on the user vault:
+
+```solidity
+submitEntry(bytes32 id,uint8 market,bool isLong,uint8 leverage,uint256 margin,
+    uint256 limitPrice,uint256 expectedPrice,uint64 validUntil)
+fillLimit(bytes32 id); amendLimit(bytes32 id,uint256 limitPrice,uint64 goodUntil);
+cancelPending(bytes32 id);
+increaseSize(bytes32 id,uint256 margin,uint256 expectedPrice,uint64 validUntil);
+reduceSize(bytes32 id,uint256 sizeWad,uint256 expectedPrice,uint64 validUntil);
+addMargin(bytes32 id,uint256 amount,uint256 expectedPrice,uint64 validUntil);
+removeMargin(bytes32 id,uint256 amount,uint256 expectedPrice,uint64 validUntil);
+setTriggers(bytes32 id,uint256 takeProfitWad,uint256 stopLossWad);
+accrueFunding(bytes32 id);
+closePosition(bytes32 id,uint256 expectedPrice,uint64 validUntil);
+executeTrigger(bytes32 id,uint256 expectedPrice,uint64 validUntil);
+liquidate(bytes32 id); settleExpired(bytes32 id);
+stopWithSignature(uint256 nonce,uint64 deadline,bytes signature);
+```
+
+For market actions, `limitPrice=0`, `expectedPrice` is the recently sampled WAD pool mark,
+and `validUntil` must be in `[now,now+30s]`; onchain deviation must be <=1%. Limit entry
+uses `limitPrice != 0`, `expectedPrice=0`, and `validUntil` no later than run expiry. Routine
+close/resize/margin changes require this quote bound. Trigger, expiry, liquidation and stop
+settlement use the live onchain pool mark. `increaseSize` and `addMargin` preserve
+`currentMargin + addedMargin <= fundedAmount`; `removeMargin` preserves <=10x effective
+notional leverage and maintenance margin.
+
+Stop EIP-712 domain is `Moeazi Monad Testnet Perp Vault`, version `1`, chain `10143`,
+verifying contract the vault. Type is `Stop(address vault,address owner,uint256 nonce,uint64 deadline)`.
+`stopNonce()` starts at 0; `stopDigest(nonce,deadline)` returns the digest. Deadline must be
+within five minutes and nonce exact. Stop is relayed by the executor and returns remaining
+vault USDC to the owner.
+
+Useful reads: factory `predictVault`, `activeVault`, `enrollmentNonce`; clearinghouse
+`currentPrice`, `position`, `pendingOrder`, `currentMargin`, `operatorReserve`,
+`reserveCommitted`, `userCollateralTotal`, `openPositionCount`, `fundingRateBpsPerDay`;
+vault `fundedAmount`, `expiresAt`, `status`, `availableUsdc`, `stopNonce`, `usedOrderId`.
+Key clearinghouse events: `EntrySubmitted`, `LimitFilled`, `PositionChanged`,
+`FundingAccrued`, `PositionClosed(vault,orderId,marketIndex,isLong,sizeWad,entryPriceWad,
+exitPriceWad,realizedPnlUsdc,fundingUsdc,returnedUsdc,reason)`, `Liquidated`,
+`EntryCancelled`, and `TriggersChanged`. Vault events `SettlementReturned`, `Stopped`,
+and `RunExpired` record terminal return. Funding rate updates are blocked while any
+position is open, so a rate change cannot retroactively alter accrued time.

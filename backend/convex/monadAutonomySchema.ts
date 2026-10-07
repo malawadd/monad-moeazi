@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const monadAutonomyTables = {
   monadAutonomyOperatorLease: defineTable({ key: v.string(), executorAddress: v.string(), orderId: v.string(),
-    workflow: v.union(v.literal("autonomy"), v.literal("scenario")), status: v.string(),
+    workflow: v.union(v.literal("autonomy"), v.literal("scenario"), v.literal("perp")), status: v.string(),
     expiresAt: v.optional(v.number()), createdAt: v.number(), updatedAt: v.number(),
   }).index("by_key", ["key"]),
 

@@ -109,6 +109,7 @@ export type MonadActivityEvent = {
   blockNumber?: number | null;
   details?: Array<{label: string; value: string}>;
 };
+export type MonadActivityPage = {events: MonadActivityEvent[]; nextCursor: string | null; hasMore: boolean};
 
 export type MonadAgentSnapshot = {
   state: 'inactive' | 'blocked' | 'scheduled' | 'running';

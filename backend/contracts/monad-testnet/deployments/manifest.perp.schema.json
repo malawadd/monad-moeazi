@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.test/schemas/manifest.perp.testnet.json",
+  "title": "Moeazi Monad Testnet Mock Perp Deployment Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "network", "chainId", "deploymentStatus", "verified", "enrollmentEnabled", "policy", "addresses", "codeHashes", "reserve", "source", "deploymentTxHashes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "network": { "const": "monad-testnet" },
+    "chainId": { "const": 10143 },
+    "deploymentStatus": { "const": "verified" },
+    "verified": { "const": true },
+    "enrollmentEnabled": { "const": false },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "minFunding", "maxFunding", "minDurationSeconds", "maxDurationSeconds", "maxLeverage", "maxPositionMarginMultiple", "maxPayoutMultiple", "reserveMultiple"],
+      "properties": {
+        "version": { "const": 1 }, "minFunding": { "const": "100000" }, "maxFunding": { "const": "10000000" },
+        "minDurationSeconds": { "const": 600 }, "maxDurationSeconds": { "const": 7200 }, "maxLeverage": { "const": 10 },
+        "maxPositionMarginMultiple": { "const": 1 }, "maxPayoutMultiple": { "const": 5 }, "reserveMultiple": { "const": 4 }
+      }
+    },
+    "addresses": {
+      "type": "object", "additionalProperties": false,
+      "required": ["administrator", "executor", "usdc", "factory", "clearinghouse", "markets"],
+      "properties": {
+        "administrator": { "$ref": "#/$defs/address" }, "executor": { "$ref": "#/$defs/address" },
+        "usdc": { "const": "0x534b2f3A21130d7a60830c2Df862319e593943A3" },
+        "factory": { "$ref": "#/$defs/address" }, "clearinghouse": { "$ref": "#/$defs/address" },
+        "markets": { "type": "array", "minItems": 3, "maxItems": 3, "prefixItems": [
+          { "$ref": "#/$defs/market0" }, { "$ref": "#/$defs/market1" }, { "$ref": "#/$defs/market2" }
+        ], "items": false }
+      }
+    },
+    "codeHashes": {
+      "type": "object", "additionalProperties": false, "required": ["factory", "clearinghouse", "tokens", "pools"],
+      "properties": { "factory": { "$ref": "#/$defs/hash" }, "clearinghouse": { "$ref": "#/$defs/hash" },
+        "tokens": { "$ref": "#/$defs/hashList" }, "pools": { "$ref": "#/$defs/hashList" } }
+    },
+    "reserve": {
+      "type": "object", "additionalProperties": false,
+      "required": ["token", "depositedUsdc", "committedUsdc", "availableUsdc", "status"],
+      "properties": { "token": { "const": "0x534b2f3A21130d7a60830c2Df862319e593943A3" },
+        "depositedUsdc": { "const": "0" }, "committedUsdc": { "const": "0" },
+        "availableUsdc": { "const": "0" }, "status": { "const": "not_funded" } }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["revision", "solc", "foundry", "foundryTomlHash", "autonomyManifestHash", "autonomyFactory"],
+      "properties": { "revision": { "type": "string", "minLength": 7 }, "solc": { "const": "0.8.26" },
+        "foundry": { "type": "string", "minLength": 2 }, "foundryTomlHash": { "$ref": "#/$defs/hash" },
+        "autonomyManifestHash": { "$ref": "#/$defs/hash" }, "autonomyFactory": { "$ref": "#/$defs/address" } }
+    },
+    "deploymentTxHashes": {
+      "type": "object", "additionalProperties": false, "required": ["status", "items"],
+      "properties": { "status": { "const": "verified" }, "items": { "type": "array", "minItems": 3,
+        "items": { "$ref": "#/$defs/receipt" }, "allOf": [
+          { "contains": { "properties": { "label": { "const": "deploy_perp_clearinghouse" } }, "required": ["label"] } },
+          { "contains": { "properties": { "label": { "const": "deploy_perp_factory" } }, "required": ["label"] } },
+          { "contains": { "properties": { "label": { "const": "set_perp_factory" } }, "required": ["label"] } }
+        ] } }
+    }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "hashList": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/hash" } },
+    "market": { "type": "object", "additionalProperties": false, "required": ["index", "name", "symbol", "token", "pool"],
+      "properties": { "index": { "type": "integer", "minimum": 0, "maximum": 2 }, "name": { "type": "string" },
+        "symbol": { "enum": ["MZA", "MZB", "MZG"] }, "token": { "$ref": "#/$defs/address" }, "pool": { "$ref": "#/$defs/address" } } },
+    "market0": { "allOf": [{ "$ref": "#/$defs/market" }, { "properties": { "index": { "const": 0 }, "symbol": { "const": "MZA" } } }] },
+    "market1": { "allOf": [{ "$ref": "#/$defs/market" }, { "properties": { "index": { "const": 1 }, "symbol": { "const": "MZB" } } }] },
+    "market2": { "allOf": [{ "$ref": "#/$defs/market" }, { "properties": { "index": { "const": 2 }, "symbol": { "const": "MZG" } } }] },
+    "receipt": { "type": "object", "additionalProperties": false, "required": ["label", "txHash", "blockNumber", "status"],
+      "properties": { "label": { "enum": ["deploy_perp_clearinghouse", "deploy_perp_factory", "set_perp_factory"] },
+        "txHash": { "$ref": "#/$defs/hash" }, "blockNumber": { "type": "integer", "minimum": 0 }, "status": { "const": 1 } } }
+  }
+}

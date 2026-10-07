@@ -14,6 +14,10 @@ import { registerMonadAutonomyEnrollmentRoutes } from "./monad/autonomyEnrollmen
 import { registerMonadAutonomyWorkerRoutes } from "./monad/autonomyWorker.js";
 import { registerMonadAutonomyOperatorRoutes } from "./monad/autonomyOperator.js";
 import { registerMonadAutonomyScenarioRoutes } from "./monad/autonomyOperatorScenarios.js";
+import { registerMonadPerpAutonomyRoutes } from "./monad/perpEnrollment.js";
+import { registerMonadPerpStopRoutes } from "./monad/perpStop.js";
+import { registerMonadPerpWorkerRoutes } from "./monad/perpWorker.js";
+import { registerMonadPerpScenarioRoutes } from "./monad/perpOperatorScenarios.js";
 
 export const OPERATOR_SUBJECT = LOCAL_OPERATOR_SUBJECT;
 
@@ -56,6 +60,10 @@ export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
   registerMonadAutonomyWorkerRoutes(app);
   registerMonadAutonomyOperatorRoutes(app);
   registerMonadAutonomyScenarioRoutes(app);
+  registerMonadPerpAutonomyRoutes(app);
+  registerMonadPerpStopRoutes(app);
+  registerMonadPerpWorkerRoutes(app);
+  registerMonadPerpScenarioRoutes(app);
   const count = await registerLegacyRoutes(app, `${apiRoot}/app/api`);
 
   app.notFound((context) => context.json({ error: "Route not found." }, 404));

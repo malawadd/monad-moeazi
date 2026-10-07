@@ -124,12 +124,12 @@ async function persistEvent(ctx: any, row: any, event: any) {
   const prior = await ctx.db.query("monadPerpEvents").withIndex("by_eventId", (q: any) => q.eq("eventId", eventId)).first();
   if (prior) return;
   const payloadJson = event.payload ? JSON.stringify(event.payload).slice(0, 20_000) : undefined;
-  await ctx.db.insert("monadPerpEvents", { runId: row.runId, ownerAddress: row.ownerAddress, eventId,
+  await ctx.db.insert("monadPerpEvents", { runId: row.runId, venueId: "monad-mock-clearinghouse-v1", ownerAddress: row.ownerAddress, eventId,
     timestamp: event.timestamp ?? Date.now(), type: event.type, status: event.status,
     summary: String(event.summary ?? event.type).slice(0, 300), ...(event.orderId ? { orderId: event.orderId } : {}),
     ...(event.txHash ? { txHash: event.txHash } : {}), ...(event.blockNumber !== undefined ? { blockNumber: event.blockNumber } : {}),
     ...(payloadJson ? { payloadJson } : {}) });
   if (event.activity !== false) await appendMonadActivity(ctx, { userId: row.userId, ownerAddress: row.ownerAddress, activityId: eventId,
     kind: event.type, status: event.status, summary: event.summary ?? event.type, txHash: event.txHash,
-    dataJson: payloadJson ?? JSON.stringify({ runId: row.runId, orderId: event.orderId }) });
+    venueId: "monad-mock-clearinghouse-v1", dataJson: payloadJson ?? JSON.stringify({ runId: row.runId, orderId: event.orderId }) });
 }

@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const monadPerpTables = {
   monadPerpRuns: defineTable({
-    runId: v.string(), userId: v.id("users"), subject: v.string(), ownerAddress: v.string(),
+    runId: v.string(), venueId: v.optional(v.string()), userId: v.id("users"), subject: v.string(), ownerAddress: v.string(),
     chainId: v.number(), factoryAddress: v.string(), clearinghouseAddress: v.string(), vaultAddress: v.string(),
     nonce: v.string(), idempotencyKey: v.string(), amountUnits: v.string(), durationSeconds: v.number(),
     setupDeadline: v.number(), preparedExpiresAt: v.number(), circleNonce: v.string(),
@@ -29,7 +29,7 @@ export const monadPerpTables = {
     .index("by_owner_status", ["ownerAddress", "status"]),
 
   monadPerpOrders: defineTable({
-    runId: v.string(), ownerAddress: v.string(), orderId: v.string(), idempotencyKey: v.string(),
+    runId: v.string(), venueId: v.optional(v.string()), ownerAddress: v.string(), orderId: v.string(), idempotencyKey: v.string(),
     kind: v.string(), status: v.string(), marketIndex: v.optional(v.number()), side: v.optional(v.string()),
     leverage: v.optional(v.number()), marginUnits: v.optional(v.string()), sizeWad: v.optional(v.string()),
     limitPriceWad: v.optional(v.string()), expectedPriceWad: v.optional(v.string()),
@@ -52,7 +52,7 @@ export const monadPerpTables = {
   }).index("by_run_market_time", ["runId", "marketIndex", "observedAt"])
     .index("by_run_time", ["runId", "observedAt"]),
 
-  monadPerpEvents: defineTable({ runId: v.string(), ownerAddress: v.string(), eventId: v.string(),
+  monadPerpEvents: defineTable({ runId: v.string(), venueId: v.optional(v.string()), ownerAddress: v.string(), eventId: v.string(),
     timestamp: v.number(), type: v.string(), status: v.string(), summary: v.string(),
     orderId: v.optional(v.string()), txHash: v.optional(v.string()), blockNumber: v.optional(v.number()),
     payloadJson: v.optional(v.string()),

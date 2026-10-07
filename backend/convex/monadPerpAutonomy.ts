@@ -64,7 +64,7 @@ export const prepareRun = mutation({
       if (existing) throw new Error("A perp run is already active or settling for this Mera owner.");
     }
     const now = Date.now();
-    const id = await ctx.db.insert("monadPerpRuns", { ...args, userId: user._id, subject: `mera:${owner}`,
+    const id = await ctx.db.insert("monadPerpRuns", { ...args, venueId: "monad-mock-clearinghouse-v1", userId: user._id, subject: `mera:${owner}`,
       ownerAddress: owner, status: "prepared", tickSequence: 0, createdAt: now, updatedAt: now });
     await addEvent(ctx, { runId: args.runId, ownerAddress: owner, userId: user._id, eventId: "prepared",
       type: "perp_enrollment_prepared", status: "prepared", summary: "Perp test policy and exact Circle funding authorization prepared for Mera review" });
@@ -130,11 +130,11 @@ async function addEvent(ctx: any, input: any) {
   if (prior) return;
   const timestamp = input.timestamp ?? Date.now();
   const payload = input.payload ? JSON.stringify(input.payload).slice(0, 20_000) : undefined;
-  await ctx.db.insert("monadPerpEvents", { runId: input.runId, ownerAddress: input.ownerAddress,
+  await ctx.db.insert("monadPerpEvents", { runId: input.runId, venueId: "monad-mock-clearinghouse-v1", ownerAddress: input.ownerAddress,
     eventId, timestamp, type: input.type, status: input.status, summary: String(input.summary).slice(0, 300),
     ...(input.orderId ? { orderId: input.orderId } : {}), ...(input.txHash ? { txHash: input.txHash } : {}),
     ...(input.blockNumber !== undefined ? { blockNumber: input.blockNumber } : {}), ...(payload ? { payloadJson: payload } : {}) });
   await appendMonadActivity(ctx, { userId: input.userId, ownerAddress: input.ownerAddress,
     activityId: eventId, kind: input.type, status: input.status, summary: input.summary,
-    txHash: input.txHash, dataJson: payload ?? JSON.stringify({ runId: input.runId }) });
+    txHash: input.txHash, venueId: "monad-mock-clearinghouse-v1", dataJson: payload ?? JSON.stringify({ runId: input.runId }) });
 }

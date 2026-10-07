@@ -66,7 +66,7 @@ export async function updateAutonomyOperatorLease(ctx: any, orderId: string, sta
 
 export async function appendMonadActivity(ctx: any, input: {
   userId: any; ownerAddress: string; activityId: string; kind: string; status: string;
-  summary: string; operationId?: string; mandateId?: string; txHash?: string; dataJson?: string;
+  summary: string; operationId?: string; mandateId?: string; txHash?: string; dataJson?: string; venueId?: string;
 }) {
   await ctx.db.insert("monadActivity", {
     ...input, chainId: MONAD_CHAIN_ID, ownerAddress: input.ownerAddress.toLowerCase(),

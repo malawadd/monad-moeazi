@@ -16,6 +16,7 @@
     <script src="/console-pages.js" defer></script>
     <script src="/autonomy-controls.js" defer></script>
     <script src="/perp-scenarios.js" defer></script>
+    <script src="/perpl-scenarios.js" defer></script>
   </head>
   <body>
     <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
@@ -41,6 +42,7 @@
         <a href="#testing-page">Experiments &amp; Test Center</a><a href="#credits-title">Credits &amp; providers</a>
         <a href="#config-page">Configuration</a><a href="#manual-sequence-page">Manual sequence</a>
         <a href="#autonomy-page">Autonomy testnet</a><a href="#perp-scenarios-page">Mock perp scenarios</a>
+        <a href="#perpl-scenarios-page">Perpl scenarios</a>
       </nav>
 
       <section class="intro">
@@ -53,6 +55,23 @@
         <strong>Dedicated local operator identity</strong>
         <span>Console calls use a walletless, paused Monad-local workspace. Browser requests never receive Convex admin keys or service credentials.</span>
         <span class="scope">Customer identities and existing assignments are not used for operator-owned teams and programs.</span>
+      </section>
+
+      <section class="workspace" id="perpl-scenarios-page" aria-labelledby="perpl-scenarios-title">
+        <div class="panel-head"><div><p class="eyebrow">MONAD TESTNET · REAL PERPL</p><h2 id="perpl-scenarios-title">Perpl scenario runner</h2></div>
+          <div class="head-actions"><span id="perpl-scenario-state" role="status">Not loaded</span><button id="perpl-scenario-refresh" type="button">Refresh status</button></div></div>
+        <div class="perp-scenario-warning"><strong>Funded Perpl orders can lose AUSD.</strong>
+          <span>This runner is available only for an active, Mera-approved Perpl run and passes each action through the live policy checker. It does not control Perpl prices. No order acknowledgement is counted as a fill.</span></div>
+        <form id="perpl-scenario-form" class="perp-scenario-form">
+          <label for="perpl-scenario-run">Active Perpl run ID</label><input id="perpl-scenario-run" required autocomplete="off" placeholder="Copy from the app's Perpl status">
+          <label for="perpl-scenario-actions">Actions (JSON array)</label>
+          <textarea id="perpl-scenario-actions" rows="8" required spellcheck="false" placeholder='[{"kind":"market_entry","marketId":16,"side":"long","size":1,"leverage":2},{"kind":"close_position","marketId":16,"side":"long","size":1}]'></textarea>
+          <p class="perp-scenario-hint">Use live market IDs and sizes from Perpl status. Market and limit entry, close, reduce, amend/cancel, linked exit, and margin actions are subject to the run mandate, current order book, available collateral, and Perpl admission. Review every action before submitting.</p>
+          <label for="perpl-scenario-interval">Seconds between actions</label><input id="perpl-scenario-interval" type="number" min="15" max="120" value="15">
+          <div class="perp-scenario-actions"><button id="perpl-scenario-submit" type="submit">Start Perpl script</button><input id="perpl-scenario-key" required autocomplete="off" aria-label="Perpl scenario idempotency key" placeholder="Scenario request key"></div>
+          <p id="perpl-scenario-message" role="status" aria-live="polite">No Perpl scenario is running.</p>
+        </form>
+        <div id="perpl-scenario-list" class="perp-scenario-list" aria-live="polite"><p class="empty-state">Load Perpl scenario status to continue.</p></div>
       </section>
 
       <section class="workspace" id="perp-scenarios-page" aria-labelledby="perp-scenarios-title">

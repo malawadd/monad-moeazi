@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moeazi.test/schemas/manifest.perpl.strategy.testnet.json",
+  "title": "Moeazi Perpl Strategy Vault Deployment Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "network", "chainId", "deploymentStatus", "verified", "enrollmentEnabled", "policy", "addresses", "codeHashes", "source", "deploymentTxHashes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "network": { "const": "monad-testnet" },
+    "chainId": { "const": 10143 },
+    "deploymentStatus": { "enum": ["not_deployed", "draft", "verified"] },
+    "verified": { "type": "boolean" },
+    "enrollmentEnabled": { "const": false },
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "collateralSymbol", "collateralDecimals", "minAccountCreationFunding", "maxMarketsPerRun", "perOrderLimitsEnforcedOnchain"],
+      "properties": {
+        "version": { "const": 2 }, "collateralSymbol": { "const": "AUSD" },
+        "collateralDecimals": { "const": 6 }, "minAccountCreationFunding": { "const": "100000000" },
+        "maxMarketsPerRun": { "const": 16 }, "perOrderLimitsEnforcedOnchain": { "const": false }
+      }
+    },
+    "addresses": {
+      "type": "object", "additionalProperties": false,
+      "required": ["administrator", "operator", "collateralToken", "delegatedAccountFactory", "exchange", "factory"],
+      "properties": {
+        "administrator": { "$ref": "#/$defs/maybeAddress" },
+        "operator": { "$ref": "#/$defs/maybeAddress" },
+        "collateralToken": { "const": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC" },
+        "delegatedAccountFactory": { "const": "0xf42548Ccb3300Bc76c35dc2D347416db2E8d7209" },
+        "exchange": { "const": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc" },
+        "factory": { "$ref": "#/$defs/maybeAddress" }
+      }
+    },
+    "codeHashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["factory", "collateralToken", "delegatedAccountFactory", "exchange"],
+      "properties": {
+        "factory": { "$ref": "#/$defs/maybeHash" }, "collateralToken": { "$ref": "#/$defs/maybeHash" },
+        "delegatedAccountFactory": { "$ref": "#/$defs/maybeHash" }, "exchange": { "$ref": "#/$defs/maybeHash" }
+      }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["revision", "solc", "foundry", "foundryTomlHash"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 7 }, "solc": { "const": "0.8.26" },
+        "foundry": { "type": "string", "minLength": 2 }, "foundryTomlHash": { "$ref": "#/$defs/maybeHash" }
+      }
+    },
+    "deploymentTxHashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "items"],
+      "properties": {
+        "status": { "enum": ["not_deployed", "pending_receipt_verification", "verified"] },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/receipt" } }
+      }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "verified": { "const": true } }, "required": ["verified"] },
+      "then": { "properties": { "deploymentStatus": { "const": "verified" }, "deploymentTxHashes": { "properties": { "status": { "const": "verified" }, "items": { "minItems": 1 } } } } } },
+    { "if": { "properties": { "verified": { "const": false } }, "required": ["verified"] },
+      "then": { "properties": { "enrollmentEnabled": { "const": false } } } }
+  ],
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+    "maybeAddress": { "anyOf": [{ "$ref": "#/$defs/address" }, { "type": "null" }] },
+    "maybeHash": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+    "receipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "txHash", "blockNumber", "status"],
+      "properties": {
+        "label": { "const": "deploy_perpl_strategy_factory" },
+        "txHash": { "$ref": "#/$defs/hash" }, "blockNumber": { "type": "integer", "minimum": 0 },
+        "status": { "const": 1 }
+      }
+    }
+  }
+}

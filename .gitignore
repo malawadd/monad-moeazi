@@ -69,6 +69,7 @@ yarn-error.log
 /coverage
 /SOURCE_SNAPSHOTS.md
 /.data/
+/backend/.data/
 /.bundle/
 /.ignore/
 /.codex-*

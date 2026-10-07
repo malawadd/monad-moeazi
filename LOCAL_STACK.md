@@ -100,6 +100,27 @@ gates must also be enabled for funded runs. Spot and Perp mandates, vaults,
 workers, and records are separate. The [Perp test guide](docs/PERP_AUTONOMY_TESTNET.md)
 describes the policy, reserve, operator scripts, and shutdown sequence.
 
+### Perpl Testnet autonomy
+
+The separate [Perpl guide](docs/PERPL_AUTONOMY_TESTNET.md) describes the AUSD
+venue, owner approval, direct onchain transport, retained API transport, and
+acceptance steps. The default-off `MONAD_TESTNET_PERPL_AUTONOMY_ENABLED` and
+`MONAD_TESTNET_PERPL_DIRECT_EXECUTION_ENABLED` gates are distinct from the mock
+Perp gate; action, broadcast, and operator gates are also required for funded
+direct runs. Direct runs do not require a Perpl API key or Origin whitelist.
+For a hands-on three-cycle repeat, follow the
+[direct Perpl manual guide](docs/REPEAT_PERPL_DIRECT_CYCLES.md).
+The API transport still requires `PERPL_API_ORIGIN` in ignored
+`backend/.env.local` and an origin whitelisted by Perpl. On 2026-10-07, Perpl
+rejected the intended Moeazi origin for API-key enrollment. The
+[standalone report](docs/PERPL_TESTNET_REPORT.html) records wallet funding and
+three finalized direct BTC cycles, along with blocked and unobserved
+capabilities. A submitted transaction is never counted as a fill.
+Public context, prices, order books, candles, funding history, announcements,
+and market-data WebSocket streams remain usable without a Perpl API key. Run
+`node scripts/check-perpl-public.mjs` from `backend/` for a read-only Testnet
+coverage check; the mobile Perpl markets page uses the public context.
+
 The local Android acceptance setup has the first two gates enabled so a tester
 can use the app. A new stack setup starts with them disabled. The managed vault
 is currently stopped onchain with zero USDC and WMON balances; its old signed

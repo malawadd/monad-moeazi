@@ -28,6 +28,14 @@ export function routeError(error: unknown) {
   if (error instanceof MonadApiError) return { body: { error: error.code === "approval_required" ? error.code : error.message,
     message: error.message, code: error.code,
     ...(error.details === undefined ? {} : { details: error.details }) }, status: error.status };
+  if (error && typeof error === "object" && "status" in error && "code" in error) {
+    const candidate = error as { status?: unknown; code?: unknown; message?: unknown };
+    const status = Number(candidate.status); const code = String(candidate.code);
+    if (Number.isInteger(status) && status >= 400 && status <= 599 && /^perpl_[a-z0-9_]+$/.test(code)) {
+      const message = String(candidate.message ?? "Perpl Testnet request failed.");
+      return { body: { error: message, message, code }, status };
+    }
+  }
   const message = error instanceof Error ? error.message : "Monad request failed.";
   const status = /not found/i.test(message) ? 404 : /identity|required|belongs to|owner/i.test(message) ? 403 : 409;
   return { body: { error: message.slice(0, 300), code: "monad_request_rejected" }, status };

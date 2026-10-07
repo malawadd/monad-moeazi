@@ -18,6 +18,11 @@ import { registerMonadPerpAutonomyRoutes } from "./monad/perpEnrollment.js";
 import { registerMonadPerpStopRoutes } from "./monad/perpStop.js";
 import { registerMonadPerpWorkerRoutes } from "./monad/perpWorker.js";
 import { registerMonadPerpScenarioRoutes } from "./monad/perpOperatorScenarios.js";
+import { registerPerplRoutes } from "./monad/perplRoutes.js";
+import { registerPerplRecoveryRoutes } from "./monad/perplRecoveryRoutes.js";
+import { registerPerplScenarioRoutes } from "./monad/perplOperatorScenarios.js";
+import { registerPerplWorkerRoutes } from "./monad/perplWorker.js";
+import { registerPerpVenues } from "./monad/registerPerpVenues.js";
 
 export const OPERATOR_SUBJECT = LOCAL_OPERATOR_SUBJECT;
 
@@ -36,6 +41,7 @@ async function bridgeOnly(context: Context<ApiEnv>, next: () => Promise<void>): 
 
 export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
   const app = new Hono<ApiEnv>();
+  registerPerpVenues();
   app.use("/api/*", async (context, next) => {
     await next();
     if (!context.res.headers.has("vary")) {
@@ -64,6 +70,10 @@ export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
   registerMonadPerpStopRoutes(app);
   registerMonadPerpWorkerRoutes(app);
   registerMonadPerpScenarioRoutes(app);
+  registerPerplRoutes(app);
+  registerPerplRecoveryRoutes(app);
+  registerPerplScenarioRoutes(app);
+  registerPerplWorkerRoutes(app);
   const count = await registerLegacyRoutes(app, `${apiRoot}/app/api`);
 
   app.notFound((context) => context.json({ error: "Route not found." }, 404));

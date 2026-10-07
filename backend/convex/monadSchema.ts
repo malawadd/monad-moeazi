@@ -76,7 +76,7 @@ export const monadTables = {
 
   monadActivity: defineTable({
     userId: v.id("users"), ownerAddress: v.string(), chainId: v.number(),
-    activityId: v.string(), kind: v.string(), status: v.string(),
+    activityId: v.string(), kind: v.string(), status: v.string(), venueId: v.optional(v.string()),
     operationId: v.optional(v.string()), mandateId: v.optional(v.string()),
     txHash: v.optional(v.string()), summary: v.string(), dataJson: v.optional(v.string()),
     createdAt: v.number(),

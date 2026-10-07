@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "verified",
+  "verified": true,
+  "enrollmentEnabled": false,
+  "policy": {
+    "version": 2,
+    "collateralSymbol": "AUSD",
+    "collateralDecimals": 6,
+    "minAccountCreationFunding": "100000000",
+    "maxMarketsPerRun": 16,
+    "perOrderLimitsEnforcedOnchain": false
+  },
+  "addresses": {
+    "administrator": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "operator": "0x3d6eBd40FC8Ed6fbdA3268785fcc047Dda05b801",
+    "collateralToken": "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+    "delegatedAccountFactory": "0xf42548Ccb3300Bc76c35dc2D347416db2E8d7209",
+    "exchange": "0x1964C32f0bE608E7D29302AFF5E61268E72080cc",
+    "factory": "0xCF0fd3c3FEd28d40bd739FcE26FD7CC7d923b80e"
+  },
+  "codeHashes": {
+    "factory": "0xdd7b4ca5e79261ef0abaf87d32499c9fc7ebbcc04bb44e5c58ea59fffd748da0",
+    "collateralToken": "0xa3bda7298d1c5f8585852ee04439f9cc493e5c291c9cac74fa54a0bc67024a7b",
+    "delegatedAccountFactory": "0x5799f30cc9d6e8e32d6587aa7b0f06bdea28c11b1b6785ca36851e20e9cfb724",
+    "exchange": "0x63411cb4bdb3d2085146b23dca998134a387312f7ea092e05386066a85f9f7a1"
+  },
+  "source": {
+    "revision": "5054682-working",
+    "solc": "0.8.26",
+    "foundry": "v1.8.4",
+    "foundryTomlHash": "0x66d3015d37f601ef0205ad146a2edf9ca208ea812900361636ad87dfba4f90c7"
+  },
+  "deploymentTxHashes": {
+    "status": "verified",
+    "items": [
+      {
+        "label": "deploy_perpl_strategy_factory",
+        "txHash": "0x4b10390d35541a2b556ae7cb812d24aaf79d5a84f92491bd76bedb048b497085",
+        "blockNumber": 68999783,
+        "status": 1
+      }
+    ]
+  }
+}

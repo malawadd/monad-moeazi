@@ -50,6 +50,8 @@ export function MonadHomeScreen() {
       <Button label="Markets and trade review" variant="secondary" onPress={() => navigation.navigate('Markets')} />
       <Button label="Wrap or unwrap MON" variant="secondary" onPress={() => navigation.navigate('Wrap')} />
       <Button label="Managed vault" variant="secondary" onPress={() => navigation.navigate('ManagedVault')} />
+      <Button label="Perpl Testnet markets" variant="secondary" onPress={() => navigation.navigate('PerplMarkets')} />
+      <Button label="Mock Spot and Perp" variant="secondary" onPress={() => navigation.navigate('AutonomyChoice')} />
       <Button label="Autonomous trading · testnet" onPress={() => navigation.navigate('AutonomyChoice')} />
     </View>
   </Screen>;

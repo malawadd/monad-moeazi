@@ -8,8 +8,11 @@ export type PerpVenueOrderState = "prepared" | "submitted" | "executed" | "final
 export type PerpVenueReconciliation = { venueState: PerpVenueOrderState; finalized: boolean; order: any; events: any[] };
 export interface PerpVenueAdapter {
   readonly venueId: string;
+  readonly displayName: string;
+  readonly chainId: 10143;
   readonly executionModel: "onchain_mock";
   readonly testOnly: true;
+  readonly capabilities: readonly string[];
   readDeployment(provider: JsonRpcProvider): Promise<any>;
   readFinalizedMarkets(provider: JsonRpcProvider, deployment: any, blockNumber: number, observedAt: number): Promise<any[]>;
   readFinalizedRunState(provider: JsonRpcProvider, deployment: any, row: any, blockNumber: number): Promise<any>;
@@ -24,7 +27,9 @@ export interface PerpVenueAdapter {
  * adapter deliberately loads only the signed deployment markets and contains no Perpl parameters.
  */
 export const mockClearinghouseVenue: PerpVenueAdapter = {
-  venueId: "monad-mock-clearinghouse-v1", executionModel: "onchain_mock", testOnly: true,
+  venueId: "monad-mock-clearinghouse-v1", displayName: "Monad Mock Perp", chainId: 10143,
+  executionModel: "onchain_mock", testOnly: true,
+  capabilities: ["market_data", "account_read", "market_orders", "limit_orders", "linked_exits", "margin_changes", "owner_withdrawal"],
   readDeployment: readPerpDeployment,
   async readFinalizedMarkets(provider, deployment, blockNumber, observedAt) {
     return await Promise.all(deployment.markets.map(async (market: any) => {

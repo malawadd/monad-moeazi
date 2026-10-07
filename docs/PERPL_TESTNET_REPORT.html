@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moeazi · Perpl Testnet acceptance report</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#192136;background:#f4f6fb}
+    *{box-sizing:border-box}body{margin:0}main{max-width:1080px;margin:auto;padding:36px 22px 64px}
+    h1{font-size:2.3rem;letter-spacing:-.045em;margin:8px 0}h2{font-size:1.2rem;margin:0 0 14px}
+    p{line-height:1.55}.muted{color:#65708a}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;font-weight:800;color:#5145bb}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:24px 0}
+    .card{background:#fff;border:1px solid #e3e7f0;border-radius:18px;padding:20px;box-shadow:0 6px 24px #17213a08}
+    .metric{font-size:1.6rem;font-weight:800;margin:8px 0}.warning{background:#fff6e9;border-color:#f1d4a6}
+    .chart{width:100%;height:auto;min-height:230px}table{width:100%;border-collapse:collapse;font-size:.9rem}
+    th,td{text-align:left;border-bottom:1px solid #e8eaf1;padding:11px 9px;vertical-align:top}th{color:#596581;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+    code{overflow-wrap:anywhere;font-size:.82rem}a{color:#493bb7}.pill{display:inline-block;border-radius:999px;padding:4px 9px;background:#eef0f9;font-size:.75rem;font-weight:700}
+    .pending{background:#fff1d9;color:#805500}.done{background:#dff7eb;color:#11603b}.blocked{background:#ffe7e7;color:#a22b2b}
+    .legend{display:flex;gap:20px;font-size:.82rem;color:#65708a}.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px}
+    .timeline{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;padding:6px 0}.step{border-top:3px solid #d9deeb;padding-top:12px}.step.doneStep{border-color:#17a673}.step.blockedStep{border-color:#dc6b5a}.step b{display:block}.step small{color:#65708a;line-height:1.45}
+    @media(max-width:700px){.timeline{grid-template-columns:1fr 1fr}}
+    @media(max-width:600px){main{padding:22px 14px}h1{font-size:1.8rem}table{display:block;overflow-x:auto;white-space:nowrap}}
+  </style>
+</head>
+<body>
+<main>
+  <span class="eyebrow">Monad Testnet · chain 10143</span>
+  <h1>Perpl autonomy acceptance</h1>
+  <p class="muted">Predictions and measured results are kept separate. A Perpl acknowledgement is not counted as a fill, and a scenario without a finalized outcome remains pending or blocked.</p>
+  <div class="grid" id="metrics"></div>
+  <section class="card warning">
+    <h2>Direct execution acceptance status</h2>
+    <p>Three capped BTC cycles executed through Perpl's delegated account on Monad Testnet: long, short, long. Each entry and close has a finalized transaction and verified Exchange fill. A PUMP long opened automatically before the operator script and was closed; another PUMP short opened after the script and was closed by owner stop. The final 100 AUSD run returned <b>99.732661 AUSD</b>, a measured loss of <b>0.267339 AUSD</b>. The account has zero positions, order locks and collateral; the delegated operator is revoked. The factory enrollment gate and all funded local execution gates are off. The retained API transport remains blocked by Perpl's Origin whitelist.</p>
+  </section>
+  <section class="card warning" style="margin-top:14px">
+    <h2>How to read the predictions</h2>
+    <p>Purple bars are illustrative flat-price, fee-only estimates made with a 0.0345% taker fee per side: −0.0345 AUSD for the roughly 50 AUSD PUMP position and −0.0287 AUSD per roughly 41.6 AUSD BTC cycle. They omit spread, price changes, funding and slippage. Green bars use finalized Exchange balances after each close. These estimates were not live trade signals or guaranteed returns.</p>
+  </section>
+  <div class="grid">
+    <section class="card"><h2>Predicted versus realized PnL</h2><div class="legend"><span><i style="background:#8177d9"></i>Illustrative prediction</span><span><i style="background:#17a673"></i>Measured</span></div><svg id="pnlChart" class="chart" viewBox="0 0 530 250" role="img" aria-label="Predicted and measured AUSD profit and loss by scenario"></svg></section>
+    <section class="card"><h2>Collateral path</h2><div class="legend"><span><i style="background:#8177d9"></i>Illustrative return</span><span><i style="background:#17a673"></i>Verified return</span></div><svg id="balanceChart" class="chart" viewBox="0 0 530 250" role="img" aria-label="Predicted and verified returned AUSD by scenario"></svg></section>
+  </div>
+  <section class="card"><h2>Cycle timeline</h2><div class="timeline">
+    <div class="step doneStep"><b>Factory and Mera setup</b><small>Factory deployed; one offline KeePassDX Mera unlock signed exact funding and direct mandate. Exchange account 964 received 100 AUSD.</small></div>
+    <div class="step doneStep"><b>Automatic PUMP warm-up</b><small>Long entry and close finalized; account balance 99.813273 AUSD.</small></div>
+    <div class="step doneStep"><b>BTC cycle 1 · long</b><small>Entry and close finalized; balance 99.795044 AUSD.</small></div>
+    <div class="step doneStep"><b>BTC cycle 2 · short</b><small>Entry and close finalized; balance 99.764101 AUSD.</small></div>
+    <div class="step doneStep"><b>BTC cycle 3 · long</b><small>Entry and close finalized; balance 99.719199 AUSD.</small></div>
+    <div class="step doneStep"><b>Owner stop and return</b><small>A later PUMP short was closed. Finalized settlement returned 99.732661 AUSD; positions, locks and operator access are zero.</small></div>
+  </div></section>
+  <section class="card"><h2>Scenario and capability ledger</h2><table><thead><tr><th>Scenario</th><th>Expected result</th><th>Measured result</th><th>Evidence</th><th>Status</th></tr></thead><tbody id="scenarios"></tbody></table></section>
+  <section class="card" style="margin-top:14px"><h2>Venue capability coverage</h2><table><thead><tr><th>Capability</th><th>Observation</th><th>Status</th></tr></thead><tbody>
+    <tr><td>Public context and market IDs</td><td>Chain 10143, AUSD, exchange instance 12 and live market IDs read from Perpl Testnet context.</td><td><span class="pill done">observed</span></td></tr>
+    <tr><td>Public ticker and order book</td><td>Perpl Testnet returned executable bid/ask snapshots and depth for market 16.</td><td><span class="pill done">observed</span></td></tr>
+    <tr><td>Direct vault and delegated account interfaces</td><td>Factory 0xCF0fd3c3FEd28d40bd739FcE26FD7CC7d923b80e and vault 0x0Bf216DE213BFF8279C8d0c87cE154A0807f6192 deployed. Account 964 was funded, traded and settled with forwarding disabled. Final operator permission is false.</td><td><span class="pill done">live verified</span></td></tr>
+    <tr><td>Direct filled entry and close</td><td>Ten live IOC order transactions produced finalized request and fill evidence: three scripted BTC cycles plus two automatic PUMP cycles. A local fork separately proved a post-only order, cancel, failed order and short lifecycle.</td><td><span class="pill done">live verified</span></td></tr>
+    <tr><td>Origin-bound API-key payload</td><td>HTTP 400 for Moeazi HTTPS Origin; account enrollment stopped before funding.</td><td><span class="pill blocked">blocked</span></td></tr>
+    <tr><td>Onchain account and position reads</td><td>Finalized getAccountById, getPositionV2 and getOrderLocks read account 964. Final block 69010507 showed zero collateral, position banks and order locks; owner wallet held 9,999.732661 AUSD.</td><td><span class="pill done">live verified</span></td></tr>
+    <tr><td>Authenticated portfolio and history reads</td><td>No enrolled Perpl key; these API endpoints remain unavailable.</td><td><span class="pill blocked">blocked</span></td></tr>
+    <tr><td>WebSocket trading and REST batch</td><td>Retained API transport requires Origin allowlisting; direct onchain execution did not use these endpoints.</td><td><span class="pill blocked">blocked</span></td></tr>
+    <tr><td>Limit amend/cancel, linked exits and margin</td><td>Direct post-only placement and cancel were proved on a Monad local fork. Live run used IOC orders; amend, linked exits and margin changes were not broadcast.</td><td><span class="pill pending">partial</span></td></tr>
+    <tr><td>Funding and liquidation</td><td>No funding accrual or liquidation was observed during this capped live run.</td><td><span class="pill pending">unobserved</span></td></tr>
+  </tbody></table></section>
+  <section class="card" style="margin-top:14px"><h2>Verified transactions and account changes</h2><table><thead><tr><th>Time</th><th>Action</th><th>Amount / outcome</th><th>Hash or Perpl ID</th></tr></thead><tbody id="events"></tbody></table></section>
+  <p class="muted">Source data: finalized Monad Testnet receipts and Exchange state at the blocks shown below, <a href="https://testnet.perpl.xyz/api/v1/pub/context">Perpl live Testnet context</a>, and <a href="https://docs.agora.finance/developer/contract-deployments">Agora Testnet AUSD deployment</a>. The Perpl API transport was not used for these orders. This is a fixed 2026-10-07 acceptance snapshot.</p>
+</main>
+<script>
+  // Acceptance data is embedded here to keep this report usable as one standalone file.
+  const tx = (time,action,outcome,id) => ({time,action,outcome,id,url:`https://testnet.monadscan.com/tx/${id}`});
+  const report = {
+    updatedAt: '2026-10-07',
+    wallet: '0xbb66e7bc26d8a81c36a2f900d141a1fa786a98d8',
+    collateral: 'AUSD',
+    startingAccountAusd: 100,
+    returnedAccountAusd: 99.732661,
+    cyclesFinalized: 3,
+    scenarios: [
+      {name:'PUMP warm-up · long',expected:'Illustrative flat-price fee-only round trip',predictedPnl:-0.0345,actualPnl:-0.186727,predictedBalance:99.9655,actualBalance:99.813273,status:'done',evidence:['Requests 1–2; blocks 69006889, 69007797']},
+      {name:'BTC cycle 1 · long',expected:'Scripted market entry then full close',predictedPnl:-0.0287,actualPnl:-0.018229,predictedBalance:99.9368,actualBalance:99.795044,status:'done',evidence:['Requests 3–4; blocks 69008106, 69008482']},
+      {name:'BTC cycle 2 · short',expected:'Scripted market entry then full close',predictedPnl:-0.0287,actualPnl:-0.030943,predictedBalance:99.9081,actualBalance:99.764101,status:'done',evidence:['Requests 5–6; blocks 69008620, 69008751']},
+      {name:'BTC cycle 3 · long',expected:'Scripted market entry then full close',predictedPnl:-0.0287,actualPnl:-0.044902,predictedBalance:99.8794,actualBalance:99.719199,status:'done',evidence:['Requests 7–8; blocks 69008886, 69009022']},
+      {name:'Owner stop and PUMP exit',expected:'Disable entries, close exposure, revoke operator, return AUSD',predictedPnl:null,actualPnl:0.013462,status:'done',evidence:['Requests 9–10; stop block 69010009; settlement block 69010378']},
+      {name:'Post-only limit and cancel',expected:'Verify placement, cancel, locks and account state',predictedPnl:null,actualPnl:null,status:'done',evidence:['Monad local fork only; no live Testnet order']},
+      {name:'Live amend, linked exits and margin',expected:'Admit only within signed policy',predictedPnl:null,actualPnl:null,status:'unobserved',evidence:['Not broadcast in capped live run']},
+      {name:'Funding/liquidation',expected:'Record live event only if Testnet conditions trigger it',predictedPnl:null,actualPnl:null,status:'unobserved',evidence:[]},
+      {name:'API batch and key enrollment',expected:'Separate retained API adapter after Origin approval',predictedPnl:null,actualPnl:null,status:'blocked',evidence:['Perpl Origin whitelist rejected Moeazi HTTPS Origin']}
+    ],
+    events:[
+      tx('2026-10-07','Agora faucet to Mera wallet','10,000 AUSD finalized','0xec01e8c5e708e2cb56796c76f2d170a5bfdbc4b9a6f0d76897079d2b9c6e02ac'),
+      tx('68999783','Moeazi strategy factory deployment','Verified code hash; later enrollment disabled','0x4b10390d35541a2b556ae7cb812d24aaf79d5a84f92491bd76bedb048b497085'),
+      tx('69006326','Mera signed direct funding','100 AUSD to owner vault','0xb0e986bf6a402fa56782652340adc20676273ffae9e50f7a9a90dfc50e4cfa2b'),
+      tx('69006366','Operator activation','Delegated account 964 created; no API forwarding','0x2db406c919d38411808f655c16640e288e3c22e57e471c258b54ef6ab7088da8'),
+      tx('69006889','PUMP long entry · request 1','Filled; 0.017238 AUSD fee','0x03829e79255061cb26d209de751763c774639392f7748fc6ca12a7f6cdcbbdce'),
+      tx('69007797','PUMP long close · request 2','Flat; balance 99.813273 AUSD','0xc7eec30d1f6429842d614f9e40675113a81fa84723017b9b748fd918d2104159'),
+      tx('69008106','BTC long entry · request 3','Filled; 0.014363 AUSD fee','0x0a8c43b993729cb5e6222a0ee65ca34258af7cd36fa4dc3650982e1eba3f9c82'),
+      tx('69008482','BTC long close · request 4','Cycle 1 flat; balance 99.795044 AUSD','0x17a9de7f79fc8a01bfecd5e4e85d9f732d9bce0fa0989cc61588b726bdc9ce03'),
+      tx('69008620','BTC short entry · request 5','Filled; 0.014371 AUSD fee','0x096f9a794edaad0b3e276d690372369b6ae56e745333dbaf79593b5245529f38'),
+      tx('69008751','BTC short close · request 6','Cycle 2 flat; balance 99.764101 AUSD','0x53f0976a05e903538bd7b84698678f348c4f9f0c1f0f87162f46e7367b084c7a'),
+      tx('69008886','BTC long entry · request 7','Filled; 0.014379 AUSD fee','0xc4da7d92c6838c489b2f5797cd585781abd38211c15f161394e27511cda1987d'),
+      tx('69009022','BTC long close · request 8','Cycle 3 flat; balance 99.719199 AUSD','0x6ea94553088c6f2a682c2b2c74268ad4df7567d9bb76a13b333b02b29724653c'),
+      tx('69009124','Automatic PUMP short · request 9','Filled after script completion','0x9218c88178e6a18e77ed74a7b36fa80608cfc194aff16f13bf07b47025152ef8'),
+      tx('69010009','Mera owner stop','New entries disabled; stop finalized','0x2a4f55a1ebcfac20b073e1f47b5613af94691971e2912438ef498689a3c8d08d'),
+      tx('69010256','PUMP short close · request 10','Flat; balance 99.732661 AUSD','0x56ef0664d1e0706f43b3567ca46c2a7c73b3e3d45e380d9db4bdea5f1fc89910'),
+      tx('69010323','Settlement ready','Zero positions and locks verified','0x33b7c174111834b34813ed855b6845bc0aba9b40485eaa4a1782295a5b8726e7'),
+      tx('69010378','Settlement complete','99.732661 AUSD returned; operator revoked','0x5a2c4def76b4e67c42530793c0114948f7703b7d0ea0443d0acc5386964cadcd'),
+      tx('69010544','Factory enrollment disabled','Default-off rollout restored','0x72cf16b419217d1f23092d550d603088469b6f9815757c79e4dca4a94298bd94')
+    ]
+  };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = n => n === null || n === undefined ? '—' : `${n >= 0 ? '+' : ''}${Number(n).toFixed(6)} AUSD`;
+  document.getElementById('metrics').innerHTML = [
+    ['Finalized cycles',String(report.cyclesFinalized)],
+    ['Perpl starting collateral',report.startingAccountAusd === null ? 'Not enrolled' : `${report.startingAccountAusd} AUSD`],
+    ['Verified return',report.returnedAccountAusd === null ? 'Not settled' : `${report.returnedAccountAusd} AUSD`],
+    ['Realized AUSD PnL','−0.267339 AUSD'],
+    ['Perpl fees','0.155131 AUSD · included in PnL'],
+    ['Operator-paid gas','0.655745964 MON']
+  ].map(([label,value]) => `<div class="card"><span class="eyebrow">${esc(label)}</span><div class="metric">${esc(value)}</div></div>`).join('');
+  document.getElementById('scenarios').innerHTML = report.scenarios.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.expected)}${s.predictedPnl === null ? '' : `<br>Illustrative: ${esc(fmt(s.predictedPnl))}`}</td><td>${esc(fmt(s.actualPnl))}${s.actualBalance === undefined ? '' : `<br>Closing balance: ${esc(s.actualBalance.toFixed(6))} AUSD`}</td><td>${s.evidence.map(x => `<code>${esc(x)}</code>`).join('<br>') || '—'}</td><td><span class="pill ${esc(s.status)}">${esc(s.status)}</span></td></tr>`).join('');
+  document.getElementById('events').innerHTML = report.events.map(e => `<tr><td>${esc(e.time)}</td><td>${esc(e.action)}</td><td>${esc(e.outcome)}</td><td><a href="${esc(e.url)}"><code>${esc(e.id)}</code></a></td></tr>`).join('');
+  function draw(svgId, balance) {
+    const svg = document.getElementById(svgId), rows = report.scenarios.filter(s => s.predictedPnl !== null).slice(0,4);
+    let markup = balance
+      ? '<line x1="152" y1="8" x2="152" y2="236" stroke="#b5bfd2"/><text x="152" y="245" font-size="10">99.7</text><text x="453" y="245" font-size="10">100.0</text>'
+      : '<line x1="330" y1="8" x2="330" y2="236" stroke="#b5bfd2"/><text x="334" y="245" font-size="10">0</text>';
+    rows.forEach((s,i) => {
+      const y = 24 + i * 54, predicted = balance ? s.predictedBalance : s.predictedPnl;
+      const actual = balance ? s.actualBalance : s.actualPnl;
+      markup += `<text x="8" y="${y+17}" font-size="12" fill="#3d4961">${esc(s.name)}</text>`;
+      if(balance){
+        const px = 152 + (predicted-99.7)/.3*326, ax = 152 + (actual-99.7)/.3*326;
+        markup += `<line x1="${px}" y1="${y+9}" x2="${ax}" y2="${y+26}" stroke="#c2c9d8"/><circle cx="${px}" cy="${y+9}" r="6" fill="#8177d9"/><circle cx="${ax}" cy="${y+26}" r="6" fill="#17a673"/><text x="${Math.min(458,ax+9)}" y="${y+30}" font-size="10" fill="#11603b">${actual.toFixed(6)}</text>`;
+      }else{
+        const pw = Math.abs(predicted)*600, aw = Math.abs(actual)*600;
+        markup += `<rect x="${330-pw}" y="${y}" width="${Math.max(2,pw)}" height="12" rx="3" fill="#8177d9"/><rect x="${330-aw}" y="${y+17}" width="${Math.max(2,aw)}" height="12" rx="3" fill="#17a673"/><text x="336" y="${y+27}" font-size="10" fill="#11603b">${esc(fmt(actual))}</text>`;
+      }
+    });
+    svg.innerHTML = markup;
+  }
+  draw('pnlChart',false);draw('balanceChart',true);
+</script>
+</body>
+</html>

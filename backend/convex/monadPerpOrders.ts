@@ -46,7 +46,7 @@ export const queueFunding = mutation({
       q.eq("executorAddress", args.executorAddress.toLowerCase()).eq("nonce", args.nonce)).collect();
     if (nonceRows.some((item: any) => item.orderId !== orderId && !["failed", "finalized"].includes(item.status))) throw new Error("Perp executor nonce is already reserved.");
     await reserveAutonomyOperatorLease(ctx, { executorAddress: args.executorAddress, orderId, workflow: "perp", expiresAt: row.setupDeadline * 1000 });
-    if (!prior) await ctx.db.insert("monadPerpOrders", { runId: row.runId, ownerAddress: row.ownerAddress,
+    if (!prior) await ctx.db.insert("monadPerpOrders", { runId: row.runId, venueId: "monad-mock-clearinghouse-v1", ownerAddress: row.ownerAddress,
       orderId, idempotencyKey: orderId, kind: "funding", status: "prepared", transactionJson: args.transactionJson,
       signedRawTransaction: args.rawTransaction, txHash: args.txHash, executorAddress: args.executorAddress.toLowerCase(),
       nonce: args.nonce, vaultAddress: row.vaultAddress, clearinghouseAddress: row.clearinghouseAddress,
@@ -92,7 +92,7 @@ export const persistOrder = mutation({
       workflow: "perp", expiresAt: args.leaseExpiresAt });
     const now = Date.now();
     const { rawTransaction, leaseExpiresAt: _leaseExpiresAt, ...stored } = args;
-    const id = await ctx.db.insert("monadPerpOrders", { ...stored, ownerAddress: row.ownerAddress,
+    const id = await ctx.db.insert("monadPerpOrders", { ...stored, venueId: "monad-mock-clearinghouse-v1", ownerAddress: row.ownerAddress,
       signedRawTransaction: rawTransaction,
       status: "prepared", executorAddress: args.executorAddress.toLowerCase(), createdAt: now, updatedAt: now });
     return await ctx.db.get(id);
@@ -138,12 +138,12 @@ export const updateOrder = mutation({
         const prior = await ctx.db.query("monadPerpEvents").withIndex("by_eventId", (q: any) => q.eq("eventId", eventId)).first();
         if (!prior) {
           const summary = `Perp ${row.kind} transaction submitted to Monad`;
-          await ctx.db.insert("monadPerpEvents", { runId: row.runId, ownerAddress: row.ownerAddress, eventId,
+          await ctx.db.insert("monadPerpEvents", { runId: row.runId, venueId: "monad-mock-clearinghouse-v1", ownerAddress: row.ownerAddress, eventId,
             timestamp: Date.now(), type: "perp_order_submitted", status: "submitted", summary,
             orderId: row.orderId, txHash: row.txHash });
           await appendMonadActivity(ctx, { userId: ownerRun.userId, ownerAddress: row.ownerAddress,
             activityId: eventId, kind: "perp_order_submitted", status: "submitted", summary, txHash: row.txHash,
-            dataJson: JSON.stringify({ runId: row.runId, orderId: row.orderId, kind: row.kind }) });
+            venueId: "monad-mock-clearinghouse-v1", dataJson: JSON.stringify({ runId: row.runId, orderId: row.orderId, kind: row.kind }) });
         }
       }
     }

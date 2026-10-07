@@ -1,6 +1,7 @@
 export type MonadAsset = 'MON' | 'USDC' | 'WMON';
 export type MonadAccountScope = 'wallet' | 'vault';
 export type MonadVenueId = 'uniswap_v4_testnet' | 'moeazi_test_amm';
+export type PerpVenueId = 'monad-mock-clearinghouse-v1' | 'perpl-testnet-v1' | 'perpl-direct-testnet-v1';
 
 export type MonadBalance = {
   asset: MonadAsset;
@@ -106,6 +107,7 @@ export type MonadActivityEvent = {
   transactionHash?: string | null;
   amount?: string | null;
   asset?: string | null;
+  venueId?: PerpVenueId | null;
   blockNumber?: number | null;
   details?: Array<{label: string; value: string}>;
 };

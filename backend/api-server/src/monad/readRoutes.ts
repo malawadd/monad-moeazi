@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Contract, getAddress, Interface } from "ethers";
+import { Contract, formatUnits, getAddress, Interface } from "ethers";
 import { Hono } from "hono";
 import { meraQuery, operatorMutation } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
@@ -47,11 +47,19 @@ async function activity(context: any) {
     const data = jsonRecord(row.dataJson);
     const status = row.status === "authorized" ? "verified" : row.status;
     const receiptStatus = Number(data.receiptStatus);
-    const amount = typeof data.amount === "string" ? data.amount : null;
-    const asset = typeof data.asset === "string" ? data.asset : null;
-    return { id: row.activityId, kind: row.kind, title: row.kind.replaceAll("_", " "),
+    const response = data.response && typeof data.response === "object" && !Array.isArray(data.response)
+      ? data.response as Record<string, unknown> : {};
+    const fills = Array.isArray(data.fills) ? data.fills : [];
+    const verifiedPerplFill = Boolean(row.venueId?.startsWith("perpl-") && row.kind === "perpl_order_finalized"
+      && status === "finalized" && fills.length > 0);
+    const verifiedPerplReturn = Boolean(row.venueId?.startsWith("perpl-") && row.kind === "perpl_settlement_finalized"
+      && status === "completed" && /^\d+$/.test(String(data.returnedUnits ?? "")) && BigInt(String(data.returnedUnits)) > 0n);
+    const amount = typeof data.amount === "string" ? data.amount
+      : verifiedPerplReturn ? formatUnits(BigInt(String(data.returnedUnits)), 6) : null;
+    const asset = typeof data.asset === "string" ? data.asset : verifiedPerplReturn ? "AUSD" : null;
+    return { id: row.activityId, kind: row.kind, venueId: row.venueId ?? null, title: row.kind.replaceAll("_", " "),
       summary: row.summary, status, occurredAt: new Date(row.createdAt).toISOString(),
-      fundsMoved: status === "finalized" && receiptStatus === 1,
+      fundsMoved: status === "finalized" && receiptStatus === 1 || verifiedPerplFill || verifiedPerplReturn,
       transactionHash: row.txHash ?? null, amount, asset,
       blockNumber: typeof data.blockNumber === "number" ? data.blockNumber : null,
       details: Object.entries({ ...(asset ? { asset } : {}), ...(amount ? { amount } : {}),
@@ -60,6 +68,10 @@ async function activity(context: any) {
         ...(typeof data.leverage === "number" ? { leverage: `${data.leverage}x` } : {}),
         ...(typeof data.marginUnits === "string" ? { marginUnits: data.marginUnits } : {}),
         ...(typeof data.realizedPnlUnits === "string" ? { realizedPnlUnits: data.realizedPnlUnits } : {}),
+        ...(typeof data.requestId === "number" ? { requestId: String(data.requestId) } : {}),
+        ...(typeof response.feeUnits === "string" ? { feeAUSDUnits: response.feeUnits } : {}),
+        ...(typeof response.operatorGasWei === "string" ? { operatorGasWei: response.operatorGasWei } : {}),
+        ...(typeof data.returnedUnits === "string" ? { returnedAUSDUnits: data.returnedUnits } : {}),
         ...(typeof data.blockNumber === "number" ? { block: String(data.blockNumber) } : {}) })
         .map(([label, value]) => ({ label, value: String(value) })) };
   });

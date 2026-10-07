@@ -47,6 +47,14 @@ export function assertMonadPerpAutonomyEnabled(requireBroadcast = false) {
   if (requireBroadcast) assertMonadBroadcastEnabled(true);
 }
 
+export function assertMonadPerplAutonomyEnabled(requireBroadcast = false) {
+  assertMonadActionsEnabled();
+  if (!enabled("MONAD_TESTNET_PERPL_AUTONOMY_ENABLED")) {
+    throw new MonadApiError("Perpl Testnet execution is disabled by its separate local gate.", 503, "perpl_autonomy_disabled");
+  }
+  if (requireBroadcast) assertMonadBroadcastEnabled(true);
+}
+
 export function rpcUrl() {
   const value = process.env.MONAD_TESTNET_RPC_URL?.trim() || MONAD_TESTNET_RPC_URL;
   let url: URL;
@@ -62,6 +70,8 @@ export function configuredVault() { return configuredAddress("MONAD_TESTNET_VAUL
 export function configuredAutonomyFactory() { return configuredAddress("MONAD_TESTNET_AUTONOMY_FACTORY_ADDRESS"); }
 
 export function configuredPerpFactory() { return configuredAddress("MONAD_TESTNET_PERP_FACTORY_ADDRESS"); }
+
+export function configuredPerplStrategyFactory() { return configuredAddress("MONAD_TESTNET_PERPL_STRATEGY_FACTORY_ADDRESS"); }
 
 export function configuredAdapter(venue: MonadVenue): string | null {
   const name = venue === "uniswap_v4_testnet"

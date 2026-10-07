@@ -120,8 +120,8 @@ async function event(ctx: any, run: any, scenarioId: string, id: string, type: s
   const prior = await ctx.db.query("monadPerpEvents").withIndex("by_eventId", (q: any) => q.eq("eventId", eventId)).first();
   if (prior) return;
   const timestamp = Date.now(); const payloadJson = payload ? JSON.stringify({ scenarioId, ...payload }).slice(0, 20_000) : undefined;
-  await ctx.db.insert("monadPerpEvents", { runId: run.runId, ownerAddress: run.ownerAddress, eventId,
+  await ctx.db.insert("monadPerpEvents", { runId: run.runId, venueId: "monad-mock-clearinghouse-v1", ownerAddress: run.ownerAddress, eventId,
     timestamp, type, status, summary, ...(payloadJson ? { payloadJson } : {}) });
   await appendMonadActivity(ctx, { userId: run.userId, ownerAddress: run.ownerAddress, activityId: eventId,
-    kind: type, status, summary, dataJson: payloadJson ?? JSON.stringify({ runId: run.runId, scenarioId }) });
+    kind: type, status, summary, venueId: "monad-mock-clearinghouse-v1", dataJson: payloadJson ?? JSON.stringify({ runId: run.runId, scenarioId }) });
 }

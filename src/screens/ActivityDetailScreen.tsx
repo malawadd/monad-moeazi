@@ -47,7 +47,7 @@ export function ActivityDetailScreen() {
 }
 
 function activityStatus(event: MonadActivityEvent) {
-  if (event.kind === 'perp_order_failed' || event.summary.toLowerCase().includes('transaction reverted')) {
+  if (event.kind.includes('order_failed') || event.summary.toLowerCase().includes('transaction reverted')) {
     return event.status === 'finalized' ? 'failed · reverted after finality' : 'reverted · awaiting finality';
   }
   return event.status;

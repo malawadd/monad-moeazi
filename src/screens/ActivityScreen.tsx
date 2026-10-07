@@ -52,21 +52,21 @@ export function ActivityScreen() {
     finally { setLoadingMore(false); }
   }, [hasMore, nextCursor, loadingMore]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
-  const visibleEvents = scope === 'perp' ? events.filter(event => event.kind.startsWith('perp_')) : events;
+  const visibleEvents = scope === 'perp' ? events.filter(isPerpVenueEvent) : events;
 
   return <Screen refreshing={refreshing} onRefresh={() => { void refresh(); }}>
     <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />
     {error ? <Notice live tone="rose" title="Activity unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
     <View style={styles.filters}>
       <Button label="All activity" variant={scope === 'all' ? 'primary' : 'secondary'} onPress={() => setScope('all')} />
-      <Button label="Perp only" variant={scope === 'perp' ? 'primary' : 'secondary'} onPress={() => setScope('perp')} />
+      <Button label="Perp venues" variant={scope === 'perp' ? 'primary' : 'secondary'} onPress={() => setScope('perp')} />
     </View>
     {!events.length && !refreshing && !error ? <Card><Text style={s.strong}>The service returned no activity events.</Text><Text style={s.body}>New events appear after the backend records an operation, receipt, or agent status change.</Text></Card> : null}
     {scope === 'perp' && events.length > 0 && !visibleEvents.length ? <Card><Text style={s.body}>No Perp events are in the loaded pages yet.</Text></Card> : null}
     <View style={styles.timeline}>{visibleEvents.map(event => <Pressable accessibilityRole="button" accessibilityLabel={`Open event: ${event.title}`} key={event.id} onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id, event})} style={({pressed}) => [styles.row, pressed && styles.pressed]}>
       <View style={styles.rail}><View style={styles.marker} /></View>
       <View style={styles.copy}>
-        <View style={styles.metaRow}>{event.kind.startsWith('perp_') ? <StatusBadge label="Perp · test" tone="lilac" /> : null}<StatusBadge label={event.kind} tone={event.fundsMoved ? 'mint' : 'sky'} /><Text style={s.meta}>{eventTime(event.occurredAt)}</Text></View>
+        <View style={styles.metaRow}>{isPerpVenueEvent(event) ? <StatusBadge label={event.venueId === 'perpl-direct-testnet-v1' ? 'Perpl · direct' : event.venueId === 'perpl-testnet-v1' ? 'Perpl · API' : 'Perp · mock'} tone="lilac" /> : null}<StatusBadge label={event.kind} tone={event.fundsMoved ? 'mint' : 'sky'} /><Text style={s.meta}>{eventTime(event.occurredAt)}</Text></View>
         <Text style={s.subheading}>{event.title}</Text>
         <Text style={s.body}>{event.summary}</Text>
         <Text style={s.meta}>Status · {activityStatus(event)}</Text>
@@ -90,9 +90,13 @@ const styles = StyleSheet.create({
 });
 
 function activityStatus(event: MonadActivityEvent) {
-  if (event.kind === 'perp_order_failed' || event.summary.toLowerCase().includes('transaction reverted')) {
+  if (event.kind.includes('order_failed') || event.summary.toLowerCase().includes('transaction reverted')) {
     return event.status === 'finalized' ? 'failed · reverted after finality' : 'reverted · awaiting finality';
   }
   return event.status;
 }
 function isBlocked(event: MonadActivityEvent) { return event.status === 'blocked' || event.kind.includes('blocked'); }
+function isPerpVenueEvent(event: MonadActivityEvent) {
+  return event.kind.startsWith('perp_') || event.kind.startsWith('perpl_')
+    || event.venueId === 'monad-mock-clearinghouse-v1' || event.venueId === 'perpl-testnet-v1' || event.venueId === 'perpl-direct-testnet-v1';
+}

@@ -18,6 +18,10 @@ import {OperationReviewScreen} from '../screens/OperationReviewScreen';
 import {PerpSetupScreen} from '../screens/PerpSetupScreen';
 import {PerpStatusScreen} from '../screens/PerpStatusScreen';
 import {PerpHistoryScreen} from '../screens/PerpHistoryScreen';
+import {PerplHistoryScreen} from '../screens/PerplHistoryScreen';
+import {PerplMarketsScreen} from '../screens/PerplMarketsScreen';
+import {PerplSetupScreen} from '../screens/PerplSetupScreen';
+import {PerplStatusScreen} from '../screens/PerplStatusScreen';
 import {SendScreen} from '../screens/SendScreen';
 import {TradeReviewScreen} from '../screens/TradeReviewScreen';
 import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
@@ -57,6 +61,10 @@ export function RootNavigator() {
       <Stack.Screen name="PerpSetup" component={PerpSetupScreen} />
       <Stack.Screen name="PerpStatus" component={PerpStatusScreen} />
       <Stack.Screen name="PerpHistory" component={PerpHistoryScreen} />
+      <Stack.Screen name="PerplMarkets" component={PerplMarketsScreen} />
+      <Stack.Screen name="PerplSetup" component={PerplSetupScreen} />
+      <Stack.Screen name="PerplStatus" component={PerplStatusScreen} />
+      <Stack.Screen name="PerplHistory" component={PerplHistoryScreen} />
       <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />

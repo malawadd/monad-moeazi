@@ -1,0 +1,251 @@
+.step-dot {
+  background: transparent;
+  border: 1px solid #cbd8d2;
+  border-radius: 20px;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 10px;
+  color: #58706b;
+  cursor: pointer;
+}
+
+.step-dot[aria-current='step'] {
+  background: var(--deep);
+  color: #fff;
+  border-color: var(--deep);
+}
+
+.mobile-structure {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 8px 0 22px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.mobile-card {
+  padding: 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-card h3 {
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  margin: 6px 0;
+}
+
+.mobile-card .card-type {
+  font-size: 11px;
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.mobile-card ul {
+  padding-left: 17px;
+  margin: 9px 0;
+  color: #586b69;
+  font-size: 11px;
+}
+
+.mobile-card li + li {
+  margin-top: 3px;
+}
+
+.mobile-card a {
+  font-size: 10px;
+  color: #24685e;
+}
+
+.compact-notice {
+  margin: 18px 0 0;
+}
+
+.compact-notice code,
+.port-section code {
+  font-size: 11px;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.inventory-group {
+  padding: 14px 15px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  min-height: 160px;
+}
+
+.inventory-group h3 {
+  font-size: 13px;
+  margin: 0 0 9px;
+}
+
+.inventory-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inventory-group li {
+  font-size: 11px;
+  color: #586b69;
+  padding: 5px 0;
+  border-top: 1px solid #dde5e1;
+}
+
+.inventory-group li strong {
+  display: block;
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.port-section {
+  margin: 31px 0;
+}
+
+.port-section h3 {
+  margin: 4px 0 12px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+
+th {
+  color: #71827e;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 800;
+  border-bottom: 1px solid #aebeb7;
+  padding: 8px;
+}
+
+td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #d6e0dc;
+  color: #4f6360;
+}
+
+td:first-child {
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.extension-section {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.85fr) minmax(0, 1.4fr);
+  gap: 25px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 20px 0;
+  margin: 28px 0;
+}
+
+.extension-section p {
+  font-size: 12px;
+  color: #596d69;
+  max-width: 420px;
+  margin: 7px 0;
+}
+
+.ml-points {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.ml-point {
+  border-left: 2px solid #8298b5;
+  padding: 2px 0 4px 11px;
+}
+
+.ml-point h4 {
+  font-size: 12px;
+  margin: 0 0 3px;
+}
+
+.ml-point p {
+  max-width: none;
+  margin: 0 0 3px;
+  font-size: 11px;
+}
+
+.ml-point a {
+  font-size: 10px;
+  color: #315f89;
+}
+
+.page-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding: 17px 0 27px;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: #73837f;
+}
+
+.page-footer > span:first-child {
+  font-weight: 800;
+  color: #48605b;
+  letter-spacing: 0.11em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    width: min(100% - 34px, 760px);
+  }
+  .layer-row {
+    grid-template-columns: 145px minmax(0, 1fr);
+  }
+  .component-card {
+    flex-basis: 155px;
+  }
+  .edge-card {
+    grid-template-columns: minmax(55px, auto) 14px minmax(55px, auto) minmax(
+        0,
+        1fr
+      );
+  }
+  .mobile-structure,
+  .inventory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lower-grid {
+    grid-template-columns: 1fr 1.5fr;
+  }
+}

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Moeazi Monad · System design</title>
+    <script src="./theme.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles-02.css" />
+    <link rel="stylesheet" href="./styles-03.css" />
+    <link rel="stylesheet" href="./styles-04.css" />
+    <link rel="stylesheet" href="./styles-05.css" />
+    <link rel="stylesheet" href="./research.css" />
+    <link rel="stylesheet" href="./theme-tokens.css" />
+    <link rel="stylesheet" href="./theme-components.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <a class="wordmark" href="#top" aria-label="Moeazi Monad system design home"
+          ><span class="brand-mark">M</span><span>MOEAZI <b>/</b> MONAD</span></a
+        >
+        <div class="header-actions">
+          <span class="local-label"><span class="local-dot"></span>LOCAL SYSTEM · OFFLINE EXPLORER</span>
+          <label class="theme-picker" for="theme-select">
+            <span>Theme</span>
+            <select id="theme-select" aria-label="System design theme">
+              <option value="current">Current · Spruce</option>
+              <option value="paper-pop">Paper Pop · Yellow / Pink</option>
+              <option value="sky-grid">Sky Grid · Sky / Mint</option>
+              <option value="lilac-audit">Lilac Audit · Lilac / Rose</option>
+            </select>
+          </label>
+          <span id="theme-status" class="sr-only" aria-live="polite"></span>
+        </div>
+      </header>
+      <section class="intro" id="top">
+        <div class="eyebrow">ENGINEERING MAP <span>·</span> TESTNET 10143</div>
+        <h1>Understand the system.<br /><em>See where it can grow.</em></h1>
+        <p class="lede">Explore the mobile app, local services, data stores, workers, and Monad Testnet boundaries. Select a component or flow to trace how the pieces connect.</p>
+        <div class="notice" role="note">
+          <span class="notice-mark">i</span>
+          <p><strong>Read the status carefully.</strong> Routes and worker code can be present while actions remain disabled. A fresh local setup keeps execution and model-provider gates off.</p>
+        </div>
+      </section>
+
+      <nav class="view-tabs" aria-label="System design views" role="tablist">
+        <button type="button" role="tab" id="tab-map" aria-controls="view-map" aria-selected="true">01 <span>System map</span></button>
+        <button type="button" role="tab" id="tab-mobile" aria-controls="view-mobile" aria-selected="false">02 <span>Mobile structure</span></button>
+        <button type="button" role="tab" id="tab-stack" aria-controls="view-stack" aria-selected="false">03 <span>Technology &amp; ports</span></button>
+        <button type="button" role="tab" id="tab-research" aria-controls="view-research" aria-selected="false">04 <span>ML research</span></button>
+      </nav>
+
+      <section id="view-map" role="tabpanel" aria-labelledby="tab-map">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">RUNTIME TOPOLOGY</div>
+            <h2>System map</h2>
+          </div>
+          <span class="section-kicker">Select a node for details and source links</span>
+        </div>
+        <div class="toolbar">
+          <label class="search-box"><span aria-hidden="true">⌕</span><span class="sr-only">Search components</span><input id="search" type="search" placeholder="Search services, stores, routes…" autocomplete="off" /></label>
+          <label class="flow-picker"
+            ><span>Walk a flow</span
+            ><select id="flow-select" aria-label="Choose a flow">
+              <option value="">Choose a flow…</option>
+            </select></label
+          >
+          <label class="zoom-control"><span>Map zoom</span><input id="zoom" type="range" min="0.8" max="1.25" step="0.05" value="1" /><output id="zoom-value" for="zoom">100%</output></label>
+          <button class="quiet-button" id="reset" type="button">Reset view</button>
+        </div>
+        <fieldset class="layer-filters">
+          <legend>Show layers</legend>
+          <div id="layer-filters" class="filter-list"></div>
+        </fieldset>
+        <div class="map-shell">
+          <div class="map-label-row"><span>CLIENT</span><span>REQUEST / DATA PATH</span><span>NETWORK EDGE</span></div>
+          <div class="map-scroll" tabindex="0" aria-label="Scrollable system map">
+            <div id="map-inner" class="map-inner">
+              <div id="layers" class="layers" aria-label="Layered system map"></div>
+              <div class="connector-area">
+                <div class="connector-heading"><span>CONNECTIONS</span><span>Direction and trust boundary</span></div>
+                <div id="connections" class="connections"></div>
+              </div>
+            </div>
+          </div>
+          <div class="map-foot"><span id="search-feedback" aria-live="polite">Showing all components</span><span>Use Tab, Enter, and Space to inspect components</span></div>
+        </div>
+        <div class="lower-grid">
+          <section class="legend" aria-labelledby="legend-title">
+            <div class="eyebrow" id="legend-title">STATUS LEGEND</div>
+            <div class="legend-items" id="legend-items"></div>
+            <p class="small-copy">“Active” describes a current route or capability. “Gated” means code exists, but a runtime gate or rollout pause blocks the action.</p>
+          </section>
+          <section class="detail-panel" id="detail-panel" aria-labelledby="detail-title" aria-live="polite">
+            <div class="eyebrow">INSPECTED COMPONENT</div>
+            <div id="detail-content">
+              <h3 id="detail-title">Start with a component</h3>
+              <p>Choose any map node to see its role, status, key connections, and source files.</p>
+            </div>
+          </section>
+        </div>
+        <section class="flow-panel" id="flow-panel" aria-live="polite" hidden>
+          <div class="flow-top">
+            <div>
+              <div class="eyebrow">FLOW WALKTHROUGH</div>
+              <h3 id="flow-title"></h3>
+              <p id="flow-summary"></p>
+            </div>
+            <div class="step-actions"><button id="step-prev" type="button" class="quiet-button">← Previous</button><button id="step-next" type="button" class="quiet-button">Next →</button></div>
+          </div>
+          <div class="step-track">
+            <span id="step-number"></span><strong id="step-name"></strong>
+            <p id="step-description"></p>
+          </div>
+          <div id="step-list" class="step-list"></div>
+        </section>
+      </section>
+
+      <section id="view-mobile" role="tabpanel" aria-labelledby="tab-mobile" hidden>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">NATIVE APP ANATOMY</div>
+            <h2>Mobile structure</h2>
+          </div>
+          <span class="section-kicker">React Native · Android + iOS</span>
+        </div>
+        <p class="section-lede">The signed-in app is a tab navigator inside a native stack. App context owns session and screen state; service modules carry requests and signing.</p>
+        <div id="mobile-structure" class="mobile-structure"></div>
+        <div class="notice compact-notice">
+          <span class="notice-mark">!</span>
+          <p><strong>Current rollout boundary.</strong> Mera passkey sign-in is active. <code>AppContext</code> deliberately pauses chain actions and autopilot controls while the sign-in rollout is in progress, even though review screens and backend routes are present.</p>
+        </div>
+      </section>
+
+      <section id="view-stack" role="tabpanel" aria-labelledby="tab-stack" hidden>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">IMPLEMENTATION INVENTORY</div>
+            <h2>Technology &amp; ports</h2>
+          </div>
+          <span class="section-kicker">Local stack · loopback bindings</span>
+        </div>
+        <p class="section-lede">Host ports are for local tools and the emulator. Containers use Compose DNS and internal ports. The mobile client calls the Hono API; it does not connect directly to Convex or Python services.</p>
+        <div id="inventory" class="inventory-grid"></div>
+        <section class="port-section">
+          <div class="eyebrow">LOCAL PORT MAP</div>
+          <h3>Host ↔ container</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Host binding</th>
+                  <th>Compose target</th>
+                  <th>Default state</th>
+                </tr>
+              </thead>
+              <tbody id="port-rows"></tbody>
+            </table>
+          </div>
+          <p class="small-copy">
+            Metro is a host process on 8082. Android emulator API base:
+            <code>http://10.0.2.2:3102</code>. Compose services communicate by service name on the internal port.
+          </p>
+        </section>
+        <section class="extension-section">
+          <div>
+            <div class="eyebrow">FUTURE EXTENSION · PROPOSED</div>
+            <h3>ML and LLM insertion points</h3>
+            <p>Begin at the existing Python model-provider and decision interfaces. Keep model output advisory and structured; deterministic policy, owner mandates, risk limits, and signing authority stay in the trusted application and API boundary.</p>
+          </div>
+          <div id="ml-points" class="ml-points"></div>
+        </section>
+      </section>
+
+      <section id="view-research" role="tabpanel" aria-labelledby="tab-research" hidden>
+        <div id="research-explorer"></div>
+      </section>
+
+      <footer class="page-footer">
+        <span>MOEAZI MONAD <b>·</b> SYSTEM DESIGN</span><span>Source of truth: current route registration, app configuration, Compose stack, and local stack guide.</span><a href="../../LOCAL_STACK.md">Open LOCAL_STACK.md ↗</a>
+      </footer>
+    </main>
+    <script src="./data.js"></script>
+    <script src="./nodes-mobile.js"></script>
+    <script src="./nodes-api.js"></script>
+    <script src="./nodes-data.js"></script>
+    <script src="./nodes-workers.js"></script>
+    <script src="./nodes-execution.js"></script>
+    <script src="./nodes-external.js"></script>
+    <script src="./edges.js"></script>
+    <script src="./flows-user.js"></script>
+    <script src="./flows-workers.js"></script>
+    <script src="./mobile-data.js"></script>
+    <script src="./inventory-data.js"></script>
+    <script src="./app.js"></script>
+    <script src="./research-data.js"></script>
+    <script src="./research-system.js"></script>
+    <script src="./research-typed.js"></script>
+    <script src="./research-signals.js"></script>
+    <script src="./research-features.js"></script>
+    <script src="./research-lineage.js"></script>
+    <script src="./research-backtesting.js"></script>
+    <script src="./research-ui.js"></script>
+  </body>
+</html>

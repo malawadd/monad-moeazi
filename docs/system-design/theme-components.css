@@ -1,0 +1,223 @@
+:root[data-theme]:not([data-theme='current']) {
+  --hard-sm: 3px 3px 0 var(--ink);
+  --hard-md: 5px 5px 0 var(--ink);
+  --hard-lg: 8px 8px 0 var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) .masthead,
+:root[data-theme]:not([data-theme='current']) .view-tabs {
+  border-color: var(--ink);
+  border-bottom-width: 3px;
+}
+:root[data-theme]:not([data-theme='current']) .brand-mark {
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--ink);
+  box-shadow: var(--hard-sm);
+}
+:root[data-theme]:not([data-theme='current']) .local-dot {
+  border-radius: 0;
+  background: var(--support);
+}
+:root[data-theme]:not([data-theme='current']) .intro .eyebrow,
+:root[data-theme]:not([data-theme='current']) .section-heading > div > .eyebrow {
+  color: var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) h1 em {
+  color: var(--support);
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 800;
+}
+:root[data-theme]:not([data-theme='current']) .notice {
+  border: 3px solid var(--ink);
+  border-left-width: 8px;
+  border-radius: 0;
+  background: var(--accent-soft);
+  color: var(--ink);
+  box-shadow: var(--hard-sm);
+}
+:root[data-theme]:not([data-theme='current']) .notice-mark {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--support);
+}
+:root[data-theme]:not([data-theme='current']) .lede,
+:root[data-theme]:not([data-theme='current']) .section-lede,
+:root[data-theme]:not([data-theme='current']) .section-kicker,
+:root[data-theme]:not([data-theme='current']) .notice p,
+:root[data-theme]:not([data-theme='current']) .component-kind,
+:root[data-theme]:not([data-theme='current']) .edge-label,
+:root[data-theme]:not([data-theme='current']) .map-foot,
+:root[data-theme]:not([data-theme='current']) .small-copy,
+:root[data-theme]:not([data-theme='current']) .detail-panel p,
+:root[data-theme]:not([data-theme='current']) .flow-top p,
+:root[data-theme]:not([data-theme='current']) .step-track p,
+:root[data-theme]:not([data-theme='current']) .mobile-card ul,
+:root[data-theme]:not([data-theme='current']) .inventory-group li,
+:root[data-theme]:not([data-theme='current']) table th,
+:root[data-theme]:not([data-theme='current']) table td,
+:root[data-theme]:not([data-theme='current']) .extension-section p,
+:root[data-theme]:not([data-theme='current']) .page-footer {
+  color: var(--muted);
+}
+:root[data-theme]:not([data-theme='current']) .view-tabs button {
+  border-radius: 0;
+  color: var(--muted);
+}
+:root[data-theme]:not([data-theme='current']) .view-tabs button[aria-selected='true'] {
+  border: 3px solid var(--ink);
+  border-bottom-width: 5px;
+  background: var(--accent);
+  color: var(--ink);
+  box-shadow: var(--hard-sm);
+}
+:root[data-theme]:not([data-theme='current']) .view-tabs button[aria-selected='true'] span { color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) input,
+:root[data-theme]:not([data-theme='current']) select,
+:root[data-theme]:not([data-theme='current']) .quiet-button,
+:root[data-theme]:not([data-theme='current']) .step-dot {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) input[type='checkbox'],
+:root[data-theme]:not([data-theme='current']) input[type='range'] { accent-color: var(--accent); }
+:root[data-theme]:not([data-theme='current']) .quiet-button,
+:root[data-theme]:not([data-theme='current']) .step-dot { box-shadow: var(--hard-sm); }
+:root[data-theme]:not([data-theme='current']) .quiet-button:hover,
+:root[data-theme]:not([data-theme='current']) .step-dot:hover {
+  transform: translate(2px, 2px);
+  background: var(--accent-soft);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) button:focus-visible,
+:root[data-theme]:not([data-theme='current']) a:focus-visible,
+:root[data-theme]:not([data-theme='current']) input:focus-visible,
+:root[data-theme]:not([data-theme='current']) select:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+:root[data-theme]:not([data-theme='current']) .map-shell {
+  border: 5px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: var(--hard-lg);
+}
+:root[data-theme]:not([data-theme='current']) .map-label-row {
+  background: var(--ink);
+  color: var(--accent);
+}
+:root[data-theme]:not([data-theme='current']) .layer-row,
+:root[data-theme]:not([data-theme='current']) .connector-area {
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: var(--hard-sm);
+}
+:root[data-theme]:not([data-theme='current']) .layer-heading {
+  border-color: var(--ink);
+  background: var(--accent-soft);
+}
+:root[data-theme]:not([data-theme='current']) .component-card {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper-alt, #fff8e9);
+  box-shadow: var(--hard-sm);
+}
+:root[data-theme]:not([data-theme='current']) .component-card:hover,
+:root[data-theme]:not([data-theme='current']) .edge-card:hover {
+  transform: translate(2px, 2px);
+  border-color: var(--ink);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) .component-card[aria-pressed='true'] {
+  border: 3px solid var(--ink);
+  background: var(--support-soft, #fff0f4);
+  box-shadow: var(--hard-md);
+}
+:root[data-theme]:not([data-theme='current']) .component-card.flow-node { background: var(--extra-soft, #eef7ff); }
+:root[data-theme]:not([data-theme='current']) .component-card.current-node { background: var(--accent); }
+:root[data-theme]:not([data-theme='current']) .status-mark {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  padding: 2px 5px;
+  color: var(--ink);
+  background: var(--paper-alt, #fff8e9);
+}
+:root[data-theme]:not([data-theme='current']) .status-mark::before { background: var(--ink); }
+:root[data-theme]:not([data-theme='current']) .status-active { background: var(--status-active); }
+:root[data-theme]:not([data-theme='current']) .status-gated { background: var(--status-gated); }
+:root[data-theme]:not([data-theme='current']) .status-retained { background: var(--status-retained); }
+:root[data-theme]:not([data-theme='current']) .status-proposed { background: var(--status-proposed); }
+:root[data-theme]:not([data-theme='current']) .connector-area { background: var(--paper-alt, #fff8e9); }
+:root[data-theme]:not([data-theme='current']) .edge-card {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+}
+:root[data-theme]:not([data-theme='current']) .edge-arrow { color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) .edge-card.edge-active {
+  border: 3px solid var(--ink);
+  background: var(--support-soft, #fff0f4);
+  box-shadow: inset 5px 0 var(--support);
+}
+:root[data-theme]:not([data-theme='current']) .detail-panel,
+:root[data-theme]:not([data-theme='current']) .legend,
+:root[data-theme]:not([data-theme='current']) .flow-panel {
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  padding: 14px;
+  box-shadow: var(--hard-md);
+}
+:root[data-theme]:not([data-theme='current']) .tech-tag {
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+:root[data-theme]:not([data-theme='current']) .source-links a,
+:root[data-theme]:not([data-theme='current']) .mobile-card a,
+:root[data-theme]:not([data-theme='current']) .ml-point a,
+:root[data-theme]:not([data-theme='current']) .page-footer a { color: var(--ink); font-weight: 800; }
+:root[data-theme]:not([data-theme='current']) .step-track { border-color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) .step-dot[aria-current='step'] { background: var(--accent); color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) .mobile-structure,
+:root[data-theme]:not([data-theme='current']) .inventory-grid { border-color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) .mobile-card,
+:root[data-theme]:not([data-theme='current']) .inventory-group {
+  border-color: var(--ink);
+  background: var(--paper);
+}
+:root[data-theme]:not([data-theme='current']) .mobile-card,
+:root[data-theme]:not([data-theme='current']) .inventory-group { box-shadow: var(--hard-sm); }
+:root[data-theme]:not([data-theme='current']) .mobile-card:nth-child(even),
+:root[data-theme]:not([data-theme='current']) .inventory-group:nth-child(even) { background: var(--paper-alt, #fff8e9); }
+:root[data-theme]:not([data-theme='current']) .card-type { color: var(--ink); font-family: var(--font-meta); }
+:root[data-theme]:not([data-theme='current']) .table-wrap,
+:root[data-theme]:not([data-theme='current']) .port-section { border-color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) th,
+:root[data-theme]:not([data-theme='current']) td { border-color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) th { background: var(--accent); color: var(--ink); }
+:root[data-theme]:not([data-theme='current']) td { background: var(--paper); }
+:root[data-theme]:not([data-theme='current']) .extension-section { border-color: var(--ink); border-left: 5px solid var(--support); }
+:root[data-theme]:not([data-theme='current']) .ml-point { border-color: var(--support); }
+:root[data-theme]:not([data-theme='current']) .page-footer { border-color: var(--ink); }
+
+:root[data-theme='sky-grid'] .layer-row:nth-child(even) .layer-heading { background: var(--support-soft); }
+:root[data-theme='sky-grid'] .map-label-row { color: var(--accent); }
+:root[data-theme='lilac-audit'] .component-card { min-height: 62px; padding: 7px 8px; flex-basis: 160px; }
+:root[data-theme='lilac-audit'] .layer-row { min-height: 80px; }
+:root[data-theme='lilac-audit'] .edge-label,
+:root[data-theme='lilac-audit'] .component-kind { font-family: var(--font-meta); font-size: 9px; }
+:root[data-theme='lilac-audit'] .inventory-group { min-height: 140px; }
+
+@media (max-width: 600px) {
+  :root[data-theme]:not([data-theme='current']) .map-shell { box-shadow: 5px 5px 0 var(--ink); }
+  :root[data-theme]:not([data-theme='current']) .detail-panel,
+  :root[data-theme]:not([data-theme='current']) .legend,
+  :root[data-theme]:not([data-theme='current']) .flow-panel { padding: 11px; }
+}

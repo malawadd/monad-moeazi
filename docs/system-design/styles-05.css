@@ -1,0 +1,148 @@
+@media (max-width: 600px) {
+  .shell {
+    width: calc(100% - 28px);
+  }
+  .masthead {
+    height: 58px;
+  }
+  .local-label {
+    font-size: 8px;
+    letter-spacing: 0.06em;
+  }
+  .intro {
+    padding: 37px 0 23px;
+  }
+  h1 {
+    font-size: 42px;
+  }
+  .lede {
+    font-size: 14px;
+  }
+  .view-tabs {
+    margin-bottom: 23px;
+  }
+  .view-tabs button {
+    padding: 11px 8px;
+    font-size: 10px;
+    flex: 1;
+  }
+  .view-tabs button span {
+    margin-left: 2px;
+  }
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .section-heading h2 {
+    font-size: 25px;
+  }
+  .section-kicker {
+    font-size: 11px;
+  }
+  .toolbar {
+    align-items: stretch;
+    gap: 8px;
+  }
+  .search-box {
+    flex-basis: 100%;
+  }
+  .flow-picker {
+    flex: 1;
+  }
+  .zoom-control {
+    width: 130px;
+  }
+  .quiet-button {
+    padding: 7px 9px;
+  }
+  .map-label-row {
+    grid-template-columns: 1fr 1.5fr;
+    font-size: 8px;
+  }
+  .map-label-row span:nth-child(2) {
+    text-align: right;
+  }
+  .map-label-row span:last-child {
+    display: none;
+  }
+  .map-scroll {
+    padding: 8px;
+  }
+  .layer-row {
+    grid-template-columns: 1fr;
+  }
+  .layer-heading {
+    padding: 8px 10px 6px;
+    border-right: 0;
+    border-bottom: 1px solid #dbe4e0;
+  }
+  .component-list {
+    padding: 7px;
+  }
+  .component-card {
+    max-width: none;
+    flex-basis: calc(50% - 5px);
+    min-height: 75px;
+    padding: 8px;
+  }
+  .connections {
+    grid-template-columns: 1fr;
+  }
+  .edge-card {
+    grid-template-columns: 80px 16px 84px minmax(0, 1fr);
+  }
+  .edge-label {
+    font-size: 9px;
+  }
+  .map-foot {
+    font-size: 9px;
+  }
+  .map-foot span:last-child {
+    display: none;
+  }
+  .lower-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .detail-panel {
+    padding-top: 13px;
+  }
+  .flow-top {
+    flex-direction: column;
+  }
+  .step-actions {
+    align-items: center;
+  }
+  .mobile-structure,
+  .inventory-grid {
+    grid-template-columns: 1fr;
+  }
+  .mobile-card {
+    padding: 14px;
+  }
+  .inventory-group {
+    min-height: 0;
+  }
+  .extension-section {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+  .page-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .table-wrap {
+    margin-right: -7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

@@ -10,7 +10,8 @@ import type {PreparedMonadOperation} from '../types/monad';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
 
-type OperationResult = {message: string; transactionHash?: string | null; status?: string};
+type OperationResult = {message: string; transactionHash?: string | null; status?: string;
+  faucetTransferVerified?: boolean; verifiedAmountUnits?: string};
 
 export function OperationReviewScreen() {
   const route = useRoute<any>();
@@ -45,7 +46,8 @@ export function OperationReviewScreen() {
       const broadcast = await monadApi.broadcast(prepared.operationId);
       let latest = broadcast;
       const isApproval = prepared.kind === 'approve_token';
-      if (isApproval && !['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) {
+      const isAusdClaim = prepared.kind === 'claim_ausd_faucet';
+      if ((isApproval || isAusdClaim) && !['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) {
         for (let attempt = 0; attempt < 8; attempt += 1) {
           await new Promise<void>(resolve => setTimeout(resolve, 1500));
           try { latest = await monadApi.operation(prepared.operationId); } catch { break; }
@@ -59,6 +61,8 @@ export function OperationReviewScreen() {
           : latest.message ?? `The transaction is ${latest.status}. Check Activity for the recorded result.`,
         transactionHash: latest.transactionHash ?? broadcast.transactionHash ?? verified.transactionHash,
         status: latest.status,
+        faucetTransferVerified: latest.faucetTransferVerified,
+        verifiedAmountUnits: latest.verifiedAmountUnits,
       });
       if (['failed', 'reverted'].includes(latest.status)) setError(latest.message ?? 'The transaction failed on Monad Testnet.');
     } catch (reason) {
@@ -69,7 +73,8 @@ export function OperationReviewScreen() {
         try {
           const latest = await monadApi.operation(prepared.operationId);
           if (latest.transactionHash || ['submitted', 'executed', 'finalized', 'failed'].includes(latest.status)) {
-            setResult({message: latest.message ?? `Current operation status: ${latest.status}.`, transactionHash: latest.transactionHash, status: latest.status});
+          setResult({message: latest.message ?? `Current operation status: ${latest.status}.`, transactionHash: latest.transactionHash,
+            status: latest.status, faucetTransferVerified: latest.faucetTransferVerified, verifiedAmountUnits: latest.verifiedAmountUnits});
           }
         } catch { /* The original error remains visible when status cannot be reached. */ }
       }
@@ -93,7 +98,8 @@ export function OperationReviewScreen() {
     setBusy(true);
     try {
       const current = await monadApi.operation(prepared.operationId);
-      setResult({message: current.message ?? `Current operation status: ${current.status}.`, transactionHash: current.transactionHash, status: current.status});
+      setResult({message: current.message ?? `Current operation status: ${current.status}.`, transactionHash: current.transactionHash,
+        status: current.status, faucetTransferVerified: current.faucetTransferVerified, verifiedAmountUnits: current.verifiedAmountUnits});
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Operation status is unavailable.'); }
     finally { setBusy(false); }
   }
@@ -101,7 +107,12 @@ export function OperationReviewScreen() {
   return <FlowScreen>
     <PageHeader kicker="Final review" title="Check every detail" copy="Your passkey will sign this exact EIP-1559 transaction for Monad Testnet (10143)." />
     {error ? <Notice live tone="rose" title="Transaction needs attention" message={error} actionLabel="Check status" onAction={() => { void checkStatus(); }} /> : null}
-    {result ? <Notice live tone={result.status === 'failed' ? 'rose' : 'mint'} title={result.status ? `Status: ${result.status}` : 'Transaction update'} message={result.message} /> : null}
+    {result ? <Notice live tone={result.status === 'failed' || result.faucetTransferVerified === false ? 'rose' : 'mint'}
+      title={result.faucetTransferVerified === false ? 'AUSD transfer not verified' : result.status ? `Status: ${result.status}` : 'Transaction update'}
+      message={result.message} /> : null}
+    {result?.faucetTransferVerified && result.verifiedAmountUnits ? <Card>
+      <DataRow label="AUSD received · finalized receipt" value={`${formatMonadUnits(result.verifiedAmountUnits, 6)} AUSD`} />
+    </Card> : null}
     <Card>
       <DataRow label="Action" value={title} />
       {expected.amount || prepared.review?.amount ? <DataRow label="Amount" value={`${amount} ${asset}`} /> : null}
@@ -129,6 +140,13 @@ export function OperationReviewScreen() {
         <DataRow label="Exact allowance" value={`${formatMonadUnits(String(prepared.review?.amountUnits ?? expected.amountUnits ?? '0'), approvalDecimals)} ${approvalSymbol}`} />
         <DataRow label="Exact allowance · base units" value={String(prepared.review?.amountUnits ?? expected.amountUnits ?? 'Missing amount')} />
       </> : null}
+      {prepared.kind === 'claim_ausd_faucet' ? <>
+        <DataRow label="Faucet method" value={String(prepared.review?.method ?? 'Missing method')} />
+        <DataRow label="AUSD recipient" value={String(expected.recipient ?? 'Missing Mera address')} />
+        <DataRow label="Agora faucet contract" value={String(prepared.review?.faucetAddress ?? tx.to)} />
+        <DataRow label="AUSD token contract" value={String(prepared.review?.tokenAddress ?? 'Missing token address')} />
+        <Text style={s.body}>This request calls the Agora Monad Testnet faucet for your Mera address. It transfers no AUSD from your wallet; your wallet pays the displayed network fee in MON.</Text>
+      </> : null}
     </Card>
     {tx.data !== '0x' ? <Card><Text style={s.strong}>Exact contract call data</Text><Text selectable style={s.body}>{tx.data}</Text></Card> : null}
     {prepared.review?.summary ? <Card><Text style={s.strong}>Server review</Text><Text style={s.body}>{prepared.review.summary}</Text></Card> : null}
@@ -140,6 +158,8 @@ export function OperationReviewScreen() {
       ? <Button label="Return to original action" variant="secondary" onPress={() => navigation.navigate(afterApproval?.returnRoute, afterApproval?.returnParams)} />
       : null}
     {prepared.kind === 'autonomy_recovery' && result ? <Button label="Return to run status" variant="secondary" onPress={() => navigation.navigate('AutonomyStatus')} /> : null}
+    {prepared.kind === 'claim_ausd_faucet' && result?.status === 'finalized'
+      ? <Button label="Return to AUSD balance" variant="secondary" onPress={() => navigation.navigate('Funding')} /> : null}
     <Button label="Open Activity" variant="secondary" onPress={() => navigation.navigate('Main', {screen: 'Activity'})} />
     <Text style={s.body}>Moeazi will verify your signature before it broadcasts. The Mera signing key stays in this short-lived passkey session and is cleared when signing ends.</Text>
   </FlowScreen>;

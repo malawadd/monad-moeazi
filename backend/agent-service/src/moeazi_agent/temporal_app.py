@@ -323,26 +323,32 @@ class ScheduledAnalysisWorkflow:
 
 async def run_worker() -> None:
     settings = get_settings()
-    client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
-    worker = Worker(
-        client, task_queue=settings.temporal_task_queue,
-        workflows=[
-            MarketAnalysisWorkflow, ScheduledAnalysisWorkflow, ExecutionWorkflow, VenueSetupWorkflow,
-            DependencyIncidentWorkflow, EvidenceLifecycleWorkflow, EvidenceLifecycleOutboxWorkflow,
-            MobileWithdrawalWorkflow,
-            MobileConnectorWorkflow,
-        ],
-        activities=[
-            analyze_market_activity, complete_analysis_job_activity, fail_analysis_job_activity,
-            prepare_scheduled_analysis_activity, execute_proposal_activity,
-            finalize_venue_setup_activity, fail_venue_setup_activity, expire_evidence_body_activity,
-            execute_copy_commands_activity,
-            fetch_lifecycle_outbox_activity, mark_lifecycle_outbox_activity, fetch_hold_expiries_activity, expire_hold_activity,
-            reconcile_mobile_withdrawal_activity, mark_mobile_withdrawal_attention_activity,
-            reconcile_mobile_connector_activity, mark_mobile_connector_attention_activity,
-        ],
-    )
-    await worker.run()
+    engine = AnalysisRepository.create_worker_engine(settings.postgres_dsn)
+    try:
+        AnalysisRepository.install_worker_engine(settings.postgres_dsn, engine)
+        client = await Client.connect(settings.temporal_address, namespace=settings.temporal_namespace)
+        worker = Worker(
+            client, task_queue=settings.temporal_task_queue,
+            workflows=[
+                MarketAnalysisWorkflow, ScheduledAnalysisWorkflow, ExecutionWorkflow, VenueSetupWorkflow,
+                DependencyIncidentWorkflow, EvidenceLifecycleWorkflow, EvidenceLifecycleOutboxWorkflow,
+                MobileWithdrawalWorkflow,
+                MobileConnectorWorkflow,
+            ],
+            activities=[
+                analyze_market_activity, complete_analysis_job_activity, fail_analysis_job_activity,
+                prepare_scheduled_analysis_activity, execute_proposal_activity,
+                finalize_venue_setup_activity, fail_venue_setup_activity, expire_evidence_body_activity,
+                execute_copy_commands_activity,
+                fetch_lifecycle_outbox_activity, mark_lifecycle_outbox_activity, fetch_hold_expiries_activity, expire_hold_activity,
+                reconcile_mobile_withdrawal_activity, mark_mobile_withdrawal_attention_activity,
+                reconcile_mobile_connector_activity, mark_mobile_connector_attention_activity,
+            ],
+        )
+        await worker.run()
+    finally:
+        AnalysisRepository.release_worker_engine(engine)
+        await engine.dispose()
 
 
 if __name__ == "__main__":

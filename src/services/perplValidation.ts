@@ -4,6 +4,9 @@ import type {PerplPreparedEnrollment, PerplRecoveryReview, PerplRun, PerplStopRe
 import {monadTimestampMillis} from './monadFormatting';
 
 export const PERPL_TESTNET_AUSD = '0xa9012a055bd4e0edff8ce09f960291c09d5322dc';
+export const PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS = 600;
+export const PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS = 7_200;
+export const PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS = 43_200;
 const PERPL_DIRECT_VENUE_ID = 'perpl-direct-testnet-v1';
 const isPerplVenueId = (value: string) => value === PERPL_DIRECT_VENUE_ID || value === 'perpl-testnet-v1';
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
@@ -13,6 +16,11 @@ const ERC20_TRANSFER_ABI = [{type: 'function', name: 'transfer', stateMutability
   inputs: [{name: 'to', type: 'address'}, {name: 'amount', type: 'uint256'}], outputs: [{type: 'bool'}]}] as const;
 const RECOVERY_ABI = [{type: 'function', name: 'recoverWithdrawCollateral', stateMutability: 'nonpayable',
   inputs: [{name: 'amount', type: 'uint256'}], outputs: []}] as const;
+
+export function isPerplDirectOptimizerDuration(value: number) {
+  return Number.isSafeInteger(value) && value >= PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS
+    && value <= PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS;
+}
 
 export function validatePerplVenue(venue: PerplVenue): PerplVenue {
   if (!isPerplVenueId(venue.venueId) || venue.chainId !== 10143 || !venue.collateral
@@ -57,8 +65,15 @@ export function validatePreparedPerpl(review: PerplPreparedEnrollment, expected:
     throw new Error('The prepared review includes a market that is absent from live Perpl context.');
   }
   const optimizer = review.optimizerReview;
-  if (review.venueId === PERPL_DIRECT_VENUE_ID && (!optimizer || optimizer.version !== 'perpl-deterministic-v2' || review.amountUnits !== '100000000'
-      || review.durationSeconds !== 43_200 || optimizer.maxCycles !== 15 || optimizer.targetWinStreak !== 2
+  if (review.venueId === PERPL_DIRECT_VENUE_ID && (!optimizer || optimizer.version !== 'perpl-deterministic-v3-soak'
+      || optimizer.profile !== 'duration_soak' || optimizer.stopCondition !== 'run_expiry_or_cycle_cap'
+      || optimizer.targetWinStreak !== null || review.amountUnits !== '100000000'
+      || optimizer.target !== 'signed_duration_expiry_or_15_cycle_cap'
+      || !isPerplDirectOptimizerDuration(review.durationSeconds)
+      || optimizer.minDurationSeconds !== PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS
+      || optimizer.defaultDurationSeconds !== PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS
+      || optimizer.maxDurationSeconds !== PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS
+      || optimizer.maxCycles !== 15
       || optimizer.minimumPositivePnlUnits !== '10000' || optimizer.maxNotionalUnits !== '30000000'
       || optimizer.maxMarginUnits !== '25000000' || optimizer.plannedLossUnits !== '150000'
       || optimizer.maxDepthConsumptionBps !== 2_000)) {

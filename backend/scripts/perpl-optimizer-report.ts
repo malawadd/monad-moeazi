@@ -23,10 +23,13 @@ const generatedAt = new Date().toISOString();
 const html = renderHtml(payload, generatedAt);
 await mkdir(path.dirname(htmlPath), { recursive: true });
 await writeFile(htmlPath, html, "utf8");
-const acceptanceReportUpdated = payload.runStatus === "completed" && ["settlement_reconciled", "settlement_finalized"].includes(payload.phase)
+const acceptanceReportUpdated = !isDurationSoak(payload.optimizer) && payload.runStatus === "completed"
+  && ["settlement_reconciled", "settlement_finalized"].includes(payload.phase)
   ? await publishFinalOutcome(payload, root) : null;
-process.stdout.write(`${JSON.stringify({ generatedAt, runId: payload.runId, optimizerStatus: payload.optimizer?.status ?? "not_started",
+process.stdout.write(`${JSON.stringify({ generatedAt, runId: payload.runId, optimizerProfile: payload.optimizer?.profile ?? null,
+  stopCondition: payload.optimizer?.stopCondition ?? null, optimizerStatus: payload.optimizer?.status ?? "not_started",
   cycles: payload.optimizer?.cycles ?? 0, winStreak: payload.optimizer?.winStreak ?? 0,
+  positiveCycles: payload.optimizer?.positiveCycles ?? 0, targetWinStreak: payload.optimizer?.targetWinStreak ?? null,
   activePositions: payload.activePositions?.length ?? 0, pendingOrders: payload.pendingOrders?.length ?? 0,
   cyclePnls: (payload.cycles ?? []).map((cycle: any) => ({ cycle: cycle.cycleNumber, realizedPnlUnits: cycle.realizedPnlUnits })),
   journalEntries: payload.journal?.length ?? 0, recentDecisions: payload.recentScans?.length ?? 0,
@@ -34,7 +37,15 @@ process.stdout.write(`${JSON.stringify({ generatedAt, runId: payload.runId, opti
 
 function renderHtml(data: any, generatedAt: string) {
   const status = data.optimizer?.status ?? "not_started";
-  const statusLabel = data.runStatus === "completed" ? (status === "target_reached_awaiting_settlement" ? "Completed · two-win target reached"
+  const soak = isDurationSoak(data.optimizer);
+  const soakCycleCapReached = status === "cycle_cap_reached_awaiting_settlement"
+    || data.optimizer?.completionReason === "cycle_cap_reached";
+  const statusLabel = soak ? data.runStatus === "completed"
+    ? soakCycleCapReached ? "Soak settled · cycle cap reached" : "Soak settled"
+    : data.runStatus === "incomplete_settlement" ? "Incomplete soak settlement"
+    : status === "cycle_cap_reached_awaiting_settlement" ? "Cycle cap reached, awaiting settlement"
+    : status === "running" ? "Soaking until expiry" : humanize(status)
+    : data.runStatus === "completed" ? (status === "target_reached_awaiting_settlement" ? "Completed · two-win target reached"
     : status === "cycle_cap_reached_awaiting_settlement" ? "Completed · cycle cap reached" : "Completed · target not reached")
     : data.runStatus === "incomplete_settlement" ? "Incomplete settlement"
     : status === "target_reached_awaiting_settlement" ? "Target reached, awaiting settlement"
@@ -47,7 +58,8 @@ function renderHtml(data: any, generatedAt: string) {
 <title>Perpl deterministic optimizer live report</title><style>
 body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:0;padding:28px}main{max-width:1000px;margin:auto}header,section{background:white;border:1px solid #dedbd2;border-radius:14px;padding:20px;margin:0 0 16px}h1{font-size:1.5rem;margin:0 0 8px}.status{font-weight:700;color:#355b4b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f2ed;padding:16px;border-radius:10px;font-size:12px}small{color:#555}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid #eee;padding:8px;vertical-align:top}code{overflow-wrap:anywhere}</style></head><body><main>
 <header><h1>Perpl deterministic optimizer · live report</h1><div class="status">${escapeHtml(statusLabel)}</div>
-<p>Run: ${escapeHtml(String(data.runId ?? "not enrolled"))} · Cycles: ${escapeHtml(String(data.optimizer?.cycles ?? 0))}/${escapeHtml(String(data.optimizer?.cycleLimit ?? 15))} · Win streak: ${escapeHtml(String(data.optimizer?.winStreak ?? 0))}/2</p>
+<p>Run: ${escapeHtml(String(data.runId ?? "not enrolled"))} · Profile: ${escapeHtml(soak ? "duration soak" : data.optimizer ? "two-win target" : "not enrolled")} · Cycles: ${escapeHtml(String(data.optimizer?.cycles ?? 0))}/${escapeHtml(String(data.optimizer?.cycleLimit ?? 15))} · ${soak ? `Positive cycles: ${escapeHtml(String(data.optimizer?.positiveCycles ?? 0))}` : `Win streak: ${escapeHtml(String(data.optimizer?.winStreak ?? 0))}/2`}</p>
+<p>${escapeHtml(soak ? "Entry stop condition: signed run expiry or 15 completed cycles; positive streaks do not stop entries." : data.optimizer ? "Entry stop condition: two consecutive qualifying wins or 15 completed cycles." : "No optimizer profile is active.")}</p>
 <p>Chain state: ${escapeHtml(String(data.runStatus ?? "not started"))} · ${escapeHtml(String(data.phase ?? ""))} · Approved: ${escapeHtml(formatUnits(String(data.approvedAmountUnits ?? "0"), 6))} AUSD · Expires: ${escapeHtml(data.expiresAt ? new Date(data.expiresAt).toISOString() : "pending activation")}</p>
 <p>Cumulative realized PnL: ${escapeHtml(formatUnits(String(data.cumulativePnlUnits ?? "0"), 6))} AUSD · Operator gas recorded: ${escapeHtml(formatUnits(gasWei, 18))} MON</p>
 <p>Scanner: ${escapeHtml(String(data.optimizer?.scanner?.totalScans ?? 0))} scans · ${escapeHtml(String(data.optimizer?.scanner?.totalProposals ?? 0))} proposals · ${escapeHtml(String(data.optimizer?.scanner?.consecutiveNoProposal ?? 0))} consecutive scans without a proposal · cadence ${escapeHtml(String((data.optimizer?.scanner?.cadenceMs ?? 300_000) / 60_000))} minute(s). It continues while a position is open; such proposals are deferred.</p>
@@ -104,7 +116,7 @@ function cycleTable(cycles: any[]) {
 function escapeHtml(value: string) { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 
 async function publishFinalOutcome(data: any, backendRoot: string) {
-  if (!data.optimizer) return null;
+  if (!data.optimizer || isDurationSoak(data.optimizer)) return null;
   const reportPath = path.resolve(backendRoot, "../docs/PERPL_TESTNET_REPORT.html");
   const source = await readFile(reportPath, "utf8");
   const start = "<!-- optimizer-v2-outcome:start -->"; const end = "<!-- optimizer-v2-outcome:end -->";
@@ -136,3 +148,9 @@ function formatUnits(value: string, decimals: number) {
 function formatAbsoluteUnits(value: string, decimals: number) {
   return formatUnits(value, decimals).replace(/^\+/, "");
 }
+
+function isDurationSoak(optimizer: any) {
+  return optimizer?.profile === "duration_soak" || optimizer?.version === "perpl-deterministic-v3-soak";
+}
+
+function humanize(value: string) { return String(value).replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }

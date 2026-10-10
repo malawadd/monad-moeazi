@@ -2,11 +2,13 @@ import React, {useCallback, useState} from 'react';
 import {Linking, StyleSheet, Text, View} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import {useFocusEffect} from '@react-navigation/native';
-import {Button, Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader} from '../components/Ui';
-import {monadApi} from '../services/monadApi';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {Button, Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader, TextLink} from '../components/Ui';
+import {MONAD_AUSD_ADDRESS, MONAD_AUSD_FAUCET_ADDRESS} from '../config/monadAUsd';
+import {monadApi, createMonadIdempotencyKey} from '../services/monadApi';
 import {formatMonadUnits} from '../services/monadFormatting';
 import {haptics} from '../services/haptics';
+import {validatePreparedMonadOperation} from '../services/monadValidation';
 import {useApp} from '../state/AppContext';
 import type {MonadWalletSnapshot} from '../types/monad';
 import {colors, spacing, type} from '../theme/tokens';
@@ -14,13 +16,16 @@ import {screenStyles as s} from '../theme/screenStyles';
 
 const MON_FAUCET = 'https://faucet.monad.xyz/';
 const CIRCLE_FAUCET = 'https://faucet.circle.com/';
+const AGORA_FAUCET_DOCS = 'https://docs.agora.finance/instant-settlement/guides/getting-testnet-tokens';
 
 export function MonadFundingScreen() {
+  const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
   const [wallet, setWallet] = useState<MonadWalletSnapshot | null>(null);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(true);
+  const [preparingAusd, setPreparingAusd] = useState(false);
 
   const refresh = useCallback(async () => {
     setError(''); setFeedback('');
@@ -48,6 +53,21 @@ export function MonadFundingScreen() {
     setFeedback('Mera address copied. Select Monad Testnet before sending tokens.');
   };
 
+  async function prepareAusdClaim() {
+    if (!ownerAddress || !wallet) return;
+    setPreparingAusd(true); setError(''); setFeedback('');
+    try {
+      const prepared = await monadApi.prepareAusdFaucet(createMonadIdempotencyKey());
+      const expected = {ownerAddress, kind: 'claim_ausd_faucet' as const, asset: 'AUSD',
+        recipient: ownerAddress, tokenAddress: MONAD_AUSD_ADDRESS, faucetAddress: MONAD_AUSD_FAUCET_ADDRESS,
+        method: 'requestFunds(address)'};
+      validatePreparedMonadOperation(prepared, expected);
+      navigation.navigate('OperationReview', {prepared, expected, asset: 'AUSD'});
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The Agora AUSD faucet request could not be prepared.');
+    } finally { setPreparingAusd(false); }
+  }
+
   return <FlowScreen refreshing={loading} onRefresh={() => { void refresh(); }}>
     <PageHeader kicker="Funding · testnet" title="Fund your Mera wallet" copy="Use Monad Testnet only. Never send mainnet funds to this test wallet." />
     {error ? <Notice live tone="rose" title="Funding information unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
@@ -71,6 +91,11 @@ export function MonadFundingScreen() {
         <Text style={s.body}>The faucet sites open outside Moeazi. Check the network and destination address before requesting funds.</Text>
         <Button label="Open Monad MON faucet" onPress={() => { void openFaucet(MON_FAUCET); }} />
         <Button label="Open Circle USDC faucet" variant="secondary" onPress={() => { void openFaucet(CIRCLE_FAUCET); }} />
+        <Button label="Request Agora test AUSD" variant="secondary" loading={preparingAusd}
+          disabled={preparingAusd || !ownerAddress} onPress={() => { void prepareAusdClaim(); }}
+          hint="Prepares the faucet transaction for Mera review. You will sign once and pay the displayed MON network fee." />
+        <Text style={s.meta}>Agora Monad Testnet AUSD · contract {MONAD_AUSD_ADDRESS} · faucet {MONAD_AUSD_FAUCET_ADDRESS}</Text>
+        <TextLink label="Agora faucet instructions" onPress={() => { void openFaucet(AGORA_FAUCET_DOCS); }} />
       </Card>
     </> : null}
   </FlowScreen>;

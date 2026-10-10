@@ -1,4 +1,4 @@
-export type MonadAsset = 'MON' | 'USDC' | 'WMON';
+export type MonadAsset = 'MON' | 'AUSD' | 'USDC' | 'WMON';
 export type MonadAccountScope = 'wallet' | 'vault';
 export type MonadVenueId = 'uniswap_v4_testnet' | 'moeazi_test_amm';
 export type PerpVenueId = 'monad-mock-clearinghouse-v1' | 'perpl-testnet-v1' | 'perpl-direct-testnet-v1';
@@ -32,7 +32,7 @@ export type MonadEip1559Transaction = {
 };
 
 export type MonadOperationKind =
-  | 'send_mon' | 'send_usdc' | 'wrap' | 'unwrap'
+  | 'send_mon' | 'send_usdc' | 'claim_ausd_faucet' | 'wrap' | 'unwrap'
   | 'vault_deposit' | 'vault_return' | 'wallet_swap'
   | 'approve_token' | 'mandate_authorize' | 'mandate_revoke' | 'vault_stop' | 'vault_resume'
   | 'autonomy_recovery';
@@ -49,7 +49,8 @@ export type PreparedMonadOperation = {
     summary?: string; amount?: string; asset?: string; recipient?: string; vaultAddress?: string;
     venue?: MonadVenueId; accountScope?: MonadAccountScope; tokenIn?: string; tokenOut?: string;
     pair?: string; tokenAddress?: string; spender?: string; amountUnits?: string; amountInUnits?: string;
-    minAmountOutUnits?: string; inputDecimals?: number; outputDecimals?: number; quoteId?: string; [key: string]: unknown;
+    minAmountOutUnits?: string; inputDecimals?: number; outputDecimals?: number; quoteId?: string;
+    faucetAddress?: string; method?: string; [key: string]: unknown;
   };
 };
 
@@ -59,6 +60,8 @@ export type MonadOperationStatus = {
   transactionHash?: string | null;
   blockNumber?: number | null;
   message?: string;
+  faucetTransferVerified?: boolean;
+  verifiedAmountUnits?: string;
 };
 
 export type MonadQuote = {

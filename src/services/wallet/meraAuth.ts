@@ -13,6 +13,7 @@ import {hashMessage, hashTypedData, hexToBytes, toHex} from 'viem';
 import type {Hex, TypedDataDefinition} from 'viem';
 import type {MonadEip1559Transaction} from '../../types/monad';
 import {signPreparedMonadTransaction} from '../monadTransaction';
+import {describePasskeyError} from './meraPasskeyError';
 
 export const MERA_RP_ID = 'moeazi-monad.kiyan.finance';
 const RP_NAME = 'Moeazi Monad';
@@ -85,16 +86,4 @@ export async function openMeraSigningSession(action: PasskeyAction): Promise<Mer
     seed?.fill(0);
     privateKey?.fill(0);
   }
-}
-
-
-function describePasskeyError(error: unknown): Error {
-  const code = typeof error === 'object' && error !== null && 'code' in error
-    ? String((error as {code: unknown}).code) : '';
-  if (code === 'PRF_UNAVAILABLE') {
-    return new Error('This passkey provider does not support PRF. Use a PRF-capable provider such as Google Password Manager or 1Password.');
-  }
-  if (code === 'CRYPTO_UNAVAILABLE') return new Error('Secure random number generation is unavailable on this device.');
-  if (code === 'PASSKEY_OPERATION_FAILED') return new Error('The passkey request failed or was cancelled. Check the app association for moeazi-monad.kiyan.finance.');
-  return error instanceof Error ? error : new Error('The passkey request could not be completed.');
 }

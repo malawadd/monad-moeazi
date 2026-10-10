@@ -1,6 +1,7 @@
 import { Contract, Interface, Transaction, getAddress, getBytes, parseUnits } from "ethers";
 import type { JsonRpcProvider, TransactionRequest } from "ethers";
-import { ADAPTER_ABI, ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS,
+import { ADAPTER_ABI, AUSD_ADDRESS, AUSD_DECIMALS, AUSD_FAUCET_ABI, AUSD_FAUCET_ADDRESS,
+  ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS,
   VAULT_ABI, WMON_ABI, WMON_ADDRESS } from "./constants.js";
 import { configuredAdapter, configuredVault, MonadApiError, type MonadVenue, venueData } from "./config.js";
 import { requireContractCode } from "./provider.js";
@@ -12,6 +13,14 @@ export type Eip1559Transaction = {
 export type BuiltTransaction = { transaction: Eip1559Transaction; gas: {
   gasLimit: string; maxFeePerGas: string; maxPriorityFeePerGas: string; maxCostWei: string;
 } };
+
+export function ausdFaucetCall(ownerAddress: string) {
+  const recipient = getAddress(ownerAddress);
+  return { to: AUSD_FAUCET_ADDRESS,
+    data: new Interface(AUSD_FAUCET_ABI).encodeFunctionData("requestFunds", [recipient]),
+    intent: { kind: "claim_ausd_faucet", asset: "AUSD", recipient, tokenAddress: AUSD_ADDRESS,
+      faucetAddress: AUSD_FAUCET_ADDRESS, method: "requestFunds(address)" } };
+}
 
 export function amountUnits(value: unknown, decimals: number): bigint {
   if (typeof value !== "string" || !/^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value)) {
@@ -65,6 +74,17 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
     const units = amountUnits(body.amount, 6);
     data = new Interface(ERC20_ABI).encodeFunctionData("transfer", [getAddress(body.recipient), units]);
     intent = { kind, asset: "USDC", amount: body.amount, amountUnits: units.toString(), recipient: getAddress(body.recipient) };
+  } else if (kind === "claim_ausd_faucet") {
+    await Promise.all([
+      requireContractCode(provider, AUSD_FAUCET_ADDRESS, "Agora AUSD faucet"),
+      requireContractCode(provider, AUSD_ADDRESS, "Agora AUSD"),
+    ]);
+    const token = new Contract(AUSD_ADDRESS, ERC20_ABI, provider);
+    if (Number(await token.decimals()) !== AUSD_DECIMALS) {
+      throw new MonadApiError("Agora AUSD decimals differ from the reviewed Monad Testnet configuration.", 503, "asset_config_mismatch");
+    }
+    const faucet = ausdFaucetCall(owner);
+    to = faucet.to; data = faucet.data; intent = faucet.intent;
   } else if (kind === "approve_token") {
     const token = getAddress(body.tokenAddress); const spender = getAddress(body.spender);
     const allowedSpenders = [configuredVault(), configuredAdapter("uniswap_v4_testnet"), configuredAdapter("moeazi_test_amm")].filter(Boolean);

@@ -35,6 +35,8 @@ export const monadVenueTables = {
     scheduledFunctionId: v.optional(v.id("_scheduled_functions")), createdAt: v.number(), updatedAt: v.number(),
     activatedAt: v.optional(v.number()), stoppedAt: v.optional(v.number()), completedAt: v.optional(v.number()),
   }).index("by_runId", ["runId"])
+    .index("by_venue_createdAt", ["venueId", "createdAt"])
+    .index("by_venue_status_createdAt", ["venueId", "status", "createdAt"])
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_owner_createdAt", ["userId", "ownerAddress", "createdAt"])
     .index("by_userId_idempotencyKey", ["userId", "idempotencyKey"])
@@ -59,6 +61,7 @@ export const monadVenueTables = {
     txHash: v.optional(v.string()), blockNumber: v.optional(v.number()), dataJson: v.optional(v.string()),
   }).index("by_eventId", ["eventId"])
     .index("by_run_timestamp", ["runId", "timestamp"])
+    .index("by_run_kind_timestamp", ["runId", "kind", "timestamp"])
     .index("by_owner_timestamp", ["ownerAddress", "timestamp"]),
 
   monadVenueObservations: defineTable({

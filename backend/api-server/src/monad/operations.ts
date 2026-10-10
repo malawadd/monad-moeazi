@@ -1,21 +1,21 @@
 import { createHash, randomUUID } from "node:crypto";
-import { Contract, getAddress } from "ethers";
+import { Contract, formatUnits, getAddress } from "ethers";
 import type { JsonRpcProvider } from "ethers";
 import { Hono } from "hono";
 import { meraQuery, operatorMutation, operatorQuery } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
 import { assertMonadActionsEnabled, assertMonadBroadcastEnabled, finalityBlocks, MonadApiError } from "./config.js";
-import { MONAD_CHAIN_ID, VAULT_ABI } from "./constants.js";
+import { MONAD_CHAIN_ID, USDC_ADDRESS, VAULT_ABI, WMON_ADDRESS } from "./constants.js";
 import { finalizedBlockNumber, monadProvider } from "./provider.js";
 import { amountUnits, buildWalletTransaction, verifyExactSignedTransaction } from "./transactions.js";
-import { USDC_ADDRESS, WMON_ADDRESS } from "./constants.js";
+import { verifiedAgoraAUsdTransferUnits } from "./faucetVerification.js";
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 function canonicalKind(kind: unknown) {
   if (kind === "vault_return") return "vault_withdraw";
   if (kind === "wallet_swap") return "swap";
   if (kind === "vault_swap" || kind === "vault_trade") throw new MonadApiError("Vault trades are operator-bridge only.", 403, "operator_only");
-  if (["send_mon", "send_usdc", "approve_token", "wrap", "unwrap", "vault_deposit", "vault_withdraw", "swap"].includes(String(kind))) return String(kind);
+  if (["send_mon", "send_usdc", "claim_ausd_faucet", "approve_token", "wrap", "unwrap", "vault_deposit", "vault_withdraw", "swap"].includes(String(kind))) return String(kind);
   throw new MonadApiError("Unsupported Monad wallet operation.", 400, "operation_unsupported");
 }
 
@@ -25,6 +25,9 @@ export function operationDto(row: any, requestedKind?: string) {
   const intent = row.intent ?? (row.intentJson ? JSON.parse(row.intentJson) : {});
   const metadata = row.metadata ?? (row.metadataJson ? JSON.parse(row.metadataJson) : {});
   const status = row.status === "authorized" ? "verified" : ["broadcasting", "uncertain"].includes(row.status) ? "submitted" : row.status;
+  const faucetUnits = metadata.verifiedAUsdUnits;
+  const faucetVerified = row.kind === "claim_ausd_faucet" && status === "finalized"
+    && /^\d+$/.test(String(faucetUnits ?? "")) && BigInt(String(faucetUnits)) > 0n;
   return {
     operationId: row.operationId, chainId: MONAD_CHAIN_ID, ownerAddress: row.ownerAddress,
     kind: requestedKind ?? (row.kind === "vault_withdraw" ? "vault_return" : row.kind === "swap" ? "wallet_swap" : row.kind),
@@ -34,7 +37,13 @@ export function operationDto(row: any, requestedKind?: string) {
     expiresAt: new Date(row.expiresAt).toISOString(), transactionType: "eip1559",
     transaction: storedTx ? { ...storedTx, type: 2, nonce: String(storedTx.nonce) } : undefined,
     gas: metadata.gas ?? undefined, review: reviewFor(intent),
-    message: row.status === "uncertain" ? "Submission is uncertain. The service is reconciling this exact signed transaction." : undefined,
+    message: row.status === "uncertain" ? "Submission is uncertain. The service is reconciling this exact signed transaction."
+      : row.kind === "claim_ausd_faucet" && status === "finalized" ? faucetVerified
+        ? `Finalized Agora receipt confirms ${formatUnits(BigInt(String(faucetUnits)), 6)} AUSD transferred.`
+        : "The faucet transaction finalized, but no AUSD transfer to this Mera wallet was verified."
+        : undefined,
+    ...(row.kind === "claim_ausd_faucet" && status === "finalized"
+      ? { faucetTransferVerified: faucetVerified, ...(faucetVerified ? { verifiedAmountUnits: String(faucetUnits) } : {}) } : {}),
   };
 }
 
@@ -47,6 +56,7 @@ function reviewFor(intent: any) {
 }
 
 function requestIntentHash(body: Record<string, any>, kind: string) {
+  if (kind === "claim_ausd_faucet") return sha256(JSON.stringify({ kind, recipient: "authenticated_owner" }));
   if (kind === "send_mon" || kind === "send_usdc" || kind === "wrap" || kind === "unwrap") {
     const decimals = kind === "send_usdc" ? 6 : 18;
     const amount = amountUnits(body.amount, decimals).toString();
@@ -159,6 +169,9 @@ export async function reconcileMonadOperation(provider: JsonRpcProvider, row: an
     const confirmations = Math.max(0, head - receipt.blockNumber + 1);
     let checkpoint: number | undefined;
     try { checkpoint = await finalizedBlockNumber(provider); } catch { checkpoint = undefined; }
+    const finalized = checkpoint !== undefined && checkpoint >= receipt.blockNumber;
+    const verifiedAUsdUnits = row.kind === "claim_ausd_faucet" && receipt.status === 1 && finalized
+      ? verifiedAgoraAUsdTransferUnits(receipt.logs, row.ownerAddress).toString() : undefined;
     if (row.kind === "vault_trade" && receipt.status === 1 && checkpoint !== undefined && checkpoint >= receipt.blockNumber) {
       const intent = row.intent ?? (row.intentJson ? JSON.parse(row.intentJson) : {});
       const vault = new Contract(intent.vaultAddress, VAULT_ABI, provider);
@@ -171,7 +184,7 @@ export async function reconcileMonadOperation(provider: JsonRpcProvider, row: an
       operationId: row.operationId, ownerAddress: row.ownerAddress, txHash: row.txHash,
       receiptStatus: receipt.status ?? 0, blockNumber: receipt.blockNumber, blockHash: receipt.blockHash,
       canonicalBlockHash: canonical.hash, finalizedBlockNumber: checkpoint,
-      confirmations, finalityBlocks: finalityBlocks(),
+      confirmations, finalityBlocks: finalityBlocks(), ...(verifiedAUsdUnits !== undefined ? { verifiedAUsdUnits } : {}),
     });
     if (updated.status === "finalized" && ["mandate_authorize", "mandate_revoke", "vault_stop", "vault_resume"].includes(row.kind)) {
       await reconcileVaultState(provider, updated);

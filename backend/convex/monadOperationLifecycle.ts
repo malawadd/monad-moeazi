@@ -72,7 +72,8 @@ export const recordBroadcast = mutation({
 export const reconcileReceipt = mutation({
   args: { operationId: v.string(), ownerAddress: v.string(), txHash: v.string(), receiptStatus: v.number(),
     blockNumber: v.number(), blockHash: v.string(), canonicalBlockHash: v.string(),
-    finalizedBlockNumber: v.optional(v.number()), confirmations: v.number(), finalityBlocks: v.number() },
+    finalizedBlockNumber: v.optional(v.number()), confirmations: v.number(), finalityBlocks: v.number(),
+    verifiedAUsdUnits: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const row = await findMonadOperation(ctx, args.operationId);
     if (!row) throw new Error("Monad operation was not found.");
@@ -83,25 +84,41 @@ export const reconcileReceipt = mutation({
       throw new Error("Monad receipt does not match the canonical chain.");
     }
     const final = args.finalizedBlockNumber !== undefined && args.finalizedBlockNumber >= args.blockNumber;
+    if (args.verifiedAUsdUnits !== undefined && (row.kind !== "claim_ausd_faucet" || !/^\d+$/.test(args.verifiedAUsdUnits))) {
+      throw new Error("AUSD receipt verification is invalid for this operation.");
+    }
+    if (final && args.receiptStatus === 1 && row.kind === "claim_ausd_faucet" && args.verifiedAUsdUnits === undefined) {
+      throw new Error("Finalized AUSD faucet receipts require transfer-log verification.");
+    }
     const status = final ? (args.receiptStatus === 1 ? "finalized" : "failed") : "executed";
     const changed = row.status !== status || row.blockHash !== args.blockHash;
     const now = Date.now();
+    const metadata = row.metadataJson ? JSON.parse(row.metadataJson) : {};
+    const verifiedFaucetTransfer = row.kind === "claim_ausd_faucet" && final && args.receiptStatus === 1
+      && BigInt(args.verifiedAUsdUnits ?? "0") > 0n;
+    const metadataJson = row.kind === "claim_ausd_faucet" && final && args.receiptStatus === 1
+      ? JSON.stringify({ ...metadata, verifiedAUsdUnits: args.verifiedAUsdUnits }) : row.metadataJson;
     await ctx.db.patch(row._id, { status, nonceReserved: !final, receiptStatus: args.receiptStatus,
       blockNumber: args.blockNumber, blockHash: args.blockHash, confirmations: args.confirmations,
       finalizedBlockNumber: final ? args.finalizedBlockNumber : undefined,
-      finalityMode: final ? "monad_finalized_block" : undefined, updatedAt: now });
+      finalityMode: final ? "monad_finalized_block" : undefined, metadataJson, updatedAt: now });
     if (changed) await appendMonadActivity(ctx, { userId: row.userId, ownerAddress: row.ownerAddress,
       activityId: `operation:${row.operationId}:${status}:${args.blockHash}`, operationId: row.operationId,
       mandateId: row.mandateId, txHash: args.txHash, kind: row.kind, status,
-      summary: status === "finalized" ? "Monad transaction is included in the finalized checkpoint"
+      summary: row.kind === "claim_ausd_faucet" && status === "finalized"
+        ? verifiedFaucetTransfer ? "Agora AUSD transfer verified from the finalized receipt"
+          : "Agora faucet transaction finalized without a verified AUSD transfer"
+        : status === "finalized" ? "Monad transaction is included in the finalized checkpoint"
         : status === "failed" ? "Monad transaction reverted on chain" : "Monad transaction receipt observed",
       dataJson: JSON.stringify({ ...JSON.parse(row.intentJson), receiptStatus: args.receiptStatus,
         blockNumber: args.blockNumber, confirmations: args.confirmations,
+        ...(row.kind === "claim_ausd_faucet" && final && args.receiptStatus === 1
+          ? { verifiedAUsdUnits: args.verifiedAUsdUnits, ...(verifiedFaucetTransfer ? { asset: "AUSD" } : {}) } : {}),
         finalizedBlockNumber: args.finalizedBlockNumber, finalityMode: final ? "monad_finalized_block" : undefined }) });
     return safeOperation({ ...row, status, receiptStatus: args.receiptStatus,
       blockNumber: args.blockNumber, blockHash: args.blockHash, confirmations: args.confirmations,
       finalizedBlockNumber: final ? args.finalizedBlockNumber : undefined,
-      finalityMode: final ? "monad_finalized_block" : undefined, updatedAt: now });
+      finalityMode: final ? "monad_finalized_block" : undefined, metadataJson, updatedAt: now });
   },
 });
 

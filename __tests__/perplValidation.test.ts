@@ -7,6 +7,7 @@ const owner = '0x1111111111111111111111111111111111111111';
 const vault = '0x2222222222222222222222222222222222222222';
 const operator = '0x3333333333333333333333333333333333333333';
 const amountUnits = '100000000';
+const directDurationSeconds = 7_200;
 const tokenAbi = [{type: 'function', name: 'transfer', stateMutability: 'nonpayable',
   inputs: [{name: 'to', type: 'address'}, {name: 'amount', type: 'uint256'}], outputs: [{type: 'bool'}]}] as const;
 const recoveryAbi = [{type: 'function', name: 'recoverWithdrawCollateral', stateMutability: 'nonpayable',
@@ -28,7 +29,7 @@ function typedData(overrides: Partial<Record<string, unknown>> = {}): MonadTyped
       {name: 'marketIds', type: 'uint256[]'},
     ]}, primaryType: 'PerplRunMandate', message: {
       chainId: 10143, owner, vault, collateralToken: PERPL_TESTNET_AUSD, operator, transport: 2, fundingAmount: amountUnits,
-      maxPositionExposure: '50000000', maxLeverage: 5, durationSeconds: 3600,
+      maxPositionExposure: '50000000', maxLeverage: 3, durationSeconds: 3600,
       setupDeadline: nowSeconds + 300, policyVersion: 2, nonce: '9', marketIds: [2, 7], ...overrides,
     }};
 }
@@ -43,10 +44,20 @@ function venue(): PerplVenue {
 function prepared(overrides: Partial<PerplPreparedEnrollment> = {}): PerplPreparedEnrollment {
   return {runId: 'run-1', venueId: 'perpl-testnet-v1', chainId: 10143, ownerAddress: owner, vaultAddress: vault,
     amountUnits, collateral: {symbol: 'AUSD', address: PERPL_TESTNET_AUSD, decimals: 6}, durationSeconds: 3600,
-    maxPositionExposureUnits: '50000000', maxLeverage: 5,
+    maxPositionExposureUnits: '50000000', maxLeverage: 3,
     markets: [{id: 2, symbol: 'BTC-PERP', isOpen: true, maxMarketSlippageBps: 80}, {id: 7, symbol: 'ETH-PERP', isOpen: true, maxMarketSlippageBps: 120}],
     limits: {}, operatorPermission: {address: operator, scope: 'trade', withdrawals: false, perOrderCapsEnforcedBy: 'Moeazi backend'},
     fundingTransaction: transaction(), mandateTypedData: typedData(), maxSlippageBps: 100, preparedExpiresAt: (nowSeconds + 600) * 1000, ...overrides};
+}
+
+function directOptimizerReview(overrides: Partial<NonNullable<PerplPreparedEnrollment['optimizerReview']>> = {}) {
+  return {version: 'perpl-deterministic-v3-soak', profile: 'duration_soak', stopCondition: 'run_expiry_or_cycle_cap',
+    maxCycles: 15, targetWinStreak: null, minimumPositivePnlUnits: '10000', minDurationSeconds: 600,
+    defaultDurationSeconds: directDurationSeconds, maxDurationSeconds: 43_200, marketScanIntervalMs: 300_000,
+    exitCheckIntervalMs: 60_000, scannerReviewAfterMisses: 3, cycleHoldMinMs: 600_000, cycleHoldMaxMs: 1_800_000,
+    plannedLossUnits: '150000', maxNotionalUnits: '30000000', maxMarginUnits: '25000000', maxLeverage: 4,
+    maxDepthConsumptionBps: 2_000, initialMomentumThresholdBps: 40, amountUnits,
+    target: 'signed_duration_expiry_or_15_cycle_cap', ...overrides};
 }
 
 const expected = {ownerAddress: owner, venue: venue(), amountUnits, durationSeconds: 3600};
@@ -58,9 +69,19 @@ describe('Perpl enrollment review validation', () => {
 
   it('binds a direct review to the direct transport', () => {
     const directVenue = {...venue(), venueId: 'perpl-direct-testnet-v1' as const, executionModel: 'onchain_exchange' as const};
-    const directReview = prepared({venueId: directVenue.venueId, mandateTypedData: typedData({transport: 1})});
-    expect(() => validatePreparedPerpl(directReview, {...expected, venue: directVenue})).not.toThrow();
+    const directReview = prepared({venueId: directVenue.venueId, durationSeconds: directDurationSeconds,
+      mandateTypedData: typedData({transport: 1, durationSeconds: directDurationSeconds}), optimizerReview: directOptimizerReview()});
+    const directExpected = {...expected, venue: directVenue, durationSeconds: directDurationSeconds};
+    expect(() => validatePreparedPerpl(directReview, directExpected)).not.toThrow();
     expect(() => validatePreparedPerpl(prepared({venueId: directVenue.venueId}), {...expected, venue: directVenue})).toThrow();
+    expect(() => validatePreparedPerpl({...directReview, durationSeconds: directDurationSeconds + 60}, directExpected)).toThrow('duration');
+    expect(() => validatePreparedPerpl({...directReview,
+      mandateTypedData: typedData({transport: 1, durationSeconds: directDurationSeconds + 60})}, directExpected)).toThrow('duration differs');
+    expect(() => validatePreparedPerpl({...directReview, optimizerReview: directOptimizerReview({
+      target: 'two_consecutive_cycles_at_least_0.01_AUSD'})}, directExpected)).toThrow('fixed deterministic optimizer policy');
+    expect(() => validatePreparedPerpl({...directReview, optimizerReview: directOptimizerReview({
+      version: 'perpl-deterministic-v2', profile: 'two_win_target', stopCondition: 'two_wins_or_cycle_cap',
+      targetWinStreak: 2, target: 'two_consecutive_cycles_at_least_0.01_AUSD'})}, directExpected)).toThrow('fixed deterministic optimizer policy');
   });
 
   it('uses the lower per-market cap when it is below the backend cap', () => {

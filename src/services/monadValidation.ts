@@ -1,5 +1,6 @@
 import type {MonadOperationKind, MonadTypedData, MonadVenueId, PreparedMonadMandate, PreparedMonadOperation} from '../types/monad';
-import {toFunctionSelector} from 'viem';
+import {encodeFunctionData, toFunctionSelector} from 'viem';
+import {MONAD_AUSD_ADDRESS, MONAD_AUSD_FAUCET_ABI, MONAD_AUSD_FAUCET_ADDRESS} from '../config/monadAUsd';
 
 const AUTONOMY_RECOVERY_SELECTOR = toFunctionSelector('emergencyRecover()');
 
@@ -16,6 +17,8 @@ export type MonadOperationExpectation = {
   tokenIn?: string;
   tokenOut?: string;
   tokenAddress?: string;
+  faucetAddress?: string;
+  method?: string;
   spender?: string;
   amountUnits?: string;
   amountInUnits?: string;
@@ -53,6 +56,18 @@ export function validatePreparedMonadOperation(value: PreparedMonadOperation, ex
     throw new Error('The recovery request must call emergencyRecover() on this exact vault with no native value.');
   }
 
+  if (expected.kind === 'claim_ausd_faucet') {
+    const expectedData = encodeFunctionData({abi: MONAD_AUSD_FAUCET_ABI, functionName: 'requestFunds',
+      args: [expected.ownerAddress as `0x${string}`]});
+    if (expected.asset !== 'AUSD' || expected.recipient?.toLowerCase() !== expected.ownerAddress.toLowerCase()
+        || expected.tokenAddress?.toLowerCase() !== MONAD_AUSD_ADDRESS.toLowerCase()
+        || expected.faucetAddress?.toLowerCase() !== MONAD_AUSD_FAUCET_ADDRESS.toLowerCase()
+        || expected.method !== 'requestFunds(address)' || tx.to.toLowerCase() !== MONAD_AUSD_FAUCET_ADDRESS.toLowerCase()
+        || tx.data.toLowerCase() !== expectedData.toLowerCase() || BigInt(tx.value) !== 0n) {
+      throw new Error('The prepared AUSD request must call Agora’s Monad Testnet faucet for this Mera wallet only.');
+    }
+  }
+
   const review = value.review as (typeof value.review & Record<string, unknown>) | undefined;
   compareReview(review, expected, 'amount');
   compareReview(review, expected, 'asset');
@@ -64,6 +79,8 @@ export function validatePreparedMonadOperation(value: PreparedMonadOperation, ex
   compareReview(review, expected, 'tokenIn');
   compareReview(review, expected, 'tokenOut');
   compareReview(review, expected, 'tokenAddress');
+  compareReview(review, expected, 'faucetAddress');
+  compareReview(review, expected, 'method');
   compareReview(review, expected, 'spender');
   compareReview(review, expected, 'amountUnits');
   compareReview(review, expected, 'amountInUnits');

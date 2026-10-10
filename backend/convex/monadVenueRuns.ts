@@ -2,8 +2,11 @@ import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { appendMonadActivity, requireMeraViewer, requireMonadOperator } from "./monadHelpers";
+import { sumPerplOptimizerFundingUnits } from "./monadVenueAccounting";
 const internalApi: any = internal;
 const ACTIVE = ["prepared", "activation_pending", "active", "stopping", "settling", "uncertain", "incomplete_settlement"];
+const OPTIMIZER_MIN_DURATION_SECONDS = 600;
+const OPTIMIZER_MAX_DURATION_SECONDS = 43_200;
 const parse = (value?: string) => { try { return value ? JSON.parse(value) : null; } catch { return null; } };
 
 async function findRun(ctx: any, runId: string) {
@@ -13,9 +16,11 @@ async function ownedRun(ctx: any, runId: string) {
   const { user, owner } = await requireMeraViewer(ctx); const row = await findRun(ctx, runId);
   return row && row.userId === user._id && row.ownerAddress === owner ? { row, user, owner } : null;
 }
-function dto(row: any) {
+function dto(row: any, optimizerCycles: any[] = []) {
   const markets = parse(row.marketsJson) ?? [];
-  const optimizerState = parse(row.optimizerStateJson);
+  const optimizerState = parse(row.optimizerStateJson); const optimizerSoak = optimizerState?.version === "perpl-deterministic-v3-soak";
+  const fundingUnits = row.venueId === "perpl-direct-testnet-v1" && optimizerState
+    ? sumPerplOptimizerFundingUnits(optimizerCycles, row.fundingUnits ?? "0") : row.fundingUnits ?? "0";
   const rawPosition = parse(row.positionsJson)?.[0] ?? null;
   const position = row.venueId === "perpl-direct-testnet-v1" && rawPosition
     ? { ...rawPosition, marketId: Number(rawPosition.mkt),
@@ -33,18 +38,19 @@ function dto(row: any) {
     accountId: row.accountId ?? null, chainId: row.chainId, collateral: { symbol: "AUSD", address: "0xa9012a055bd4e0edff8ce09f960291c09d5322dc", decimals: 6 },
     startingAmountUnits: row.amountUnits, availableUnits: row.balanceUnits ?? "0", equityUnits: row.equityUnits ?? row.balanceUnits ?? "0",
     realizedPnlUnits: row.realizedPnlUnits ?? "0", unrealizedPnlUnits: row.unrealizedPnlUnits ?? "0",
-    feesUnits: row.feesUnits ?? "0", fundingUnits: row.fundingUnits ?? "0", returnedUnits: row.returnedUnits ?? null,
+    feesUnits: row.feesUnits ?? "0", fundingUnits, returnedUnits: row.returnedUnits ?? null,
     startedAt: row.activatedAt ?? null, expiresAt: row.expiresAt ?? null, observedAt: row.lastObservedAt ?? null,
     blockNumber: row.lastAccountBlock ?? null,
     position, orders: parse(row.ordersJson) ?? [], markets,
     settlement: parse(row.settlementJson), recoveryActions, recoveryReason: row.recoveryReason ?? null,
     policy: { maxPositionExposureUnits: row.maxPositionExposureUnits,
       maxLeverage: row.maxLeverage, marketIds: parse(row.marketIdsJson) ?? [], policyVersion: row.policyVersion },
-    optimizer: optimizerState ? { version: optimizerState.version, status: optimizerState.status,
+    optimizer: optimizerState ? { version: optimizerState.version, profile: optimizerSoak ? "duration_soak" : "two_win_target",
+      stopCondition: optimizerSoak ? "run_expiry_or_cycle_cap" : "two_wins_or_cycle_cap", status: optimizerState.status,
       cycleCount: optimizerState.cycles, cycleLimit: 15, winStreak: optimizerState.winStreak,
-      targetWinStreak: 2, minimumPositivePnlUnits: "10000", positiveCycles: optimizerState.positiveCycles,
+      targetWinStreak: optimizerSoak ? null : 2, minimumPositivePnlUnits: "10000", positiveCycles: optimizerState.positiveCycles,
       params: optimizerState.params, scanner: optimizerState.scanner ?? null, activeCycle: optimizerState.activeCycle ?? null,
-      lastCycle: optimizerState.lastCycle ?? null, successTargetReached: optimizerState.status === "target_reached_awaiting_settlement" } : null };
+      lastCycle: optimizerState.lastCycle ?? null, successTargetReached: !optimizerSoak && optimizerState.status === "target_reached_awaiting_settlement" } : null };
 }
 async function recordEvent(ctx: any, row: any, input: any) {
   const eventId = `${row.venueId}:${row.runId}:${input.eventId}`;
@@ -79,12 +85,14 @@ export const prepareRun = mutation({ args: { runId: v.string(), venueId: v.strin
   handler: async (ctx, args) => {
     const { user, owner } = await requireMeraViewer(ctx); const amount = /^\d+$/.test(args.amountUnits) ? BigInt(args.amountUnits) : 0n;
     let optimizer: any = null; try { optimizer = args.optimizerStateJson ? JSON.parse(args.optimizerStateJson) : null; } catch { /* rejected below */ }
-    const optimizerRun = args.venueId === "perpl-direct-testnet-v1" && optimizer?.version === "perpl-deterministic-v2";
+    const optimizerRun = args.venueId === "perpl-direct-testnet-v1" && optimizer?.version === "perpl-deterministic-v3-soak";
     if (!["perpl-testnet-v1", "perpl-direct-testnet-v1"].includes(args.venueId) || args.chainId !== 10143 || args.ownerAddress.toLowerCase() !== owner
       || !/^\d+$/.test(args.minFundingUnits) || ![10_000_000n, 100_000_000n].includes(BigInt(args.minFundingUnits))
       || amount < BigInt(args.minFundingUnits) || amount > BigInt(process.env.MONAD_TESTNET_PERPL_MAX_FUNDING_UNITS ?? "1000000000")
-      || args.durationSeconds < 60 || args.durationSeconds > 86400 || args.maxLeverage < 1 || args.maxLeverage > (optimizerRun ? 4 : 3)
-      || optimizerRun && (amount !== 100_000_000n || args.durationSeconds !== 43_200 || args.optimizerStateJson!.length > 4000)
+      || !Number.isSafeInteger(args.durationSeconds) || args.durationSeconds < 60 || args.durationSeconds > 86400
+      || args.maxLeverage < 1 || args.maxLeverage > (optimizerRun ? 4 : 3)
+      || optimizerRun && (amount !== 100_000_000n || args.durationSeconds < OPTIMIZER_MIN_DURATION_SECONDS
+        || args.durationSeconds > OPTIMIZER_MAX_DURATION_SECONDS || args.optimizerStateJson!.length > 4000)
       || args.venueId === "perpl-direct-testnet-v1" && args.optimizerStateJson && !optimizerRun
       || BigInt(args.maxPositionExposureUnits) > amount * BigInt(args.maxLeverage) || args.policyVersion !== 2
       || args.setupDeadline <= Math.floor(Date.now() / 1000) || args.setupDeadline > Math.floor(Date.now() / 1000) + 300
@@ -143,7 +151,7 @@ export const getCurrent = query({ args: {}, handler: async (ctx) => {
   const orders = await ctx.db.query("monadVenueOrders").withIndex("by_runId_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(50);
   const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
   const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
-  return { current: { ...dto(row), events: events.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })), orders: orders.reverse(),
+  return { current: { ...dto(row, cycles), events: events.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })), orders: orders.reverse(),
     cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)), journal: journal.reverse().map((item: any) => parse(item.entryJson)) } };
 } });
 
@@ -152,10 +160,10 @@ export const getHistory = query({ args: { limit: v.optional(v.number()), cursor:
   const page = await ctx.db.query("monadVenueRuns").withIndex("by_userId_owner_createdAt", (q: any) =>
     q.eq("userId", user._id).eq("ownerAddress", owner)).order("desc").paginate({ numItems: limit, cursor: args.cursor ?? null });
   const runs = await Promise.all(page.page.map(async (row: any) => {
-    const summary = dto(row); if (!row.optimizerStateJson) return summary;
+    if (!row.optimizerStateJson) return dto(row);
     const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
     const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
-    return { ...summary, cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)),
+    return { ...dto(row, cycles), cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)),
       journal: journal.reverse().map((item: any) => parse(item.entryJson)) };
   }));
   return { runs, hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
@@ -169,7 +177,7 @@ export const getRunHistory = query({ args: { runId: v.string(), limit: v.optiona
   const observations = await ctx.db.query("monadVenueObservations").withIndex("by_run_time", (q: any) => q.eq("runId", args.runId)).order("desc").take(limit);
   const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", args.runId)).order("desc").take(15);
   const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", args.runId)).order("desc").take(15);
-  return { run: dto(found.row), events: page.page.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })),
+  return { run: dto(found.row, cycles), events: page.page.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })),
     orders: orders.reverse(), observations: observations.reverse(), cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)),
     journal: journal.reverse().map((item: any) => parse(item.entryJson)), hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
 } });
@@ -266,9 +274,12 @@ export const queueRecovery = mutation({ args: { runId: v.string(), action: v.str
 });
 
 export const getRunForOwner = query({ args: { runId: v.string() }, handler: async (ctx, args) => {
-  const found = await ownedRun(ctx, args.runId); return found ? { ...dto(found.row), status: found.row.status,
+  const found = await ownedRun(ctx, args.runId); if (!found) return null;
+  const cycles = found.row.venueId === "perpl-direct-testnet-v1" && found.row.optimizerStateJson
+    ? await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", found.row.runId)).take(15) : [];
+  return { ...dto(found.row, cycles), status: found.row.status,
     factoryAddress: found.row.factoryAddress, vaultDeploymentTxHash: found.row.vaultDeploymentTxHash,
-    vaultDeploymentStatus: found.row.vaultDeploymentStatus } : null;
+    vaultDeploymentStatus: found.row.vaultDeploymentStatus };
 } });
 
 export const recordVaultDeployment = mutation({ args: { runId: v.string(), txHash: v.string(), status: v.string() }, handler: async (ctx, args) => {

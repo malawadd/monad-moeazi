@@ -1,8 +1,13 @@
-export const PERPL_OPTIMIZER_VERSION = "perpl-deterministic-v2";
+export const PERPL_LEGACY_OPTIMIZER_VERSION = "perpl-deterministic-v2";
+export const PERPL_OPTIMIZER_VERSION = "perpl-deterministic-v3-soak";
+export const PERPL_OPTIMIZER_PROFILE = "duration_soak";
+export const PERPL_OPTIMIZER_STOP_CONDITION = "run_expiry_or_cycle_cap";
+export const PERPL_LEGACY_TARGET_WIN_STREAK = 2;
 export const PERPL_OPTIMIZER_POLICY = Object.freeze({
-  runDurationSeconds: 43_200,
+  minDurationSeconds: 600,
+  defaultDurationSeconds: 7_200,
+  maxDurationSeconds: 43_200,
   maxCycles: 15,
-  targetWinStreak: 2,
   minimumPositivePnlUnits: "10000",
   marketScanIntervalMs: 300_000,
   observationIntervalMs: 60_000,
@@ -29,6 +34,15 @@ export const PERPL_OPTIMIZER_POLICY = Object.freeze({
   depthConsumptionDenominatorBps: 10_000,
 });
 
+export function isPerplOptimizerDuration(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value)
+    && value >= PERPL_OPTIMIZER_POLICY.minDurationSeconds && value <= PERPL_OPTIMIZER_POLICY.maxDurationSeconds;
+}
+
+export function isPerplOptimizerVersion(value: unknown): value is string {
+  return value === PERPL_OPTIMIZER_VERSION || value === PERPL_LEGACY_OPTIMIZER_VERSION;
+}
+
 export type PerplOptimizerParams = {
   momentumThresholdBps: number;
   executionConservatismBps: number;
@@ -50,9 +64,11 @@ export type PerplOptimizerState = {
 };
 
 export function perplOptimizerReview() {
-  return { version: PERPL_OPTIMIZER_VERSION, maxCycles: PERPL_OPTIMIZER_POLICY.maxCycles,
-    targetWinStreak: PERPL_OPTIMIZER_POLICY.targetWinStreak, minimumPositivePnlUnits: PERPL_OPTIMIZER_POLICY.minimumPositivePnlUnits,
-    maxDurationSeconds: PERPL_OPTIMIZER_POLICY.runDurationSeconds, marketScanIntervalMs: PERPL_OPTIMIZER_POLICY.marketScanIntervalMs,
+  return { version: PERPL_OPTIMIZER_VERSION, profile: PERPL_OPTIMIZER_PROFILE, stopCondition: PERPL_OPTIMIZER_STOP_CONDITION,
+    maxCycles: PERPL_OPTIMIZER_POLICY.maxCycles, targetWinStreak: null,
+    minimumPositivePnlUnits: PERPL_OPTIMIZER_POLICY.minimumPositivePnlUnits,
+    minDurationSeconds: PERPL_OPTIMIZER_POLICY.minDurationSeconds, defaultDurationSeconds: PERPL_OPTIMIZER_POLICY.defaultDurationSeconds,
+    maxDurationSeconds: PERPL_OPTIMIZER_POLICY.maxDurationSeconds, marketScanIntervalMs: PERPL_OPTIMIZER_POLICY.marketScanIntervalMs,
     scannerReviewAfterMisses: 3,
     observationIntervalMs: PERPL_OPTIMIZER_POLICY.observationIntervalMs, exitCheckIntervalMs: PERPL_OPTIMIZER_POLICY.exitCheckIntervalMs,
     cycleHoldMinMs: PERPL_OPTIMIZER_POLICY.minimumHoldMs, cycleHoldMaxMs: PERPL_OPTIMIZER_POLICY.maximumHoldMs,
@@ -74,10 +90,11 @@ export function createPerplOptimizerState(): PerplOptimizerState {
 export function parsePerplOptimizerState(raw?: string): PerplOptimizerState | null {
   try {
     const state = JSON.parse(raw ?? "null");
-    if (!state || state.version !== PERPL_OPTIMIZER_VERSION || !Number.isSafeInteger(state.cycles)
+    if (!state || !isPerplOptimizerVersion(state.version) || !Number.isSafeInteger(state.cycles)
       || state.cycles < 0 || state.cycles > PERPL_OPTIMIZER_POLICY.maxCycles
       || !Number.isSafeInteger(state.winStreak) || !Number.isSafeInteger(state.positiveCycles)
       || !["running", "target_reached_awaiting_settlement", "cycle_cap_reached_awaiting_settlement"].includes(state.status)
+      || state.version === PERPL_OPTIMIZER_VERSION && state.status === "target_reached_awaiting_settlement"
       || !validParams(state.params)) return null;
     const initial = createPerplOptimizerState();
     return { ...initial, ...state, scanner: { ...initial.scanner, ...(state.scanner ?? {}) } } as PerplOptimizerState;

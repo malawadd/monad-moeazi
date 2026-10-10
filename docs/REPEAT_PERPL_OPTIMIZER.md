@@ -5,16 +5,21 @@ manual scenario guide](REPEAT_PERPL_DIRECT_CYCLES.md) documents the October 7
 acceptance workflow; it is historical. Do not queue those operator scenarios
 for a deterministic optimizer run.
 
-The optimizer uses a fresh Mera-reviewed mandate for **100 AUSD and 12 hours**.
-It selects eligible markets itself, opens one position at a time, and completes
-at most 15 fully reconciled entry and exit cycles. It stops opening positions
-after two consecutive cycles each realize at least 0.01 AUSD net. This target
-does not guarantee a profit or a particular number of cycles.
+New direct optimizer runs use the Mera-reviewed **duration soak** profile. The
+funding amount remains **100 AUSD**. Select a signed duration from 10 minutes
+to 12 hours; the default is **120 minutes**. The run selects eligible markets
+itself, opens one position at a time, and completes at most 15 fully reconciled
+entry and exit cycles. Positive cycles do not stop entries; the soak continues
+until the signed duration expires or the 15-cycle cap is reached. This does not
+guarantee a profit or a particular number of cycles. Historical
+`perpl-deterministic-v2` runs retain their original 12-hour, two-win behavior
+and reporting.
 
 ## Review and start
 
 Use the Perpl Testnet setup in the Monad app and choose the **direct onchain**
-route. The review fixes the funding amount and duration. Check the displayed
+route. Confirm the selected duration in Mera review: the exact duration is
+included in the signed mandate and run expiry. Check the displayed
 vault, account, live markets, exposure/leverage limits and operator permission,
 then use Mera to approve the exact AUSD transfer and mandate. The direct
 operator pays MON gas; gas is recorded separately from AUSD cycle PnL.
@@ -52,20 +57,23 @@ leverage manually.
 
 ## Monitor cycles and records
 
-For an active optimizer run, use two five-minute Codex heartbeats: **Perpl
-market scanner monitor** checks full-market coverage, missed signals and scan
-data; **Perpl position and settlement monitor** checks orders, exits, cycle
-records and final return. The scanner monitor investigates three consecutive
-no-proposal scans and changes code only when evidence supports a correction.
-Both remain quiet while healthy and stop after settlement and cleanup. The
-October 10 run reached its target, settled, and both monitors were paused.
+For the current multi-phone test, the **Moeazi standalone phone monitor**
+opens a new local chat every ten minutes and checks scanner, position, order,
+receipt, service and settlement state across all owners. It appends checkpoints
+to [PHONE_TWO_HOUR_TEST.md](PHONE_TWO_HOUR_TEST.md). Three consecutive
+no-proposal scans trigger an evidence-based scanner investigation, not an
+automatic entry. The two older five-minute heartbeats covered the completed
+October 10 v2 run and are paused.
 
-In **Perpl status**, check the optimizer's cycle count, success target, scanner
-cadence and proposal count, current parameters, active position, latest cycle
-PnL, fees and operator gas. **Perpl
+In **Perpl status**, check the profile and entry stop condition, cycle count,
+scanner cadence and proposal count, current parameters, active position, latest
+cycle PnL, fees and operator gas. Duration soaks show positive cycles instead
+of a two-win streak. Historical v2 runs continue to show the two-win target.
+**Perpl
 history** shows each completed cycle and the journal. **Activity** adds an event
 after each finalized cycle, including per-cycle and cumulative AUSD PnL and the
-win streak. Refresh before taking any manual action.
+profile-specific positive-cycle count or historical v2 win streak. Refresh
+before taking any manual action.
 
 For a read-only operator export, run this from `backend/` after the local stack
 is available:
@@ -78,9 +86,9 @@ Omit `runId` to find the latest persisted direct optimizer run. The script
 prints the run status, active positions and orders, cycle outcomes and journal,
 then regenerates `docs/PERPL_OPTIMIZER_LIVE_REPORT.html`. To write the HTML to a
 different file, add `--html <path>`. The export reads saved Convex records and
-does not submit orders. It never overwrites the separate
-[`PERPL_TESTNET_REPORT.html`](PERPL_TESTNET_REPORT.html), which retains prior
-acceptance evidence.
+does not submit orders. Completed historical v2 runs retain their existing
+acceptance-report publishing behavior; a duration soak never writes into the
+historical v2 outcome section of [`PERPL_TESTNET_REPORT.html`](PERPL_TESTNET_REPORT.html).
 
 The live report also lists recent persisted scan decisions and each market's
 rejection reason. A zero-cycle run has made no cycle-based parameter adjustment.
@@ -100,16 +108,19 @@ reconciliation; do not start a second run or scenario to get around it.
 
 ## Stop, settle and report
 
-At the two-win target or the 15-cycle cap, the worker stops new entries and
-keeps the account flat. Early settlement requires a fresh owner-signed Mera
-stop; otherwise the account remains flat until the approved run expires and
-settles automatically. Keep the funded gates available until the app confirms
+For a duration soak, the worker keeps scanning and may open later positions
+after positive cycles, subject to the reviewed strategy filters and caps. At
+the 15-cycle cap it stops new entries and waits flat for signed expiry; at
+signed expiry it closes any open position and settles. Historical v2 runs stop
+new entries at their two-win target or the cycle cap. Early settlement
+requires a fresh owner-signed Mera stop. Keep the funded gates available until the app confirms
 the final AUSD transfer, a flat Perpl account and revoked operator permission.
 Record incomplete settlement as incomplete; do not mark the run complete from
 an order submission alone.
 
 The standalone live report is generated from the saved cycle records while the
 run is in progress. Its result section remains distinct from signal estimates:
-only finalized balance changes are realized PnL. State whether two qualifying
-cycles were reached or the run ended at its cap/expiry, and show Perpl fees,
-funding and operator MON gas separately.
+only finalized balance changes are realized PnL. For a soak, state whether it
+settled at signed expiry or the 15-cycle cap; for historical v2, report the
+two-win target or cap/expiry. Show Perpl fees, funding and operator MON gas
+separately.

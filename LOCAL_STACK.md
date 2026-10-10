@@ -123,8 +123,11 @@ and market-data WebSocket streams remain usable without a Perpl API key. Run
 `node scripts/check-perpl-public.mjs` from `backend/` for a read-only Testnet
 coverage check; the mobile Perpl markets page uses the public context.
 
-The local Android acceptance setup has the first two gates enabled so a tester
-can use the app. A new stack setup starts with them disabled. The managed vault
+For the current physical-phone Testnet test, all seven local Monad Testnet
+trading gates are enabled and the Spot autonomy, mock Perp, and Perpl factory
+enrollment switches are open. See the [two-hour phone test log](docs/PHONE_TWO_HOUR_TEST.md)
+for the observed state and checkpoint history. A new stack setup starts with
+the gates disabled. The managed vault
 is currently stopped onchain with zero USDC and WMON balances; its old signed
 mandates cannot trade. To use it again, the Mera owner must explicitly resume
 it and sign a fresh mandate. Each mandate fixes one input direction and caps;

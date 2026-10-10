@@ -54,12 +54,18 @@ async function activity(context: any) {
       && status === "finalized" && fills.length > 0);
     const verifiedPerplReturn = Boolean(row.venueId?.startsWith("perpl-") && row.kind === "perpl_settlement_finalized"
       && status === "completed" && /^\d+$/.test(String(data.returnedUnits ?? "")) && BigInt(String(data.returnedUnits)) > 0n);
-    const amount = typeof data.amount === "string" ? data.amount
+    const faucetUnits = String(data.verifiedAUsdUnits ?? "");
+    const verifiedFaucetTransfer = row.kind === "claim_ausd_faucet" && status === "finalized"
+      && /^\d+$/.test(faucetUnits) && BigInt(faucetUnits) > 0n;
+    const amount = row.kind === "claim_ausd_faucet" ? verifiedFaucetTransfer ? formatUnits(BigInt(faucetUnits), 6) : null
+      : typeof data.amount === "string" ? data.amount
       : verifiedPerplReturn ? formatUnits(BigInt(String(data.returnedUnits)), 6) : null;
-    const asset = typeof data.asset === "string" ? data.asset : verifiedPerplReturn ? "AUSD" : null;
+    const asset = row.kind === "claim_ausd_faucet" ? verifiedFaucetTransfer ? "AUSD" : null
+      : typeof data.asset === "string" ? data.asset : verifiedPerplReturn ? "AUSD" : null;
     return { id: row.activityId, kind: row.kind, venueId: row.venueId ?? null, title: row.kind.replaceAll("_", " "),
       summary: row.summary, status, occurredAt: new Date(row.createdAt).toISOString(),
-      fundsMoved: status === "finalized" && receiptStatus === 1 || verifiedPerplFill || verifiedPerplReturn,
+      fundsMoved: row.kind === "claim_ausd_faucet" ? verifiedFaucetTransfer
+        : status === "finalized" && receiptStatus === 1 || verifiedPerplFill || verifiedPerplReturn,
       transactionHash: row.txHash ?? null, amount, asset,
       blockNumber: typeof data.blockNumber === "number" ? data.blockNumber : null,
       details: Object.entries({ ...(asset ? { asset } : {}), ...(amount ? { amount } : {}),

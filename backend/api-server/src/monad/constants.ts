@@ -2,8 +2,11 @@ import { getAddress } from "ethers";
 
 export const MONAD_CHAIN_ID = 10143;
 export const MONAD_TESTNET_RPC_URL = "https://testnet-rpc.monad.xyz";
+export const AUSD_ADDRESS = getAddress("0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC");
+export const AUSD_FAUCET_ADDRESS = getAddress("0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C");
 export const USDC_ADDRESS = getAddress("0x534b2f3A21130d7a60830c2Df862319e593943A3");
 export const WMON_ADDRESS = getAddress("0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541");
+export const AUSD_DECIMALS = 6;
 export const USDC_DECIMALS = 6;
 export const WMON_DECIMALS = 18;
 
@@ -15,6 +18,7 @@ export const ERC20_ABI = [
   "function transfer(address,uint256) returns (bool)",
 ];
 export const WMON_ABI = [...ERC20_ABI, "function deposit() payable", "function withdraw(uint256)"];
+export const AUSD_FAUCET_ABI = ["function requestFunds(address callerAddress)"];
 export const VAULT_ABI = [
   "function owner() view returns (address)",
   "function executor() view returns (address)",
@@ -59,6 +63,7 @@ export const MANDATE_TYPES = {
 
 export const ASSETS = {
   MON: { id: "MON", address: null, decimals: 18 },
+  AUSD: { id: "AUSD", address: AUSD_ADDRESS, decimals: AUSD_DECIMALS },
   USDC: { id: "USDC", address: USDC_ADDRESS, decimals: USDC_DECIMALS },
   WMON: { id: "WMON", address: WMON_ADDRESS, decimals: WMON_DECIMALS },
 } as const;

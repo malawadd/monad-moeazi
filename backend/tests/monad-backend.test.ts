@@ -6,14 +6,44 @@ import { importPKCS8, SignJWT } from "jose";
 import { registerMonadOperationRoutes } from "../api-server/src/monad/operations.js";
 import { registerMonadVaultTradeRoutes } from "../api-server/src/monad/vaultTrades.js";
 import { monadQuoteId } from "../api-server/src/monad/readRoutes.js";
-import { amountUnits, verifyExactSignedTransaction } from "../api-server/src/monad/transactions.js";
-import { MONAD_CHAIN_ID } from "../api-server/src/monad/constants.js";
+import { amountUnits, ausdFaucetCall, verifyExactSignedTransaction } from "../api-server/src/monad/transactions.js";
+import { AUSD_ADDRESS, AUSD_FAUCET_ABI, AUSD_FAUCET_ADDRESS, MONAD_CHAIN_ID } from "../api-server/src/monad/constants.js";
+import { verifiedAgoraAUsdTransferUnits } from "../api-server/src/monad/faucetVerification.js";
 
 test("Monad decimal parsing preserves USDC and WMON base units", () => {
   assert.equal(amountUnits("0.1", 6), 100_000n);
   assert.equal(amountUnits("0.1", 18), 100_000_000_000_000_000n);
   assert.throws(() => amountUnits("0.0000001", 6));
   assert.throws(() => amountUnits("-1", 18));
+});
+
+test("AUSD faucet transaction is the fixed requestFunds call for the authenticated Mera recipient", async () => {
+  const { Interface, getAddress } = await import("ethers");
+  const owner = `0x${"b".repeat(40)}`;
+  const call = ausdFaucetCall(owner);
+  assert.equal(call.to, AUSD_FAUCET_ADDRESS);
+  assert.equal(call.intent.recipient, getAddress(owner));
+  const args = new Interface(AUSD_FAUCET_ABI).decodeFunctionData("requestFunds", call.data);
+  assert.equal(getAddress(String(args[0])), getAddress(owner));
+  assert.equal(call.data.slice(0, 10), "0x544c7cf9");
+});
+
+test("AUSD faucet payout is measured only from a matching token transfer log", async () => {
+  const { Interface } = await import("ethers");
+  const event = new Interface(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
+  const owner = `0x${"b".repeat(40)}`;
+  const encode = (address: string, from: string, to: string, units: bigint) => {
+    const log = event.encodeEventLog(event.getEvent("Transfer")!, [from, to, units]);
+    return { address, topics: log.topics, data: log.data };
+  };
+  const logs = [
+    encode(AUSD_ADDRESS, AUSD_FAUCET_ADDRESS, owner, 10_000_000_000n),
+    encode(AUSD_ADDRESS, `0x${"c".repeat(40)}`, owner, 99n),
+    encode(AUSD_ADDRESS, AUSD_FAUCET_ADDRESS, `0x${"d".repeat(40)}`, 100n),
+    encode(AUSD_FAUCET_ADDRESS, AUSD_FAUCET_ADDRESS, owner, 500n),
+  ];
+  assert.equal(verifiedAgoraAUsdTransferUnits(logs, owner), 10_000_000_000n);
+  assert.equal(verifiedAgoraAUsdTransferUnits([], owner), 0n);
 });
 
 test("Monad quote ids match the service record envelope", () => {

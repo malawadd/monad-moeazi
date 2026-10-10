@@ -1,5 +1,5 @@
 import { Contract, JsonRpcProvider, formatUnits, getAddress } from "ethers";
-import { ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, USDC_DECIMALS,
+import { AUSD_ADDRESS, AUSD_DECIMALS, ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, USDC_DECIMALS,
   WMON_ADDRESS, WMON_DECIMALS } from "./constants.js";
 import { rpcUrl, MonadApiError } from "./config.js";
 
@@ -36,19 +36,24 @@ export async function readWalletBalances(provider: JsonRpcProvider, ownerAddress
   const block = await provider.getBlock(blockNumber);
   if (!block) throw new MonadApiError("Could not read a confirmed Monad Testnet block.", 503, "rpc_unavailable");
   await Promise.all([
+    requireContractCode(provider, AUSD_ADDRESS, "Agora AUSD"),
     requireContractCode(provider, USDC_ADDRESS, "Circle USDC"),
     requireContractCode(provider, WMON_ADDRESS, "WMON"),
   ]);
+  const ausd = new Contract(AUSD_ADDRESS, ERC20_ABI, provider);
   const usdc = new Contract(USDC_ADDRESS, ERC20_ABI, provider);
   const wmon = new Contract(WMON_ADDRESS, ERC20_ABI, provider);
-  const [native, usdcUnits, wmonUnits, usdcDecimals, wmonDecimals] = await Promise.all([
+  const [native, ausdUnits, usdcUnits, wmonUnits, ausdDecimals, usdcDecimals, wmonDecimals] = await Promise.all([
     provider.getBalance(owner, blockNumber),
+    ausd.balanceOf(owner, { blockTag: blockNumber }),
     usdc.balanceOf(owner, { blockTag: blockNumber }),
     wmon.balanceOf(owner, { blockTag: blockNumber }),
+    ausd.decimals({ blockTag: blockNumber }),
     usdc.decimals({ blockTag: blockNumber }),
     wmon.decimals({ blockTag: blockNumber }),
   ]);
-  if (Number(usdcDecimals) !== USDC_DECIMALS || Number(wmonDecimals) !== WMON_DECIMALS) {
+  if (Number(ausdDecimals) !== AUSD_DECIMALS || Number(usdcDecimals) !== USDC_DECIMALS
+      || Number(wmonDecimals) !== WMON_DECIMALS) {
     throw new MonadApiError("Monad Testnet token decimals differ from the reviewed asset configuration.", 503, "asset_config_mismatch");
   }
   const stale = Date.now() - Number(block.timestamp) * 1000 > 60_000;
@@ -57,6 +62,7 @@ export async function readWalletBalances(provider: JsonRpcProvider, ownerAddress
     observedAt: new Date(Number(block.timestamp) * 1000).toISOString(), stale,
     balances: [
       { asset: ASSETS.MON.id, tokenAddress: null, amountUnits: native.toString(), decimals: ASSETS.MON.decimals },
+      { asset: ASSETS.AUSD.id, tokenAddress: AUSD_ADDRESS, amountUnits: ausdUnits.toString(), decimals: AUSD_DECIMALS },
       { asset: ASSETS.USDC.id, tokenAddress: USDC_ADDRESS, amountUnits: usdcUnits.toString(), decimals: USDC_DECIMALS },
       { asset: ASSETS.WMON.id, tokenAddress: WMON_ADDRESS, amountUnits: wmonUnits.toString(), decimals: WMON_DECIMALS },
     ],

@@ -29,7 +29,7 @@ export function newOptimizerCycle(input: { runId: string; state: PerplOptimizerS
     selectedMarket: { id: input.market.id, symbol: input.market.symbol },
     rejectedAlternatives: details.rejectedMarkets ?? [], observationBlocks: [observation.first15m, observation.first5m,
       observation.prior1m, observation.latest1m].filter(Boolean).map((item: any) => ({ blockNumber: item.blockNumber, observedAt: item.observedAt })),
-    ruleVersion: "perpl-deterministic-v2", params: { ...input.state.params }, entryDecision: details,
+    ruleVersion: input.state.version, params: { ...input.state.params }, entryDecision: details,
     marginUnits: String(input.action.maxCollateralUnits ?? "0"), notionalUnits: String(input.action.maxExposureUnits ?? "0"),
     leverage: input.action.leverage, entryImpactBps: details.estimatedEntryImpactBps ?? 0,
     estimatedRoundTripCostBps: details.estimatedRoundTripCostBps ?? 0, orderReceipts: [] };

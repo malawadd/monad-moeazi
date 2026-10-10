@@ -23,10 +23,16 @@ export function registerMeraAssociationRoutes(app: Hono<any>) {
       return unavailable(context, "MERA_ANDROID_SHA256_CERT_FINGERPRINTS",
         "Use comma-separated SHA-256 signing fingerprints for the Android debug and release certificates.");
     }
-    return context.json([{
-      relation: ["delegate_permission/common.get_login_creds"],
-      target: {namespace: "android_app", package_name: ANDROID_PACKAGE, sha256_cert_fingerprints: fingerprints},
-    }], 200, {"Cache-Control": "public, max-age=300"});
+    const relations = [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds",
+    ];
+    return context.json([
+      {relation: relations, target: {namespace: "web", site: `https://${RP_ID}`}},
+      {relation: relations, target: {
+        namespace: "android_app", package_name: ANDROID_PACKAGE, sha256_cert_fingerprints: fingerprints,
+      }},
+    ], 200, {"Cache-Control": "public, max-age=300"});
   });
 
   app.get("/.well-known/apple-app-site-association", (context) => {

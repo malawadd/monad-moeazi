@@ -1,7 +1,9 @@
 import { MonadApiError } from "./config.js";
 import { decidePerplOptimizer } from "./perplOptimizationStrategy.js";
 import { advancePerplScanner, scannerCadenceMs, scannerMarketIds } from "./perplOptimizerScanner.js";
-import { parsePerplOptimizerState, PERPL_OPTIMIZER_POLICY, type PerplOptimizerState } from "./perplOptimizerConfig.js";
+import { parsePerplOptimizerState, PERPL_LEGACY_TARGET_WIN_STREAK, PERPL_OPTIMIZER_POLICY,
+  PERPL_OPTIMIZER_PROFILE, PERPL_OPTIMIZER_STOP_CONDITION, PERPL_OPTIMIZER_VERSION,
+  type PerplOptimizerState } from "./perplOptimizerConfig.js";
 import { newOptimizerCycle, optimizerCycleHasPendingOrder, reconcileOptimizerOrder, saveOptimizerState } from "./perplOptimizerExecution.js";
 import { operatorMutation, operatorQuery } from "./convex.js";
 import { perplDirectExecutionEnabled } from "./perplConfig.js";
@@ -55,7 +57,7 @@ export async function runPerplOptimizerDecisionTick(input: { provider: any; row:
   if (scanDue) {
     scanDecision = decidePerplOptimizer({ now, expiresAt, run: row,
       account: { ...account, positions: [], orders: [] }, markets, histories: observation.samples,
-      params: state.params, optimizerStatus: state.status });
+      params: state.params, optimizerStatus: state.status, policyVersion: state.version });
     const advanced = advancePerplScanner(state, scanDecision, now, Boolean(positionMarket));
     await operatorMutation("monadVenueOptimizer", "recordScannerScan", { runId: row.runId, tickId,
       recordJson: JSON.stringify(advanced.record) });
@@ -65,7 +67,7 @@ export async function runPerplOptimizerDecisionTick(input: { provider: any; row:
   state.lastExitCheckAt = now;
   const decision = !positionMarket && scanDecision ? scanDecision : decidePerplOptimizer({ now, expiresAt, run: row, account, markets,
     histories: observation.samples, params: state.params, forceExit: forced, optimizerStatus: state.status,
-    activeCycle: state.activeCycle });
+    activeCycle: state.activeCycle, policyVersion: state.version });
   if (decision.kind === "hold") {
     if (state.activeCycle && decision.details?.bestEstimatedProfitUnits) state.activeCycle = { ...state.activeCycle,
       bestEstimatedProfitUnits: String(decision.details.bestEstimatedProfitUnits) };
@@ -123,7 +125,10 @@ function respond(row: any, account: VenueAccountSnapshot, tickId: string, state:
   phase: string, details?: any, observation?: any, delay = forced ? 5_000 : 60_000) {
   const result = stateResult(row, account, tickId, forced ? "settling" : "active", phase,
     "perpl_direct_optimizer", { ...details, optimizer: { version: state.version, cycleCount: state.cycles,
-      cycleLimit: PERPL_OPTIMIZER_POLICY.maxCycles, targetWinStreak: PERPL_OPTIMIZER_POLICY.targetWinStreak,
+      profile: state.version === PERPL_OPTIMIZER_VERSION ? PERPL_OPTIMIZER_PROFILE : "two_win_target",
+      stopCondition: state.version === PERPL_OPTIMIZER_VERSION ? PERPL_OPTIMIZER_STOP_CONDITION : "two_wins_or_cycle_cap",
+      cycleLimit: PERPL_OPTIMIZER_POLICY.maxCycles, targetWinStreak: state.version === PERPL_OPTIMIZER_VERSION
+        ? null : PERPL_LEGACY_TARGET_WIN_STREAK,
       winStreak: state.winStreak, status: state.status, params: state.params } }, observation);
   result.nextDelayMs = delay; result.patch = { ...(result.patch ?? {}), optimizerStateJson: JSON.stringify(state) };
   return result;

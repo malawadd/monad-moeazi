@@ -13,7 +13,7 @@ import { AUSD_ABI, PERPL_DA_ABI, PERPL_STRATEGY_VAULT_ABI, PERPL_STRATEGY_FACTOR
   buildAusdFundingTransaction, buildOperatorConsent, buildPerplMandate, openPerplStrategy, perplMandateHash } from "./perplContracts.js";
 import { operatorWallet } from "./vaultTrades.js";
 import { perplMobileTransaction } from "./perplMobileTransaction.js";
-import { createPerplOptimizerState, perplOptimizerReview, PERPL_OPTIMIZER_VERSION } from "./perplOptimizerConfig.js";
+import { createPerplOptimizerState, isPerplOptimizerDuration, perplOptimizerReview, PERPL_OPTIMIZER_VERSION } from "./perplOptimizerConfig.js";
 import { allOpenPerplMarketIds } from "./perplMarketSelection.js";
 
 const activeStatuses = ["prepared", "activation_pending", "active", "stopping", "settling", "uncertain", "incomplete_settlement"];
@@ -83,8 +83,8 @@ async function prepare(context: any) {
     if (body.durationSeconds < live.limits.minDurationSeconds || body.durationSeconds > live.limits.maxDurationSeconds) {
       throw new MonadApiError("Perpl run duration is outside the allowed policy range.", 400, "perpl_duration_limits");
     }
-    if (direct && (amount !== 100_000_000n || body.durationSeconds !== 43_200)) {
-      throw new MonadApiError("The reviewed direct optimizer run is fixed at 100 AUSD for 12 hours.", 400, "perpl_optimizer_terms_fixed");
+    if (direct && (amount !== 100_000_000n || !isPerplOptimizerDuration(body.durationSeconds))) {
+      throw new MonadApiError("The reviewed direct optimizer run requires 100 AUSD and a duration from 10 minutes to 12 hours.", 400, "perpl_optimizer_terms_fixed");
     }
     const vaultAddress = getAddress(await factory.predictVault(auth.ownerAddress));
     const [currentVault, nonce, accountAddress, runStatus] = await Promise.all([factory.vaultFor(auth.ownerAddress),
@@ -142,7 +142,7 @@ async function prepare(context: any) {
       operatorPermission: { address: operator.address, scope: "trade", withdrawals: false,
         perOrderCapsEnforcedBy: "Moeazi backend; Perpl contracts do not enforce per-order caps" },
       ...(direct ? { optimizerReview: { ...perplOptimizerReview(), version: PERPL_OPTIMIZER_VERSION,
-        amountUnits: amount.toString(), target: "two_consecutive_cycles_at_least_0.01_AUSD" } } : {}),
+        amountUnits: amount.toString(), target: "signed_duration_expiry_or_15_cycle_cap" } } : {}),
       fundingTransaction: perplMobileTransaction(saved.fundingTransaction ?? funding.transaction),
       mandateTypedData: saved.mandateTypedData ?? mandateTypedData, walletBalanceBeforeUnits: saved.ownerAusdBeforeUnits,
       preparedExpiresAt: saved.preparedExpiresAt }, 201);

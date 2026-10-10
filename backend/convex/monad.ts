@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { appendMonadActivity, MONAD_CHAIN_ID, requireMeraViewer,
   requireMonadOperator, requireStoredMeraOwner, safeOperation, findMonadOperation } from "./monadHelpers";
 
-const operationKind = v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("approve_token"), v.literal("wrap"),
+const operationKind = v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("claim_ausd_faucet"), v.literal("approve_token"), v.literal("wrap"),
   v.literal("unwrap"), v.literal("vault_deposit"), v.literal("vault_withdraw"),
   v.literal("swap"), v.literal("vault_trade"), v.literal("mandate_authorize"),
   v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume"), v.literal("autonomy_recovery"));

@@ -8,9 +8,10 @@ import {screenStyles as s} from '../theme/screenStyles';
 export function PerplOptimizerCard({run, compact = false}: {run: PerplRun; compact?: boolean}) {
   const optimizer = run.optimizer;
   if (!optimizer) return null;
+  const soak = optimizer.profile === 'duration_soak' || optimizer.version === 'perpl-deterministic-v3-soak';
   const status = optimizer.status === 'target_reached_awaiting_settlement' ? 'Target reached, awaiting settlement'
     : optimizer.status === 'cycle_cap_reached_awaiting_settlement' ? 'Cycle cap reached, awaiting settlement'
-    : optimizer.status === 'running' ? 'Running' : humanize(optimizer.status);
+    : optimizer.status === 'running' ? soak ? 'Soaking until expiry' : 'Running' : humanize(optimizer.status);
   const cycles = run.cycles ?? [];
   const recent = compact ? cycles.slice(-1) : cycles.slice(-3).reverse();
   const active: any = optimizer.activeCycle;
@@ -18,7 +19,8 @@ export function PerplOptimizerCard({run, compact = false}: {run: PerplRun; compa
     <Text style={s.strong}>Deterministic optimizer · {optimizer.version}</Text>
     <StatusBadge label={status} tone={optimizer.successTargetReached ? 'mint' : 'lilac'} />
     <DataRow label="Completed cycles" value={`${optimizer.cycleCount}/${optimizer.cycleLimit}`} />
-    <DataRow label="Success target" value={`${optimizer.targetWinStreak} consecutive cycles with at least ${formatMonadUnits(optimizer.minimumPositivePnlUnits, run.collateral.decimals)} AUSD net each · current streak ${optimizer.winStreak}`} />
+    {soak ? <DataRow label="Entry stop condition" value={`Signed run expiry or ${optimizer.cycleLimit} completed cycles; positive streaks do not stop entries`} />
+      : <DataRow label="Success target" value={`${optimizer.targetWinStreak} consecutive cycles with at least ${formatMonadUnits(optimizer.minimumPositivePnlUnits, run.collateral.decimals)} AUSD net each · current streak ${optimizer.winStreak}`} />}
     <DataRow label="Cumulative realized PnL" value={`${signedUnits(run.realizedPnlUnits ?? '0', run.collateral.decimals)} AUSD`} />
     {!compact ? <>
       <DataRow label="Current parameters" value={`${optimizer.params.momentumThresholdBps} bps momentum · ${optimizer.params.executionConservatismBps / 100}% execution conservatism`} />

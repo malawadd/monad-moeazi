@@ -5,13 +5,14 @@ import { perplMaxSlippageBps } from "./perplConfig.js";
 export type PerplPriceObservation = { observedAt: number; blockNumber: number; close: number };
 type Input = { now: number; expiresAt: number; run: any; account: VenueAccountSnapshot; markets: VenueMarket[];
   histories: Record<number, PerplPriceObservation[]>; params: PerplOptimizerParams; forceExit?: boolean;
-  optimizerStatus?: string; activeCycle?: Record<string, any> | null };
+  optimizerStatus?: string; activeCycle?: Record<string, any> | null; policyVersion?: string };
 export type OptimizerDecision = { kind: "hold"; reasonCode: string; details?: Record<string, unknown> }
   | { kind: "order"; reasonCode: string; action: Omit<VenueAction, "accountId" | "requestId">; details: Record<string, unknown> }
   | { kind: "settle"; reasonCode: string };
 
 export function decidePerplOptimizer(input: Input): OptimizerDecision {
   const { account, now, expiresAt } = input;
+  const policyVersion = input.policyVersion ?? "perpl-deterministic-v2";
   if (account.orders.length) return { kind: "hold", reasonCode: "pending_order_reconciliation" };
   if (account.positions.length > 1) return { kind: "hold", reasonCode: "position_count_exceeds_policy" };
   if (account.positions.length === 1) return exitDecision(input, account.positions[0]);
@@ -25,7 +26,7 @@ export function decidePerplOptimizer(input: Input): OptimizerDecision {
     .sort((a, b) => (b.netMoveBps ?? -Infinity) - (a.netMoveBps ?? -Infinity));
   const chosen = candidates.find((candidate) => candidate.accepted);
   if (!chosen) return { kind: "hold", reasonCode: "no_market_passed_optimizer_filters",
-    details: { policyVersion: "perpl-deterministic-v2", rejectedMarkets: candidates.map(rejectionSummary) } };
+    details: { policyVersion, rejectedMarkets: candidates.map(rejectionSummary) } };
   const leverage = chosen.leverage!; const notional = chosen.notionalUnits!; const margin = ceilDiv(notional, BigInt(leverage));
   const market = chosen.market; const sign = chosen.signal!.momentum5mBps > 0 ? "long" : "short";
   const price = sign === "long" ? market.price!.ask : market.price!.bid;
@@ -35,7 +36,7 @@ export function decidePerplOptimizer(input: Input): OptimizerDecision {
     maxCollateralUnits: margin.toString(), maxExposureUnits: notional.toString(), maxLeverage: leverage,
     allowedMarketIds: [...allowed], expiresAt, maxSlippageBps: Math.min(perplMaxSlippageBps(), market.maxMarketSlippageBps) } as Omit<VenueAction, "accountId" | "requestId">;
   return { kind: "order", reasonCode: "optimizer_momentum_entry", action,
-    details: { policyVersion: "perpl-deterministic-v2", marketId: market.id, symbol: market.symbol,
+    details: { policyVersion, marketId: market.id, symbol: market.symbol,
       direction: sign, fiveMinuteMoveBps: chosen.signal!.momentum5mBps, fifteenMinuteMoveBps: chosen.signal!.momentum15mBps,
       estimatedRoundTripCostBps: chosen.costBps, estimatedNetMoveBps: chosen.netMoveBps,
       estimatedEntryImpactBps: chosen.entryImpactBps, estimatedExitImpactBps: chosen.exitImpactBps,

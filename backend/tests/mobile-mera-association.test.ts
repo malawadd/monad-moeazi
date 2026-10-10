@@ -27,8 +27,27 @@ test("association routes publish the Android package and iOS team app", async ()
   const android = await app.request("/.well-known/assetlinks.json");
   const ios = await app.request("/.well-known/apple-app-site-association");
   assert.equal(android.status, 200);
-  assert.equal((await android.json() as Array<{target: {package_name: string}}>)[0]?.target.package_name,
-    "com.moeazi.monad.mobile");
+  const androidStatements = await android.json() as Array<{relation: string[]; target: Record<string, unknown>}>;
+  assert.deepEqual(androidStatements, [
+    {
+      relation: [
+        "delegate_permission/common.handle_all_urls",
+        "delegate_permission/common.get_login_creds",
+      ],
+      target: {namespace: "web", site: "https://moeazi-monad.kiyan.finance"},
+    },
+    {
+      relation: [
+        "delegate_permission/common.handle_all_urls",
+        "delegate_permission/common.get_login_creds",
+      ],
+      target: {
+        namespace: "android_app",
+        package_name: "com.moeazi.monad.mobile",
+        sha256_cert_fingerprints: ["AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA"],
+      },
+    },
+  ]);
   assert.equal(ios.status, 200);
   assert.deepEqual(await ios.json(), {webcredentials: {apps: ["ABCDEFGHIJ.com.moeazi.monad.mobile"]}});
 });

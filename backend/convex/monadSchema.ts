@@ -15,7 +15,7 @@ export const monadTables = {
   monadOperations: defineTable({
     userId: v.id("users"), subject: v.string(), ownerAddress: v.string(),
     operationId: v.string(), idempotencyKey: v.string(), chainId: v.number(),
-    kind: v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("approve_token"), v.literal("wrap"),
+    kind: v.union(v.literal("send_mon"), v.literal("send_usdc"), v.literal("claim_ausd_faucet"), v.literal("approve_token"), v.literal("wrap"),
       v.literal("unwrap"), v.literal("vault_deposit"), v.literal("vault_withdraw"),
       v.literal("swap"), v.literal("vault_trade"), v.literal("mandate_authorize"),
       v.literal("mandate_revoke"), v.literal("vault_stop"), v.literal("vault_resume"), v.literal("autonomy_recovery")),

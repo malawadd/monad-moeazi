@@ -62,6 +62,9 @@ export const monadApi = {
   prepare: (input: MonadPrepareInput) => apiRequest<PreparedMonadOperation>(`${base}/operations/prepare`, {
     method: 'POST', body: JSON.stringify(input),
   }),
+  prepareAusdFaucet: (idempotencyKey: string) => apiRequest<PreparedMonadOperation>(`${base}/operations/prepare`, {
+    method: 'POST', body: JSON.stringify({kind: 'claim_ausd_faucet', idempotencyKey}),
+  }),
   submit: (operationId: string, signedTransaction: string) => apiRequest<MonadOperationStatus>(
     `${base}/operations/${encodeURIComponent(operationId)}/submit`, {
       method: 'POST', body: JSON.stringify({signedTransaction}),

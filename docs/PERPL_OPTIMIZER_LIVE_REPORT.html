@@ -1,186 +1,193 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Perpl deterministic optimizer live report</title><style>
 body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:0;padding:28px}main{max-width:1000px;margin:auto}header,section{background:white;border:1px solid #dedbd2;border-radius:14px;padding:20px;margin:0 0 16px}h1{font-size:1.5rem;margin:0 0 8px}.status{font-weight:700;color:#355b4b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f2ed;padding:16px;border-radius:10px;font-size:12px}small{color:#555}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid #eee;padding:8px;vertical-align:top}code{overflow-wrap:anywhere}</style></head><body><main>
-<header><h1>Perpl deterministic optimizer · live report</h1><div class="status">Completed · two-win target reached</div>
-<p>Run: bd35898c-a8c4-4aa2-aa78-1c7d8101b002 · Cycles: 2/15 · Win streak: 2/2</p>
-<p>Chain state: completed · settlement_reconciled · Approved: +100.000000 AUSD · Expires: 2026-10-11T00:16:55.000Z</p>
-<p>Cumulative realized PnL: +0.137256 AUSD · Operator gas recorded: +0.172127652000000000 MON</p>
-<p>Scanner: 3 scans · 1 proposals · 1 consecutive scans without a proposal · cadence 5 minute(s). It continues while a position is open; such proposals are deferred.</p>
-<small>Regenerated from persisted Convex cycle and journal records at 2026-10-10T14:42:42.440Z. Operator MON gas is reported separately from realized AUSD PnL.</small></header>
-<section><h2>Strategy decisions</h2><p>24 recent persisted decisions shown, newest first.</p><div style="overflow-x:auto"><table><thead><tr><th>Time UTC</th><th>Decision</th><th>Market rejection reasons</th></tr></thead><tbody><tr><td>2026-10-10T14:37:14.463Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:36:05.805Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:34:57.566Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:33:48.047Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:32:40.567Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:31:31.441Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:30:13.628Z</td><td>net_take_profit_exit</td><td>undefined , ? bps; order bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14; 0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95</td></tr><tr><td>2026-10-10T14:29:02.360Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.043416 AUSD; held 9 minutes</td></tr><tr><td>2026-10-10T14:27:52.725Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.014646 AUSD; held 8 minutes</td></tr><tr><td>2026-10-10T14:26:43.562Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.014646 AUSD; held 6 minutes</td></tr><tr><td>2026-10-10T14:25:33.114Z</td><td>no_proposal</td><td>BTC: five_or_fifteen_minute_history_missing · ETH: five_minute_threshold (2 bps) · SOL: five_minute_threshold (5 bps) · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: one_minute_confirmation_missing · PUMP: one_minute_confirmation_missing · NEAR: five_minute_threshold (-12 bps)</td></tr><tr><td>2026-10-10T14:25:32.646Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.020400 AUSD; held 5 minutes</td></tr></tbody></table></div>
+<header><h1>Perpl deterministic optimizer · live report</h1><div class="status">Soak settled</div>
+<p>Run: 7971a58c-54c0-4409-89a9-08fcbae4ee75 · Profile: duration soak · Cycles: 4/15 · Positive cycles: 2</p>
+<p>Entry stop condition: signed run expiry or 15 completed cycles; positive streaks do not stop entries.</p>
+<p>Chain state: completed · settlement_reconciled · Approved: +100.000000 AUSD · Expires: 2026-10-10T18:06:01.000Z</p>
+<p>Cumulative realized PnL: −0.001550 AUSD · Operator gas recorded: +0.343824966000000000 MON</p>
+<p>Scanner: 21 scans · 5 proposals · 3 consecutive scans without a proposal · cadence 5 minute(s). It continues while a position is open; such proposals are deferred.</p>
+<small>Regenerated from persisted Convex cycle and journal records at 2026-10-10T18:19:56.219Z. Operator MON gas is reported separately from realized AUSD PnL.</small></header>
+<section><h2>Strategy decisions</h2><p>21 recent persisted decisions shown, newest first.</p><div style="overflow-x:auto"><table><thead><tr><th>Time UTC</th><th>Decision</th><th>Market rejection reasons</th></tr></thead><tbody><tr><td>2026-10-10T18:03:38.978Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: stale_or_irregular_observations · ZEC: five_minute_threshold (4 bps) · LIT: five_minute_threshold (16 bps) · PUMP: five_minute_threshold (43 bps) · NEAR: one_minute_confirmation_missing<br>Audit: no_qualified_live_signal; investigate_scanner_and_market_conditions</td></tr><tr><td>2026-10-10T17:57:46.199Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: five_minute_threshold (-5 bps) · SOL: one_minute_confirmation_missing · MON: market_or_book_unavailable · ZEC: five_minute_threshold (-11 bps) · LIT: five_minute_threshold (14 bps) · PUMP: five_minute_threshold (-30 bps) · NEAR: one_minute_confirmation_missing</td></tr><tr><td>2026-10-10T17:51:55.709Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: one_minute_confirmation_missing · PUMP: one_minute_confirmation_missing · NEAR: five_minute_threshold (-6 bps)</td></tr><tr><td>2026-10-10T17:45:54.201Z</td><td>proposed</td><td>336 short; -110 bps; eligible for entry</td></tr><tr><td>2026-10-10T17:40:08.841Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: five_minute_threshold (-10 bps) · PUMP: one_minute_confirmation_missing · NEAR: five_minute_threshold (-11 bps)<br>Audit: no_qualified_live_signal; investigate_scanner_and_market_conditions</td></tr><tr><td>2026-10-10T17:34:22.601Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: five_minute_threshold (25 bps) · PUMP: one_minute_confirmation_missing · NEAR: one_minute_confirmation_missing</td></tr><tr><td>2026-10-10T17:28:35.627Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: one_minute_confirmation_missing · PUMP: one_minute_confirmation_missing · NEAR: one_minute_confirmation_missing</td></tr><tr><td>2026-10-10T17:22:34.241Z</td><td>deferred_position_open</td><td>272 long; 56 bps; deferred while position open</td></tr><tr><td>2026-10-10T17:16:43.902Z</td><td>no_proposal</td><td>BTC: market_or_book_unavailable · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: five_minute_threshold (-3 bps) · LIT: one_minute_confirmation_missing · PUMP: stale_or_irregular_observations · NEAR: one_minute_confirmation_missing</td></tr><tr><td>2026-10-10T17:10:42.564Z</td><td>proposed</td><td>272 short; -43 bps; eligible for entry</td></tr><tr><td>2026-10-10T17:04:57.727Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: fifteen_minute_trend_disagrees (62 bps) · PUMP: one_minute_confirmation_missing · NEAR: one_minute_confirmation_missing</td></tr><tr><td>2026-10-10T16:58:54.836Z</td><td>no_proposal</td><td>BTC: one_minute_confirmation_missing · ETH: one_minute_confirmation_missing · SOL: one_minute_confirmation_missing · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: one_minute_confirmation_missing · PUMP: one_minute_confirmation_missing · NEAR: one_minute_confirmation_missing</td></tr></tbody></table></div>
 <p><small>A rejected scan is a measured decision, not an order or fill. Parameter changes begin only after a finalized entry→exit cycle. No cycle means no PnL optimization iteration has happened yet.</small></p></section>
-<section><h2>Measured cycle outcomes</h2><svg viewBox="0 0 980 180" role="img" aria-label="Observed cumulative AUSD profit and loss after each finalized cycle" style="width:100%;height:auto;background:#f4f7f4;border-radius:8px"><line x1="40" x2="940" y1="145.0" y2="145.0" stroke="#9aa99f"/><polyline points="40.0,145.0 490.0,81.3 940.0,35.0" fill="none" stroke="#227b59" stroke-width="3"/><text x="40" y="170" font-size="12">Start</text><text x="875" y="170" font-size="12">Cycle 2</text></svg><div style="overflow-x:auto"><table><thead><tr><th>Cycle</th><th>Market</th><th>Flat AUSD</th><th>Net PnL</th><th>Fees / funding</th><th>Operator gas</th><th>Finalized order / transaction</th></tr></thead><tbody><tr><td>1</td>
-    <td>PUMP · long</td>
-    <td>+100.000000 → +100.079480 AUSD</td>
-    <td>+0.079480 AUSD</td>
-    <td>+0.019220 AUSD · 0.000000 AUSD funding</td>
-    <td>+0.086074026000000000 MON</td>
-    <td><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11</code><br><code>0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c</code><br><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12</code><br><code>0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde</code></td></tr><tr><td>2</td>
-    <td>PUMP · long</td>
-    <td>+100.079480 → +100.137256 AUSD</td>
-    <td>+0.057776 AUSD</td>
-    <td>+0.011272 AUSD · 0.000000 AUSD funding</td>
-    <td>+0.086053626000000000 MON</td>
-    <td><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13</code><br><code>0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b</code><br><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14</code><br><code>0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95</code></td></tr></tbody></table></div>
+<section><h2>Measured cycle outcomes</h2><svg viewBox="0 0 980 180" role="img" aria-label="Observed cumulative AUSD profit and loss after each finalized cycle" style="width:100%;height:auto;background:#f4f7f4;border-radius:8px"><line x1="40" x2="940" y1="144.2" y2="144.2" stroke="#9aa99f"/><polyline points="40.0,144.2 265.0,107.7 490.0,35.0 715.0,119.2 940.0,145.0" fill="none" stroke="#227b59" stroke-width="3"/><text x="40" y="170" font-size="12">Start</text><text x="875" y="170" font-size="12">Cycle 4</text></svg><div style="overflow-x:auto"><table><thead><tr><th>Cycle</th><th>Market</th><th>Flat AUSD</th><th>Net PnL</th><th>Fees / funding</th><th>Operator gas</th><th>Finalized order / transaction</th></tr></thead><tbody><tr><td>1</td>
+    <td>LIT · short</td>
+    <td>+100.000000 → +100.067041 AUSD</td>
+    <td>+0.067041 AUSD</td>
+    <td>+0.010701 AUSD · 0.000000 AUSD funding</td>
+    <td>+0.085876962000000000 MON</td>
+    <td><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:1</code><br><code>0x398335299fbbd7d6a6aa3e3dc9c7907c5b16345d66cb2494b535f71b4d1ee426</code><br><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:2</code><br><code>0x22648f6780eeed413bed7ce8b93cfcb9a2d43cc0e2da179669d3ecc03f2d2214</code></td></tr><tr><td>2</td>
+    <td>LIT · short</td>
+    <td>+100.067041 → +100.200853 AUSD</td>
+    <td>+0.133812 AUSD</td>
+    <td>+0.020487 AUSD · +0.000877 AUSD funding</td>
+    <td>+0.085942038000000000 MON</td>
+    <td><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:3</code><br><code>0x9f3cecb15a2f2e8151ed18a9244fb77c230c9702abddd4330456c3a51986830c</code><br><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:4</code><br><code>0x54510cb11f199235bd2b5d385fac64f14164ebb177074c36f493fb46ddcf767e</code></td></tr><tr><td>3</td>
+    <td>LIT · short</td>
+    <td>+100.200853 → +100.045940 AUSD</td>
+    <td>−0.154913 AUSD</td>
+    <td>+0.017189 AUSD · 0.000000 AUSD funding</td>
+    <td>+0.086015682000000000 MON</td>
+    <td><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:5</code><br><code>0x52f86c92bbbfdb1bb620fd807791469b16b88ed113842031ab10e64e12230b65</code><br><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:6</code><br><code>0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb</code></td></tr><tr><td>4</td>
+    <td>NEAR · short</td>
+    <td>+100.045940 → +99.998450 AUSD</td>
+    <td>−0.047490 AUSD</td>
+    <td>+0.007506 AUSD · 0.000000 AUSD funding</td>
+    <td>+0.085990284000000000 MON</td>
+    <td><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:7</code><br><code>0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029</code><br><code>7971a58c-54c0-4409-89a9-08fcbae4ee75:8</code><br><code>0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd</code></td></tr></tbody></table></div>
 <p><small>The chart uses finalized flat-account AUSD balances after Perpl fees and funding. It is measured history, not a forecast. Submitted and unfilled orders do not enter this ledger.</small></p></section>
 <section><h2>Persisted run, positions, orders, cycle records, and optimization journal</h2><pre>{
   &quot;activePositions&quot;: [],
   &quot;approvedAmountUnits&quot;: &quot;100000000&quot;,
-  &quot;cumulativePnlUnits&quot;: &quot;137256&quot;,
+  &quot;cumulativePnlUnits&quot;: &quot;-1550&quot;,
   &quot;cycles&quot;: [
     {
       &quot;adaptation&quot;: {
         &quot;changed&quot;: null,
         &quot;classification&quot;: &quot;small_or_zero&quot;
       },
-      &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
-      &quot;completedAt&quot;: 1791641766435,
-      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
+      &quot;bestEstimatedProfitUnits&quot;: &quot;30895&quot;,
+      &quot;completedAt&quot;: 1791650066938,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:1&quot;,
       &quot;cycleNumber&quot;: 1,
-      &quot;endingBalanceUnits&quot;: &quot;100079480&quot;,
+      &quot;endingBalanceUnits&quot;: &quot;100067041&quot;,
       &quot;endingFlat&quot;: true,
-      &quot;entryAt&quot;: 1791640076347,
-      &quot;entryBlockNumber&quot;: 69841022,
+      &quot;entryAt&quot;: 1791649425875,
+      &quot;entryBlockNumber&quot;: 69871980,
       &quot;entryDecision&quot;: {
         &quot;depthConsumptionBps&quot;: 2000,
-        &quot;direction&quot;: &quot;long&quot;,
+        &quot;direction&quot;: &quot;short&quot;,
         &quot;estimatedEntryImpactBps&quot;: 0,
         &quot;estimatedExitImpactBps&quot;: 0,
-        &quot;estimatedNetMoveBps&quot;: 31,
-        &quot;estimatedRoundTripCostBps&quot;: 14,
-        &quot;fifteenMinuteMoveBps&quot;: 59,
-        &quot;fiveMinuteMoveBps&quot;: 45,
-        &quot;fundingEstimateBps&quot;: 0,
+        &quot;estimatedNetMoveBps&quot;: 52,
+        &quot;estimatedRoundTripCostBps&quot;: 9,
+        &quot;fifteenMinuteMoveBps&quot;: -49,
+        &quot;fiveMinuteMoveBps&quot;: -61,
+        &quot;fundingEstimateBps&quot;: 1,
         &quot;leverage&quot;: 4,
-        &quot;marginUnits&quot;: &quot;6944445&quot;,
-        &quot;marketId&quot;: 320,
-        &quot;notionalUnits&quot;: &quot;27777777&quot;,
+        &quot;marginUnits&quot;: &quot;3906250&quot;,
+        &quot;marketId&quot;: 272,
+        &quot;notionalUnits&quot;: &quot;15625000&quot;,
         &quot;observations&quot;: {
           &quot;first15m&quot;: {
-            &quot;blockNumber&quot;: 69838009,
-            &quot;close&quot;: 5593,
-            &quot;observedAt&quot;: 1791639157000
+            &quot;blockNumber&quot;: 69868976,
+            &quot;close&quot;: 372090,
+            &quot;observedAt&quot;: 1791648509000
           },
           &quot;first5m&quot;: {
-            &quot;blockNumber&quot;: 69839837,
-            &quot;close&quot;: 5601,
-            &quot;observedAt&quot;: 1791639710000
+            &quot;blockNumber&quot;: 69870805,
+            &quot;close&quot;: 372541,
+            &quot;observedAt&quot;: 1791649062000
           },
           &quot;latest1m&quot;: {
-            &quot;blockNumber&quot;: 69840986,
-            &quot;close&quot;: 5626,
-            &quot;observedAt&quot;: 1791640057000
+            &quot;blockNumber&quot;: 69871959,
+            &quot;close&quot;: 370285,
+            &quot;observedAt&quot;: 1791649410000
           },
           &quot;prior1m&quot;: {
-            &quot;blockNumber&quot;: 69840727,
-            &quot;close&quot;: 5623,
-            &quot;observedAt&quot;: 1791639979000
+            &quot;blockNumber&quot;: 69871721,
+            &quot;close&quot;: 372080,
+            &quot;observedAt&quot;: 1791649338000
           }
         },
         &quot;params&quot;: {
           &quot;executionConservatismBps&quot;: 10000,
           &quot;momentumThresholdBps&quot;: 40
         },
-        &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
         &quot;rejectedMarkets&quot;: [
           {
-            &quot;entryImpactBps&quot;: 0,
-            &quot;exitImpactBps&quot;: 0,
-            &quot;fifteenMinuteMoveBps&quot;: 36,
-            &quot;fiveMinuteMoveBps&quot;: 41,
-            &quot;marketId&quot;: 336,
-            &quot;netMoveBps&quot;: 29,
-            &quot;reason&quot;: &quot;accepted&quot;,
-            &quot;spreadBps&quot;: 4,
-            &quot;symbol&quot;: &quot;NEAR&quot;
-          },
-          {
+            &quot;fifteenMinuteMoveBps&quot;: 5,
+            &quot;fiveMinuteMoveBps&quot;: -5,
             &quot;marketId&quot;: 16,
-            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;BTC&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: -5,
-            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;fifteenMinuteMoveBps&quot;: -2,
+            &quot;fiveMinuteMoveBps&quot;: -10,
             &quot;marketId&quot;: 32,
             &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;ETH&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 9,
-            &quot;fiveMinuteMoveBps&quot;: 15,
+            &quot;fifteenMinuteMoveBps&quot;: 4,
+            &quot;fiveMinuteMoveBps&quot;: -12,
             &quot;marketId&quot;: 48,
             &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;SOL&quot;
           },
           {
             &quot;marketId&quot;: 64,
-            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;MON&quot;
           },
           {
             &quot;marketId&quot;: 256,
-            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;ZEC&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: -13,
-            &quot;fiveMinuteMoveBps&quot;: -11,
-            &quot;marketId&quot;: 272,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
-            &quot;symbol&quot;: &quot;LIT&quot;
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
           }
         ],
-        &quot;size&quot;: &quot;4935&quot;,
-        &quot;spreadBps&quot;: 7,
-        &quot;symbol&quot;: &quot;PUMP&quot;,
-        &quot;volatilityBps&quot;: 27
+        &quot;size&quot;: &quot;42&quot;,
+        &quot;spreadBps&quot;: 1,
+        &quot;symbol&quot;: &quot;LIT&quot;,
+        &quot;volatilityBps&quot;: 48
       },
-      &quot;entryFeeUnits&quot;: &quot;9593&quot;,
+      &quot;entryFeeUnits&quot;: &quot;5364&quot;,
       &quot;entryFills&quot;: [
         {
-          &quot;amountCNS&quot;: &quot;-6995086&quot;,
-          &quot;feeCNS&quot;: &quot;9593&quot;,
+          &quot;amountCNS&quot;: &quot;-5187674&quot;,
+          &quot;feeCNS&quot;: &quot;5364&quot;,
           &quot;kind&quot;: &quot;taker&quot;,
-          &quot;lotLNS&quot;: &quot;4935&quot;,
-          &quot;pricePNS&quot;: &quot;5634&quot;
+          &quot;lotLNS&quot;: &quot;42&quot;,
+          &quot;pricePNS&quot;: &quot;370165&quot;
         }
       ],
       &quot;entryImpactBps&quot;: 0,
-      &quot;entryOrderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
+      &quot;entryOrderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:1&quot;,
       &quot;entryPosition&quot;: {
-        &quot;depositUnits&quot;: &quot;6985493&quot;,
-        &quot;entryPrice&quot;: &quot;5634&quot;,
-        &quot;size&quot;: &quot;4935&quot;
+        &quot;depositUnits&quot;: &quot;5182310&quot;,
+        &quot;entryPrice&quot;: &quot;370165&quot;,
+        &quot;size&quot;: &quot;42&quot;
       },
-      &quot;entryRequestId&quot;: 11,
-      &quot;entryTxHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;,
-      &quot;estimatedRoundTripCostBps&quot;: 14,
+      &quot;entryRequestId&quot;: 1,
+      &quot;entryTxHash&quot;: &quot;0x398335299fbbd7d6a6aa3e3dc9c7907c5b16345d66cb2494b535f71b4d1ee426&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 9,
       &quot;exitDecision&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;62815&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;62815&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1679297,
-        &quot;notionalUnits&quot;: &quot;27803790&quot;,
+        &quot;heldMs&quot;: 630287,
+        &quot;notionalUnits&quot;: &quot;15546930&quot;,
         &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
       },
       &quot;exitDecisions&quot;: [
         {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+          &quot;bestEstimatedProfitUnits&quot;: &quot;62815&quot;,
           &quot;closeImpactBps&quot;: 0,
-          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+          &quot;estimatedNetProfitUnits&quot;: &quot;62815&quot;,
           &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 1679297,
-          &quot;notionalUnits&quot;: &quot;27803790&quot;
+          &quot;heldMs&quot;: 630287,
+          &quot;notionalUnits&quot;: &quot;15546930&quot;
         },
         {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+          &quot;bestEstimatedProfitUnits&quot;: &quot;62815&quot;,
           &quot;closeImpactBps&quot;: 0,
-          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+          &quot;estimatedNetProfitUnits&quot;: &quot;62815&quot;,
           &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 1679297,
-          &quot;notionalUnits&quot;: &quot;27803790&quot;,
+          &quot;heldMs&quot;: 630287,
+          &quot;notionalUnits&quot;: &quot;15546930&quot;,
           &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
         }
       ],
@@ -189,84 +196,84 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
       &quot;exitPending&quot;: true,
       &quot;exitReason&quot;: &quot;net_take_profit_exit&quot;,
       &quot;exitTxHashes&quot;: [
-        &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+        &quot;0x22648f6780eeed413bed7ce8b93cfcb9a2d43cc0e2da179669d3ecc03f2d2214&quot;
       ],
-      &quot;feesUnits&quot;: &quot;19220&quot;,
+      &quot;feesUnits&quot;: &quot;10701&quot;,
       &quot;fundingUnits&quot;: &quot;0&quot;,
       &quot;lastExitDecision&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;62815&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;62815&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1679297,
-        &quot;notionalUnits&quot;: &quot;27803790&quot;
+        &quot;heldMs&quot;: 630287,
+        &quot;notionalUnits&quot;: &quot;15546930&quot;
       },
       &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
       &quot;leverage&quot;: 4,
-      &quot;marginUnits&quot;: &quot;6944445&quot;,
-      &quot;marketId&quot;: 320,
-      &quot;notionalUnits&quot;: &quot;27777777&quot;,
+      &quot;marginUnits&quot;: &quot;3906250&quot;,
+      &quot;marketId&quot;: 272,
+      &quot;notionalUnits&quot;: &quot;15625000&quot;,
       &quot;observationBlocks&quot;: [
         {
-          &quot;blockNumber&quot;: 69838009,
-          &quot;observedAt&quot;: 1791639157000
+          &quot;blockNumber&quot;: 69868976,
+          &quot;observedAt&quot;: 1791648509000
         },
         {
-          &quot;blockNumber&quot;: 69839837,
-          &quot;observedAt&quot;: 1791639710000
+          &quot;blockNumber&quot;: 69870805,
+          &quot;observedAt&quot;: 1791649062000
         },
         {
-          &quot;blockNumber&quot;: 69840727,
-          &quot;observedAt&quot;: 1791639979000
+          &quot;blockNumber&quot;: 69871721,
+          &quot;observedAt&quot;: 1791649338000
         },
         {
-          &quot;blockNumber&quot;: 69840986,
-          &quot;observedAt&quot;: 1791640057000
+          &quot;blockNumber&quot;: 69871959,
+          &quot;observedAt&quot;: 1791649410000
         }
       ],
-      &quot;operatorGasWei&quot;: &quot;86074026000000000&quot;,
+      &quot;operatorGasWei&quot;: &quot;85876962000000000&quot;,
       &quot;orderIds&quot;: [
-        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
-        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:1&quot;,
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:2&quot;
       ],
       &quot;orderReceipts&quot;: [
         {
-          &quot;blockNumber&quot;: 69841022,
-          &quot;feeUnits&quot;: &quot;9593&quot;,
+          &quot;blockNumber&quot;: 69871980,
+          &quot;feeUnits&quot;: &quot;5364&quot;,
           &quot;fills&quot;: [
             {
-              &quot;amountCNS&quot;: &quot;-6995086&quot;,
-              &quot;feeCNS&quot;: &quot;9593&quot;,
+              &quot;amountCNS&quot;: &quot;-5187674&quot;,
+              &quot;feeCNS&quot;: &quot;5364&quot;,
               &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;4935&quot;,
-              &quot;pricePNS&quot;: &quot;5634&quot;
+              &quot;lotLNS&quot;: &quot;42&quot;,
+              &quot;pricePNS&quot;: &quot;370165&quot;
             }
           ],
           &quot;kind&quot;: &quot;market_entry&quot;,
-          &quot;operatorGasWei&quot;: &quot;44820942000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
-          &quot;requestId&quot;: 11,
+          &quot;operatorGasWei&quot;: &quot;47161332000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:1&quot;,
+          &quot;requestId&quot;: 1,
           &quot;role&quot;: &quot;entry&quot;,
-          &quot;txHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;
+          &quot;txHash&quot;: &quot;0x398335299fbbd7d6a6aa3e3dc9c7907c5b16345d66cb2494b535f71b4d1ee426&quot;
         },
         {
-          &quot;blockNumber&quot;: 69846618,
-          &quot;feeUnits&quot;: &quot;9627&quot;,
+          &quot;blockNumber&quot;: 69874106,
+          &quot;feeUnits&quot;: &quot;5337&quot;,
           &quot;fills&quot;: [
             {
-              &quot;amountCNS&quot;: &quot;7074566&quot;,
-              &quot;feeCNS&quot;: &quot;9627&quot;,
+              &quot;amountCNS&quot;: &quot;5254715&quot;,
+              &quot;feeCNS&quot;: &quot;5337&quot;,
               &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;4935&quot;,
-              &quot;pricePNS&quot;: &quot;5654&quot;
+              &quot;lotLNS&quot;: &quot;42&quot;,
+              &quot;pricePNS&quot;: &quot;368314&quot;
             }
           ],
           &quot;kind&quot;: &quot;close_position&quot;,
-          &quot;operatorGasWei&quot;: &quot;41253084000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
-          &quot;requestId&quot;: 12,
+          &quot;operatorGasWei&quot;: &quot;38715630000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:2&quot;,
+          &quot;requestId&quot;: 2,
           &quot;role&quot;: &quot;exit&quot;,
-          &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+          &quot;txHash&quot;: &quot;0x22648f6780eeed413bed7ce8b93cfcb9a2d43cc0e2da179669d3ecc03f2d2214&quot;
         }
       ],
       &quot;params&quot;: {
@@ -282,67 +289,61 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
         &quot;momentumThresholdBps&quot;: 40
       },
       &quot;positiveAtTarget&quot;: true,
-      &quot;realizedPnlUnits&quot;: &quot;79480&quot;,
+      &quot;realizedPnlUnits&quot;: &quot;67041&quot;,
       &quot;rejectedAlternatives&quot;: [
         {
-          &quot;entryImpactBps&quot;: 0,
-          &quot;exitImpactBps&quot;: 0,
-          &quot;fifteenMinuteMoveBps&quot;: 36,
-          &quot;fiveMinuteMoveBps&quot;: 41,
-          &quot;marketId&quot;: 336,
-          &quot;netMoveBps&quot;: 29,
-          &quot;reason&quot;: &quot;accepted&quot;,
-          &quot;spreadBps&quot;: 4,
-          &quot;symbol&quot;: &quot;NEAR&quot;
-        },
-        {
+          &quot;fifteenMinuteMoveBps&quot;: 5,
+          &quot;fiveMinuteMoveBps&quot;: -5,
           &quot;marketId&quot;: 16,
-          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
           &quot;symbol&quot;: &quot;BTC&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: -5,
-          &quot;fiveMinuteMoveBps&quot;: 2,
+          &quot;fifteenMinuteMoveBps&quot;: -2,
+          &quot;fiveMinuteMoveBps&quot;: -10,
           &quot;marketId&quot;: 32,
           &quot;reason&quot;: &quot;five_minute_threshold&quot;,
           &quot;symbol&quot;: &quot;ETH&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: 9,
-          &quot;fiveMinuteMoveBps&quot;: 15,
+          &quot;fifteenMinuteMoveBps&quot;: 4,
+          &quot;fiveMinuteMoveBps&quot;: -12,
           &quot;marketId&quot;: 48,
           &quot;reason&quot;: &quot;five_minute_threshold&quot;,
           &quot;symbol&quot;: &quot;SOL&quot;
         },
         {
           &quot;marketId&quot;: 64,
-          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
           &quot;symbol&quot;: &quot;MON&quot;
         },
         {
           &quot;marketId&quot;: 256,
-          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
           &quot;symbol&quot;: &quot;ZEC&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: -13,
-          &quot;fiveMinuteMoveBps&quot;: -11,
-          &quot;marketId&quot;: 272,
-          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
-          &quot;symbol&quot;: &quot;LIT&quot;
+          &quot;marketId&quot;: 320,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;PUMP&quot;
+        },
+        {
+          &quot;marketId&quot;: 336,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;NEAR&quot;
         }
       ],
-      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
       &quot;selectedMarket&quot;: {
-        &quot;id&quot;: 320,
-        &quot;symbol&quot;: &quot;PUMP&quot;
+        &quot;id&quot;: 272,
+        &quot;symbol&quot;: &quot;LIT&quot;
       },
-      &quot;startedAt&quot;: 1791640065732,
+      &quot;startedAt&quot;: 1791649414089,
       &quot;startingBalanceUnits&quot;: &quot;100000000&quot;,
-      &quot;symbol&quot;: &quot;PUMP&quot;,
+      &quot;symbol&quot;: &quot;LIT&quot;,
       &quot;txHashes&quot;: [
-        &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;,
-        &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+        &quot;0x398335299fbbd7d6a6aa3e3dc9c7907c5b16345d66cb2494b535f71b4d1ee426&quot;,
+        &quot;0x22648f6780eeed413bed7ce8b93cfcb9a2d43cc0e2da179669d3ecc03f2d2214&quot;
       ],
       &quot;winStreak&quot;: 1
     },
@@ -351,80 +352,76 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
         &quot;changed&quot;: null,
         &quot;classification&quot;: &quot;small_or_zero&quot;
       },
-      &quot;bestEstimatedProfitUnits&quot;: &quot;43416&quot;,
-      &quot;completedAt&quot;: 1791642622883,
-      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
+      &quot;bestEstimatedProfitUnits&quot;: &quot;274826&quot;,
+      &quot;completedAt&quot;: 1791651827122,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:2&quot;,
       &quot;cycleNumber&quot;: 2,
-      &quot;endingBalanceUnits&quot;: &quot;100137256&quot;,
+      &quot;endingBalanceUnits&quot;: &quot;100200853&quot;,
       &quot;endingFlat&quot;: true,
-      &quot;entryAt&quot;: 1791641983843,
-      &quot;entryBlockNumber&quot;: 69847338,
+      &quot;entryAt&quot;: 1791651185137,
+      &quot;entryBlockNumber&quot;: 69877802,
       &quot;entryDecision&quot;: {
         &quot;depthConsumptionBps&quot;: 2000,
-        &quot;direction&quot;: &quot;long&quot;,
+        &quot;direction&quot;: &quot;short&quot;,
         &quot;estimatedEntryImpactBps&quot;: 0,
         &quot;estimatedExitImpactBps&quot;: 0,
-        &quot;estimatedNetMoveBps&quot;: 10,
-        &quot;estimatedRoundTripCostBps&quot;: 42,
-        &quot;fifteenMinuteMoveBps&quot;: 66,
-        &quot;fiveMinuteMoveBps&quot;: 52,
-        &quot;fundingEstimateBps&quot;: 0,
-        &quot;leverage&quot;: 1,
-        &quot;marginUnits&quot;: &quot;16304347&quot;,
-        &quot;marketId&quot;: 320,
-        &quot;notionalUnits&quot;: &quot;16304347&quot;,
+        &quot;estimatedNetMoveBps&quot;: 51,
+        &quot;estimatedRoundTripCostBps&quot;: 9,
+        &quot;fifteenMinuteMoveBps&quot;: -104,
+        &quot;fiveMinuteMoveBps&quot;: -60,
+        &quot;fundingEstimateBps&quot;: 1,
+        &quot;leverage&quot;: 4,
+        &quot;marginUnits&quot;: &quot;7500000&quot;,
+        &quot;marketId&quot;: 272,
+        &quot;notionalUnits&quot;: &quot;30000000&quot;,
         &quot;observations&quot;: {
           &quot;first15m&quot;: {
-            &quot;blockNumber&quot;: 69844271,
-            &quot;close&quot;: 5619,
-            &quot;observedAt&quot;: 1791641049000
+            &quot;blockNumber&quot;: 69874814,
+            &quot;close&quot;: 366788,
+            &quot;observedAt&quot;: 1791650272000
           },
           &quot;first5m&quot;: {
-            &quot;blockNumber&quot;: 69846320,
-            &quot;close&quot;: 5627,
-            &quot;observedAt&quot;: 1791641668000
+            &quot;blockNumber&quot;: 69876641,
+            &quot;close&quot;: 365152,
+            &quot;observedAt&quot;: 1791650825000
           },
           &quot;latest1m&quot;: {
-            &quot;blockNumber&quot;: 69847305,
-            &quot;close&quot;: 5656,
-            &quot;observedAt&quot;: 1791641965000
+            &quot;blockNumber&quot;: 69877774,
+            &quot;close&quot;: 362976,
+            &quot;observedAt&quot;: 1791651168000
           },
           &quot;prior1m&quot;: {
-            &quot;blockNumber&quot;: 69847087,
-            &quot;close&quot;: 5650,
-            &quot;observedAt&quot;: 1791641900000
+            &quot;blockNumber&quot;: 69877545,
+            &quot;close&quot;: 362996,
+            &quot;observedAt&quot;: 1791651099000
           }
         },
         &quot;params&quot;: {
           &quot;executionConservatismBps&quot;: 10000,
           &quot;momentumThresholdBps&quot;: 40
         },
-        &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
         &quot;rejectedMarkets&quot;: [
           {
+            &quot;fifteenMinuteMoveBps&quot;: -1,
+            &quot;fiveMinuteMoveBps&quot;: -1,
             &quot;marketId&quot;: 16,
-            &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;BTC&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 4,
-            &quot;fiveMinuteMoveBps&quot;: 6,
             &quot;marketId&quot;: 32,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
             &quot;symbol&quot;: &quot;ETH&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 15,
-            &quot;fiveMinuteMoveBps&quot;: 16,
             &quot;marketId&quot;: 48,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;SOL&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 20,
-            &quot;fiveMinuteMoveBps&quot;: 32,
             &quot;marketId&quot;: 64,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;MON&quot;
           },
           {
@@ -433,66 +430,70 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
             &quot;symbol&quot;: &quot;ZEC&quot;
           },
           {
-            &quot;marketId&quot;: 272,
-            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
-            &quot;symbol&quot;: &quot;LIT&quot;
+            &quot;fifteenMinuteMoveBps&quot;: -77,
+            &quot;fiveMinuteMoveBps&quot;: -21,
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
           },
           {
+            &quot;fifteenMinuteMoveBps&quot;: 97,
+            &quot;fiveMinuteMoveBps&quot;: 34,
             &quot;marketId&quot;: 336,
-            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;NEAR&quot;
           }
         ],
-        &quot;size&quot;: &quot;2877&quot;,
-        &quot;spreadBps&quot;: 35,
-        &quot;symbol&quot;: &quot;PUMP&quot;,
-        &quot;volatilityBps&quot;: 46
+        &quot;size&quot;: &quot;82&quot;,
+        &quot;spreadBps&quot;: 1,
+        &quot;symbol&quot;: &quot;LIT&quot;,
+        &quot;volatilityBps&quot;: 23
       },
-      &quot;entryFeeUnits&quot;: &quot;5624&quot;,
+      &quot;entryFeeUnits&quot;: &quot;10270&quot;,
       &quot;entryFills&quot;: [
         {
-          &quot;amountCNS&quot;: &quot;-16332599&quot;,
-          &quot;feeCNS&quot;: &quot;5624&quot;,
+          &quot;amountCNS&quot;: &quot;-9932024&quot;,
+          &quot;feeCNS&quot;: &quot;10270&quot;,
           &quot;kind&quot;: &quot;taker&quot;,
-          &quot;lotLNS&quot;: &quot;2877&quot;,
-          &quot;pricePNS&quot;: &quot;5666&quot;
+          &quot;lotLNS&quot;: &quot;82&quot;,
+          &quot;pricePNS&quot;: &quot;362991&quot;
         }
       ],
       &quot;entryImpactBps&quot;: 0,
-      &quot;entryOrderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+      &quot;entryOrderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:3&quot;,
       &quot;entryPosition&quot;: {
-        &quot;depositUnits&quot;: &quot;16326975&quot;,
-        &quot;entryPrice&quot;: &quot;5666&quot;,
-        &quot;size&quot;: &quot;2877&quot;
+        &quot;depositUnits&quot;: &quot;9921754&quot;,
+        &quot;entryPrice&quot;: &quot;362991&quot;,
+        &quot;size&quot;: &quot;82&quot;
       },
-      &quot;entryRequestId&quot;: 13,
-      &quot;entryTxHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;,
-      &quot;estimatedRoundTripCostBps&quot;: 42,
+      &quot;entryRequestId&quot;: 3,
+      &quot;entryTxHash&quot;: &quot;0x9f3cecb15a2f2e8151ed18a9244fb77c230c9702abddd4330456c3a51986830c&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 9,
       &quot;exitDecision&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
-        &quot;closeImpactBps&quot;: 3,
-        &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 628394,
-        &quot;notionalUnits&quot;: &quot;16301082&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;274826&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;123511&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;877&quot;,
+        &quot;heldMs&quot;: 631338,
+        &quot;notionalUnits&quot;: &quot;29765262&quot;,
         &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
       },
       &quot;exitDecisions&quot;: [
         {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
-          &quot;closeImpactBps&quot;: 3,
-          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
-          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 628394,
-          &quot;notionalUnits&quot;: &quot;16301082&quot;
+          &quot;bestEstimatedProfitUnits&quot;: &quot;274826&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;123511&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;877&quot;,
+          &quot;heldMs&quot;: 631338,
+          &quot;notionalUnits&quot;: &quot;29765262&quot;
         },
         {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
-          &quot;closeImpactBps&quot;: 3,
-          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
-          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 628394,
-          &quot;notionalUnits&quot;: &quot;16301082&quot;,
+          &quot;bestEstimatedProfitUnits&quot;: &quot;274826&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;123511&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;877&quot;,
+          &quot;heldMs&quot;: 631338,
+          &quot;notionalUnits&quot;: &quot;29765262&quot;,
           &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
         }
       ],
@@ -501,84 +502,84 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
       &quot;exitPending&quot;: true,
       &quot;exitReason&quot;: &quot;net_take_profit_exit&quot;,
       &quot;exitTxHashes&quot;: [
-        &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+        &quot;0x54510cb11f199235bd2b5d385fac64f14164ebb177074c36f493fb46ddcf767e&quot;
       ],
-      &quot;feesUnits&quot;: &quot;11272&quot;,
-      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;feesUnits&quot;: &quot;20487&quot;,
+      &quot;fundingUnits&quot;: &quot;877&quot;,
       &quot;lastExitDecision&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
-        &quot;closeImpactBps&quot;: 3,
-        &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 628394,
-        &quot;notionalUnits&quot;: &quot;16301082&quot;
+        &quot;bestEstimatedProfitUnits&quot;: &quot;274826&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;123511&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;877&quot;,
+        &quot;heldMs&quot;: 631338,
+        &quot;notionalUnits&quot;: &quot;29765262&quot;
       },
-      &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
-      &quot;leverage&quot;: 1,
-      &quot;marginUnits&quot;: &quot;16304347&quot;,
-      &quot;marketId&quot;: 320,
-      &quot;notionalUnits&quot;: &quot;16304347&quot;,
+      &quot;lastFundingPnlUnits&quot;: &quot;877&quot;,
+      &quot;leverage&quot;: 4,
+      &quot;marginUnits&quot;: &quot;7500000&quot;,
+      &quot;marketId&quot;: 272,
+      &quot;notionalUnits&quot;: &quot;30000000&quot;,
       &quot;observationBlocks&quot;: [
         {
-          &quot;blockNumber&quot;: 69844271,
-          &quot;observedAt&quot;: 1791641049000
+          &quot;blockNumber&quot;: 69874814,
+          &quot;observedAt&quot;: 1791650272000
         },
         {
-          &quot;blockNumber&quot;: 69846320,
-          &quot;observedAt&quot;: 1791641668000
+          &quot;blockNumber&quot;: 69876641,
+          &quot;observedAt&quot;: 1791650825000
         },
         {
-          &quot;blockNumber&quot;: 69847087,
-          &quot;observedAt&quot;: 1791641900000
+          &quot;blockNumber&quot;: 69877545,
+          &quot;observedAt&quot;: 1791651099000
         },
         {
-          &quot;blockNumber&quot;: 69847305,
-          &quot;observedAt&quot;: 1791641965000
+          &quot;blockNumber&quot;: 69877774,
+          &quot;observedAt&quot;: 1791651168000
         }
       ],
-      &quot;operatorGasWei&quot;: &quot;86053626000000000&quot;,
+      &quot;operatorGasWei&quot;: &quot;85942038000000000&quot;,
       &quot;orderIds&quot;: [
-        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
-        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:3&quot;,
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:4&quot;
       ],
       &quot;orderReceipts&quot;: [
         {
-          &quot;blockNumber&quot;: 69847338,
-          &quot;feeUnits&quot;: &quot;5624&quot;,
+          &quot;blockNumber&quot;: 69877802,
+          &quot;feeUnits&quot;: &quot;10270&quot;,
           &quot;fills&quot;: [
             {
-              &quot;amountCNS&quot;: &quot;-16332599&quot;,
-              &quot;feeCNS&quot;: &quot;5624&quot;,
+              &quot;amountCNS&quot;: &quot;-9932024&quot;,
+              &quot;feeCNS&quot;: &quot;10270&quot;,
               &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;2877&quot;,
-              &quot;pricePNS&quot;: &quot;5666&quot;
+              &quot;lotLNS&quot;: &quot;82&quot;,
+              &quot;pricePNS&quot;: &quot;362991&quot;
             }
           ],
           &quot;kind&quot;: &quot;market_entry&quot;,
-          &quot;operatorGasWei&quot;: &quot;44815638000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
-          &quot;requestId&quot;: 13,
+          &quot;operatorGasWei&quot;: &quot;47208150000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:3&quot;,
+          &quot;requestId&quot;: 3,
           &quot;role&quot;: &quot;entry&quot;,
-          &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
+          &quot;txHash&quot;: &quot;0x9f3cecb15a2f2e8151ed18a9244fb77c230c9702abddd4330456c3a51986830c&quot;
         },
         {
-          &quot;blockNumber&quot;: 69849454,
-          &quot;feeUnits&quot;: &quot;5648&quot;,
+          &quot;blockNumber&quot;: 69879929,
+          &quot;feeUnits&quot;: &quot;10217&quot;,
           &quot;fills&quot;: [
             {
-              &quot;amountCNS&quot;: &quot;16390375&quot;,
-              &quot;feeCNS&quot;: &quot;5648&quot;,
+              &quot;amountCNS&quot;: &quot;10065836&quot;,
+              &quot;feeCNS&quot;: &quot;10217&quot;,
               &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;2877&quot;,
-              &quot;pricePNS&quot;: &quot;5690&quot;
+              &quot;lotLNS&quot;: &quot;82&quot;,
+              &quot;pricePNS&quot;: &quot;361120&quot;
             }
           ],
           &quot;kind&quot;: &quot;close_position&quot;,
-          &quot;operatorGasWei&quot;: &quot;41237988000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
-          &quot;requestId&quot;: 14,
+          &quot;operatorGasWei&quot;: &quot;38733888000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:4&quot;,
+          &quot;requestId&quot;: 4,
           &quot;role&quot;: &quot;exit&quot;,
-          &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+          &quot;txHash&quot;: &quot;0x54510cb11f199235bd2b5d385fac64f14164ebb177074c36f493fb46ddcf767e&quot;
         }
       ],
       &quot;params&quot;: {
@@ -594,32 +595,28 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
         &quot;momentumThresholdBps&quot;: 40
       },
       &quot;positiveAtTarget&quot;: true,
-      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
+      &quot;realizedPnlUnits&quot;: &quot;133812&quot;,
       &quot;rejectedAlternatives&quot;: [
         {
+          &quot;fifteenMinuteMoveBps&quot;: -1,
+          &quot;fiveMinuteMoveBps&quot;: -1,
           &quot;marketId&quot;: 16,
-          &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
           &quot;symbol&quot;: &quot;BTC&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: 4,
-          &quot;fiveMinuteMoveBps&quot;: 6,
           &quot;marketId&quot;: 32,
-          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
           &quot;symbol&quot;: &quot;ETH&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: 15,
-          &quot;fiveMinuteMoveBps&quot;: 16,
           &quot;marketId&quot;: 48,
-          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
           &quot;symbol&quot;: &quot;SOL&quot;
         },
         {
-          &quot;fifteenMinuteMoveBps&quot;: 20,
-          &quot;fiveMinuteMoveBps&quot;: 32,
           &quot;marketId&quot;: 64,
-          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
           &quot;symbol&quot;: &quot;MON&quot;
         },
         {
@@ -628,9 +625,311 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
           &quot;symbol&quot;: &quot;ZEC&quot;
         },
         {
-          &quot;marketId&quot;: 272,
+          &quot;fifteenMinuteMoveBps&quot;: -77,
+          &quot;fiveMinuteMoveBps&quot;: -21,
+          &quot;marketId&quot;: 320,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;PUMP&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 97,
+          &quot;fiveMinuteMoveBps&quot;: 34,
+          &quot;marketId&quot;: 336,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;NEAR&quot;
+        }
+      ],
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+      &quot;selectedMarket&quot;: {
+        &quot;id&quot;: 272,
+        &quot;symbol&quot;: &quot;LIT&quot;
+      },
+      &quot;startedAt&quot;: 1791651174417,
+      &quot;startingBalanceUnits&quot;: &quot;100067041&quot;,
+      &quot;symbol&quot;: &quot;LIT&quot;,
+      &quot;txHashes&quot;: [
+        &quot;0x9f3cecb15a2f2e8151ed18a9244fb77c230c9702abddd4330456c3a51986830c&quot;,
+        &quot;0x54510cb11f199235bd2b5d385fac64f14164ebb177074c36f493fb46ddcf767e&quot;
+      ],
+      &quot;winStreak&quot;: 2
+    },
+    {
+      &quot;adaptation&quot;: {
+        &quot;changed&quot;: &quot;momentumThresholdBps&quot;,
+        &quot;classification&quot;: &quot;trend_reversal_or_stall&quot;
+      },
+      &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+      &quot;completedAt&quot;: 1791653106365,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:3&quot;,
+      &quot;cycleNumber&quot;: 3,
+      &quot;endingBalanceUnits&quot;: &quot;100045940&quot;,
+      &quot;endingFlat&quot;: true,
+      &quot;entryAt&quot;: 1791652253536,
+      &quot;entryBlockNumber&quot;: 69881341,
+      &quot;entryDecision&quot;: {
+        &quot;depthConsumptionBps&quot;: 2000,
+        &quot;direction&quot;: &quot;short&quot;,
+        &quot;estimatedEntryImpactBps&quot;: 0,
+        &quot;estimatedExitImpactBps&quot;: 0,
+        &quot;estimatedNetMoveBps&quot;: 31,
+        &quot;estimatedRoundTripCostBps&quot;: 12,
+        &quot;fifteenMinuteMoveBps&quot;: -57,
+        &quot;fiveMinuteMoveBps&quot;: -43,
+        &quot;fundingEstimateBps&quot;: 1,
+        &quot;leverage&quot;: 4,
+        &quot;marginUnits&quot;: &quot;6250000&quot;,
+        &quot;marketId&quot;: 272,
+        &quot;notionalUnits&quot;: &quot;25000000&quot;,
+        &quot;observations&quot;: {
+          &quot;first15m&quot;: {
+            &quot;blockNumber&quot;: 69878277,
+            &quot;close&quot;: 362005,
+            &quot;observedAt&quot;: 1791651320000
+          },
+          &quot;first5m&quot;: {
+            &quot;blockNumber&quot;: 69880178,
+            &quot;close&quot;: 361510,
+            &quot;observedAt&quot;: 1791651894000
+          },
+          &quot;latest1m&quot;: {
+            &quot;blockNumber&quot;: 69881302,
+            &quot;close&quot;: 359948,
+            &quot;observedAt&quot;: 1791652233000
+          },
+          &quot;prior1m&quot;: {
+            &quot;blockNumber&quot;: 69881093,
+            &quot;close&quot;: 360205,
+            &quot;observedAt&quot;: 1791652170000
+          }
+        },
+        &quot;params&quot;: {
+          &quot;executionConservatismBps&quot;: 10000,
+          &quot;momentumThresholdBps&quot;: 40
+        },
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 52,
+            &quot;fiveMinuteMoveBps&quot;: 5,
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;size&quot;: &quot;69&quot;,
+        &quot;spreadBps&quot;: 4,
+        &quot;symbol&quot;: &quot;LIT&quot;,
+        &quot;volatilityBps&quot;: 30
+      },
+      &quot;entryFeeUnits&quot;: &quot;8571&quot;,
+      &quot;entryFills&quot;: [
+        {
+          &quot;amountCNS&quot;: &quot;-8288893&quot;,
+          &quot;feeCNS&quot;: &quot;8571&quot;,
+          &quot;kind&quot;: &quot;taker&quot;,
+          &quot;lotLNS&quot;: &quot;69&quot;,
+          &quot;pricePNS&quot;: &quot;360014&quot;
+        }
+      ],
+      &quot;entryImpactBps&quot;: 0,
+      &quot;entryOrderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:5&quot;,
+      &quot;entryPosition&quot;: {
+        &quot;depositUnits&quot;: &quot;8280322&quot;,
+        &quot;entryPrice&quot;: &quot;360014&quot;,
+        &quot;size&quot;: &quot;69&quot;
+      },
+      &quot;entryRequestId&quot;: 5,
+      &quot;entryTxHash&quot;: &quot;0x52f86c92bbbfdb1bb620fd807791469b16b88ed113842031ab10e64e12230b65&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 12,
+      &quot;exitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-157624&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 841761,
+        &quot;notionalUnits&quot;: &quot;24840966&quot;,
+        &quot;reasonCode&quot;: &quot;planned_loss_risk_exit&quot;
+      },
+      &quot;exitDecisions&quot;: [
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-157624&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 841761,
+          &quot;notionalUnits&quot;: &quot;24840966&quot;
+        },
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-157624&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 841761,
+          &quot;notionalUnits&quot;: &quot;24840966&quot;,
+          &quot;reasonCode&quot;: &quot;planned_loss_risk_exit&quot;
+        }
+      ],
+      &quot;exitFillCount&quot;: 1,
+      &quot;exitFinalized&quot;: true,
+      &quot;exitPending&quot;: true,
+      &quot;exitReason&quot;: &quot;planned_loss_risk_exit&quot;,
+      &quot;exitTxHashes&quot;: [
+        &quot;0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb&quot;
+      ],
+      &quot;feesUnits&quot;: &quot;17189&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;lastExitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-157624&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 841761,
+        &quot;notionalUnits&quot;: &quot;24840966&quot;
+      },
+      &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
+      &quot;leverage&quot;: 4,
+      &quot;marginUnits&quot;: &quot;6250000&quot;,
+      &quot;marketId&quot;: 272,
+      &quot;notionalUnits&quot;: &quot;25000000&quot;,
+      &quot;observationBlocks&quot;: [
+        {
+          &quot;blockNumber&quot;: 69878277,
+          &quot;observedAt&quot;: 1791651320000
+        },
+        {
+          &quot;blockNumber&quot;: 69880178,
+          &quot;observedAt&quot;: 1791651894000
+        },
+        {
+          &quot;blockNumber&quot;: 69881093,
+          &quot;observedAt&quot;: 1791652170000
+        },
+        {
+          &quot;blockNumber&quot;: 69881302,
+          &quot;observedAt&quot;: 1791652233000
+        }
+      ],
+      &quot;operatorGasWei&quot;: &quot;86015682000000000&quot;,
+      &quot;orderIds&quot;: [
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:5&quot;,
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:6&quot;
+      ],
+      &quot;orderReceipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69881341,
+          &quot;feeUnits&quot;: &quot;8571&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-8288893&quot;,
+              &quot;feeCNS&quot;: &quot;8571&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;69&quot;,
+              &quot;pricePNS&quot;: &quot;360014&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47301786000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:5&quot;,
+          &quot;requestId&quot;: 5,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x52f86c92bbbfdb1bb620fd807791469b16b88ed113842031ab10e64e12230b65&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69884164,
+          &quot;feeUnits&quot;: &quot;8618&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;8133980&quot;,
+              &quot;feeCNS&quot;: &quot;8618&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;69&quot;,
+              &quot;pricePNS&quot;: &quot;362010&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38713896000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:6&quot;,
+          &quot;requestId&quot;: 6,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb&quot;
+        }
+      ],
+      &quot;params&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 50
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;positiveAtTarget&quot;: false,
+      &quot;realizedPnlUnits&quot;: &quot;-154913&quot;,
+      &quot;rejectedAlternatives&quot;: [
+        {
+          &quot;marketId&quot;: 16,
           &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
-          &quot;symbol&quot;: &quot;LIT&quot;
+          &quot;symbol&quot;: &quot;BTC&quot;
+        },
+        {
+          &quot;marketId&quot;: 32,
+          &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+          &quot;symbol&quot;: &quot;ETH&quot;
+        },
+        {
+          &quot;marketId&quot;: 48,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;SOL&quot;
+        },
+        {
+          &quot;marketId&quot;: 64,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;MON&quot;
+        },
+        {
+          &quot;marketId&quot;: 256,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;ZEC&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 52,
+          &quot;fiveMinuteMoveBps&quot;: 5,
+          &quot;marketId&quot;: 320,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;PUMP&quot;
         },
         {
           &quot;marketId&quot;: 336,
@@ -638,453 +937,90 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
           &quot;symbol&quot;: &quot;NEAR&quot;
         }
       ],
-      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
       &quot;selectedMarket&quot;: {
-        &quot;id&quot;: 320,
-        &quot;symbol&quot;: &quot;PUMP&quot;
+        &quot;id&quot;: 272,
+        &quot;symbol&quot;: &quot;LIT&quot;
       },
-      &quot;startedAt&quot;: 1791641973297,
-      &quot;startingBalanceUnits&quot;: &quot;100079480&quot;,
-      &quot;symbol&quot;: &quot;PUMP&quot;,
+      &quot;startedAt&quot;: 1791652242564,
+      &quot;startingBalanceUnits&quot;: &quot;100200853&quot;,
+      &quot;symbol&quot;: &quot;LIT&quot;,
       &quot;txHashes&quot;: [
-        &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;,
-        &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+        &quot;0x52f86c92bbbfdb1bb620fd807791469b16b88ed113842031ab10e64e12230b65&quot;,
+        &quot;0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb&quot;
       ],
-      &quot;winStreak&quot;: 2
-    }
-  ],
-  &quot;expiresAt&quot;: 1791677815000,
-  &quot;exposureCapUnits&quot;: &quot;400000000&quot;,
-  &quot;feesUnits&quot;: &quot;30492&quot;,
-  &quot;fundingUnits&quot;: &quot;0&quot;,
-  &quot;journal&quot;: [
-    {
-      &quot;changed&quot;: null,
-      &quot;classification&quot;: &quot;small_or_zero&quot;,
-      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
-      &quot;cycleNumber&quot;: 1,
-      &quot;feesUnits&quot;: &quot;19220&quot;,
-      &quot;fundingUnits&quot;: &quot;0&quot;,
-      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
-      &quot;journalId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
-      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
-      &quot;operatorGasWei&quot;: &quot;86074026000000000&quot;,
-      &quot;paramsAfter&quot;: {
-        &quot;executionConservatismBps&quot;: 10000,
-        &quot;momentumThresholdBps&quot;: 40
-      },
-      &quot;paramsBefore&quot;: {
-        &quot;executionConservatismBps&quot;: 10000,
-        &quot;momentumThresholdBps&quot;: 40
-      },
-      &quot;realizedPnlUnits&quot;: &quot;79480&quot;,
-      &quot;receipts&quot;: [
-        {
-          &quot;blockNumber&quot;: 69841022,
-          &quot;feeUnits&quot;: &quot;9593&quot;,
-          &quot;fills&quot;: [
-            {
-              &quot;amountCNS&quot;: &quot;-6995086&quot;,
-              &quot;feeCNS&quot;: &quot;9593&quot;,
-              &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;4935&quot;,
-              &quot;pricePNS&quot;: &quot;5634&quot;
-            }
-          ],
-          &quot;kind&quot;: &quot;market_entry&quot;,
-          &quot;operatorGasWei&quot;: &quot;44820942000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
-          &quot;requestId&quot;: 11,
-          &quot;role&quot;: &quot;entry&quot;,
-          &quot;txHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;
-        },
-        {
-          &quot;blockNumber&quot;: 69846618,
-          &quot;feeUnits&quot;: &quot;9627&quot;,
-          &quot;fills&quot;: [
-            {
-              &quot;amountCNS&quot;: &quot;7074566&quot;,
-              &quot;feeCNS&quot;: &quot;9627&quot;,
-              &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;4935&quot;,
-              &quot;pricePNS&quot;: &quot;5654&quot;
-            }
-          ],
-          &quot;kind&quot;: &quot;close_position&quot;,
-          &quot;operatorGasWei&quot;: &quot;41253084000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
-          &quot;requestId&quot;: 12,
-          &quot;role&quot;: &quot;exit&quot;,
-          &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
-        }
-      ],
-      &quot;timestamp&quot;: 1791641766435,
-      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD target&quot;
+      &quot;winStreak&quot;: 0
     },
     {
-      &quot;changed&quot;: null,
-      &quot;classification&quot;: &quot;small_or_zero&quot;,
-      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
-      &quot;cycleNumber&quot;: 2,
-      &quot;feesUnits&quot;: &quot;11272&quot;,
-      &quot;fundingUnits&quot;: &quot;0&quot;,
-      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
-      &quot;journalId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
-      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
-      &quot;operatorGasWei&quot;: &quot;86053626000000000&quot;,
-      &quot;paramsAfter&quot;: {
-        &quot;executionConservatismBps&quot;: 10000,
-        &quot;momentumThresholdBps&quot;: 40
+      &quot;adaptation&quot;: {
+        &quot;changed&quot;: &quot;momentumThresholdBps&quot;,
+        &quot;classification&quot;: &quot;trend_reversal_or_stall&quot;
       },
-      &quot;paramsBefore&quot;: {
-        &quot;executionConservatismBps&quot;: 10000,
-        &quot;momentumThresholdBps&quot;: 40
-      },
-      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
-      &quot;receipts&quot;: [
-        {
-          &quot;blockNumber&quot;: 69847338,
-          &quot;feeUnits&quot;: &quot;5624&quot;,
-          &quot;fills&quot;: [
-            {
-              &quot;amountCNS&quot;: &quot;-16332599&quot;,
-              &quot;feeCNS&quot;: &quot;5624&quot;,
-              &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;2877&quot;,
-              &quot;pricePNS&quot;: &quot;5666&quot;
-            }
-          ],
-          &quot;kind&quot;: &quot;market_entry&quot;,
-          &quot;operatorGasWei&quot;: &quot;44815638000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
-          &quot;requestId&quot;: 13,
-          &quot;role&quot;: &quot;entry&quot;,
-          &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
-        },
-        {
-          &quot;blockNumber&quot;: 69849454,
-          &quot;feeUnits&quot;: &quot;5648&quot;,
-          &quot;fills&quot;: [
-            {
-              &quot;amountCNS&quot;: &quot;16390375&quot;,
-              &quot;feeCNS&quot;: &quot;5648&quot;,
-              &quot;kind&quot;: &quot;taker&quot;,
-              &quot;lotLNS&quot;: &quot;2877&quot;,
-              &quot;pricePNS&quot;: &quot;5690&quot;
-            }
-          ],
-          &quot;kind&quot;: &quot;close_position&quot;,
-          &quot;operatorGasWei&quot;: &quot;41237988000000000&quot;,
-          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
-          &quot;requestId&quot;: 14,
-          &quot;role&quot;: &quot;exit&quot;,
-          &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
-        }
-      ],
-      &quot;timestamp&quot;: 1791642622883,
-      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD target&quot;
-    }
-  ],
-  &quot;mandateMaxLeverage&quot;: 4,
-  &quot;optimizer&quot;: {
-    &quot;activeCycle&quot;: null,
-    &quot;cycleLimit&quot;: 15,
-    &quot;cycles&quot;: 2,
-    &quot;lastCycle&quot;: {
-      &quot;completedAt&quot;: 1791642622883,
-      &quot;cumulativePnlUnits&quot;: &quot;137256&quot;,
-      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
-      &quot;cycleNumber&quot;: 2,
-      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
-      &quot;winStreak&quot;: 2
-    },
-    &quot;params&quot;: {
-      &quot;executionConservatismBps&quot;: 10000,
-      &quot;momentumThresholdBps&quot;: 40
-    },
-    &quot;positiveCycles&quot;: 2,
-    &quot;scanner&quot;: {
-      &quot;cadenceMs&quot;: 300000,
-      &quot;consecutiveNoProposal&quot;: 1,
-      &quot;lastAudit&quot;: null,
-      &quot;lastProposal&quot;: {
-        &quot;at&quot;: 1791641973297,
-        &quot;blockedByOpenPosition&quot;: false,
-        &quot;estimatedNetMoveBps&quot;: 10,
-        &quot;fiveMinuteMoveBps&quot;: 52,
-        &quot;marketId&quot;: 320,
-        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
-        &quot;side&quot;: &quot;long&quot;
-      },
-      &quot;totalProposals&quot;: 1,
-      &quot;totalScans&quot;: 3
-    },
-    &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-    &quot;targetWinStreak&quot;: 2,
-    &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-    &quot;winStreak&quot;: 2
-  },
-  &quot;pendingOrders&quot;: [],
-  &quot;phase&quot;: &quot;settlement_reconciled&quot;,
-  &quot;recentScans&quot;: [
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+      &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+      &quot;completedAt&quot;: 1791655638929,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:4&quot;,
+      &quot;cycleNumber&quot;: 4,
+      &quot;endingBalanceUnits&quot;: &quot;99998450&quot;,
+      &quot;endingFlat&quot;: true,
+      &quot;entryAt&quot;: 1791654365775,
+      &quot;entryBlockNumber&quot;: 69888334,
+      &quot;entryDecision&quot;: {
+        &quot;depthConsumptionBps&quot;: 2000,
+        &quot;direction&quot;: &quot;short&quot;,
+        &quot;estimatedEntryImpactBps&quot;: 0,
+        &quot;estimatedExitImpactBps&quot;: 0,
+        &quot;estimatedNetMoveBps&quot;: 101,
+        &quot;estimatedRoundTripCostBps&quot;: 9,
+        &quot;fifteenMinuteMoveBps&quot;: -118,
+        &quot;fiveMinuteMoveBps&quot;: -110,
+        &quot;fundingEstimateBps&quot;: 1,
+        &quot;leverage&quot;: 1,
+        &quot;marginUnits&quot;: &quot;10869565&quot;,
+        &quot;marketId&quot;: 336,
+        &quot;notionalUnits&quot;: &quot;10869565&quot;,
+        &quot;observations&quot;: {
+          &quot;first15m&quot;: {
+            &quot;blockNumber&quot;: 69885338,
+            &quot;close&quot;: 53866,
+            &quot;observedAt&quot;: 1791653452000
           },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
-        },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791643034463
-    },
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+          &quot;first5m&quot;: {
+            &quot;blockNumber&quot;: 69887156,
+            &quot;close&quot;: 53825,
+            &quot;observedAt&quot;: 1791654001000
           },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
-        },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791642965805
-    },
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+          &quot;latest1m&quot;: {
+            &quot;blockNumber&quot;: 69888309,
+            &quot;close&quot;: 53231,
+            &quot;observedAt&quot;: 1791654349000
           },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
+          &quot;prior1m&quot;: {
+            &quot;blockNumber&quot;: 69888088,
+            &quot;close&quot;: 53338,
+            &quot;observedAt&quot;: 1791654282000
+          }
         },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791642897566
-    },
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
+        &quot;params&quot;: {
+          &quot;executionConservatismBps&quot;: 10000,
+          &quot;momentumThresholdBps&quot;: 50
         },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791642828047
-    },
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
-        },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791642760567
-    },
-    {
-      &quot;details&quot;: {
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 2,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 2
-        },
-        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
-      &quot;timestamp&quot;: 1791642691441
-    },
-    {
-      &quot;details&quot;: {
-        &quot;action&quot;: &quot;close_position&quot;,
-        &quot;decision&quot;: {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
-          &quot;closeImpactBps&quot;: 3,
-          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
-          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 628394,
-          &quot;notionalUnits&quot;: &quot;16301082&quot;
-        },
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
-        },
-        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
-        &quot;phase&quot;: &quot;submitted&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
-        &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
-      },
-      &quot;phase&quot;: &quot;net_take_profit_exit&quot;,
-      &quot;timestamp&quot;: 1791642613628
-    },
-    {
-      &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;43416&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;43416&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 558327,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642542360
-    },
-    {
-      &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;14646&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 488337,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642472725
-    },
-    {
-      &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;14646&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 418829,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642403562
-    },
-    {
-      &quot;details&quot;: {
-        &quot;audit&quot;: null,
-        &quot;cadenceMs&quot;: 300000,
-        &quot;consecutiveNoProposal&quot;: 1,
-        &quot;proposal&quot;: null,
-        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
         &quot;rejectedMarkets&quot;: [
           {
             &quot;marketId&quot;: 16,
-            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;BTC&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 10,
-            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;fifteenMinuteMoveBps&quot;: 5,
+            &quot;fiveMinuteMoveBps&quot;: -5,
             &quot;marketId&quot;: 32,
             &quot;reason&quot;: &quot;five_minute_threshold&quot;,
             &quot;symbol&quot;: &quot;ETH&quot;
           },
           {
-            &quot;fifteenMinuteMoveBps&quot;: 30,
-            &quot;fiveMinuteMoveBps&quot;: 5,
             &quot;marketId&quot;: 48,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;SOL&quot;
           },
           {
@@ -1106,215 +1042,1084 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
             &quot;marketId&quot;: 320,
             &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
             &quot;symbol&quot;: &quot;PUMP&quot;
-          },
-          {
-            &quot;fifteenMinuteMoveBps&quot;: 30,
-            &quot;fiveMinuteMoveBps&quot;: -12,
-            &quot;marketId&quot;: 336,
-            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
-            &quot;symbol&quot;: &quot;NEAR&quot;
           }
         ],
-        &quot;scannedAt&quot;: 1791642333114,
-        &quot;status&quot;: &quot;no_proposal&quot;
+        &quot;size&quot;: &quot;204&quot;,
+        &quot;spreadBps&quot;: 1,
+        &quot;symbol&quot;: &quot;NEAR&quot;,
+        &quot;volatilityBps&quot;: 69
       },
-      &quot;phase&quot;: &quot;no_proposal&quot;,
-      &quot;timestamp&quot;: 1791642333114
+      &quot;entryFeeUnits&quot;: &quot;3746&quot;,
+      &quot;entryFills&quot;: [
+        {
+          &quot;amountCNS&quot;: &quot;-10860218&quot;,
+          &quot;feeCNS&quot;: &quot;3746&quot;,
+          &quot;kind&quot;: &quot;taker&quot;,
+          &quot;lotLNS&quot;: &quot;204&quot;,
+          &quot;pricePNS&quot;: &quot;53218&quot;
+        }
+      ],
+      &quot;entryImpactBps&quot;: 0,
+      &quot;entryOrderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:7&quot;,
+      &quot;entryPosition&quot;: {
+        &quot;depositUnits&quot;: &quot;10856472&quot;,
+        &quot;entryPrice&quot;: &quot;53218&quot;,
+        &quot;size&quot;: &quot;204&quot;
+      },
+      &quot;entryRequestId&quot;: 7,
+      &quot;entryTxHash&quot;: &quot;0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 9,
+      &quot;exitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1262524,
+        &quot;notionalUnits&quot;: &quot;10856472&quot;,
+        &quot;reasonCode&quot;: &quot;owner_stop_or_expiry_exit&quot;
+      },
+      &quot;exitDecisions&quot;: [
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1262524,
+          &quot;notionalUnits&quot;: &quot;10856472&quot;
+        },
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1262524,
+          &quot;notionalUnits&quot;: &quot;10856472&quot;,
+          &quot;reasonCode&quot;: &quot;owner_stop_or_expiry_exit&quot;
+        }
+      ],
+      &quot;exitFillCount&quot;: 1,
+      &quot;exitFinalized&quot;: true,
+      &quot;exitPending&quot;: true,
+      &quot;exitReason&quot;: &quot;owner_stop_or_expiry_exit&quot;,
+      &quot;exitTxHashes&quot;: [
+        &quot;0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd&quot;
+      ],
+      &quot;feesUnits&quot;: &quot;7506&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;lastExitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1262524,
+        &quot;notionalUnits&quot;: &quot;10856472&quot;
+      },
+      &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
+      &quot;leverage&quot;: 1,
+      &quot;marginUnits&quot;: &quot;10869565&quot;,
+      &quot;marketId&quot;: 336,
+      &quot;notionalUnits&quot;: &quot;10869565&quot;,
+      &quot;observationBlocks&quot;: [
+        {
+          &quot;blockNumber&quot;: 69885338,
+          &quot;observedAt&quot;: 1791653452000
+        },
+        {
+          &quot;blockNumber&quot;: 69887156,
+          &quot;observedAt&quot;: 1791654001000
+        },
+        {
+          &quot;blockNumber&quot;: 69888088,
+          &quot;observedAt&quot;: 1791654282000
+        },
+        {
+          &quot;blockNumber&quot;: 69888309,
+          &quot;observedAt&quot;: 1791654349000
+        }
+      ],
+      &quot;operatorGasWei&quot;: &quot;85990284000000000&quot;,
+      &quot;orderIds&quot;: [
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:7&quot;,
+        &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:8&quot;
+      ],
+      &quot;orderReceipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69888334,
+          &quot;feeUnits&quot;: &quot;3746&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-10860218&quot;,
+              &quot;feeCNS&quot;: &quot;3746&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;204&quot;,
+              &quot;pricePNS&quot;: &quot;53218&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47294034000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:7&quot;,
+          &quot;requestId&quot;: 7,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69892552,
+          &quot;feeUnits&quot;: &quot;3760&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;10812728&quot;,
+              &quot;feeCNS&quot;: &quot;3760&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;204&quot;,
+              &quot;pricePNS&quot;: &quot;53414&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38696250000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:8&quot;,
+          &quot;requestId&quot;: 8,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd&quot;
+        }
+      ],
+      &quot;params&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 50
+      },
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 60
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 50
+      },
+      &quot;positiveAtTarget&quot;: false,
+      &quot;realizedPnlUnits&quot;: &quot;-47490&quot;,
+      &quot;rejectedAlternatives&quot;: [
+        {
+          &quot;marketId&quot;: 16,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;BTC&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 5,
+          &quot;fiveMinuteMoveBps&quot;: -5,
+          &quot;marketId&quot;: 32,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;ETH&quot;
+        },
+        {
+          &quot;marketId&quot;: 48,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;SOL&quot;
+        },
+        {
+          &quot;marketId&quot;: 64,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;MON&quot;
+        },
+        {
+          &quot;marketId&quot;: 256,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;ZEC&quot;
+        },
+        {
+          &quot;marketId&quot;: 272,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;LIT&quot;
+        },
+        {
+          &quot;marketId&quot;: 320,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;PUMP&quot;
+        }
+      ],
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+      &quot;selectedMarket&quot;: {
+        &quot;id&quot;: 336,
+        &quot;symbol&quot;: &quot;NEAR&quot;
+      },
+      &quot;startedAt&quot;: 1791654354201,
+      &quot;startingBalanceUnits&quot;: &quot;100045940&quot;,
+      &quot;symbol&quot;: &quot;NEAR&quot;,
+      &quot;txHashes&quot;: [
+        &quot;0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029&quot;,
+        &quot;0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd&quot;
+      ],
+      &quot;winStreak&quot;: 0
+    }
+  ],
+  &quot;expiresAt&quot;: 1791655561000,
+  &quot;exposureCapUnits&quot;: &quot;400000000&quot;,
+  &quot;feesUnits&quot;: &quot;55883&quot;,
+  &quot;fundingUnits&quot;: &quot;877&quot;,
+  &quot;journal&quot;: [
+    {
+      &quot;changed&quot;: null,
+      &quot;classification&quot;: &quot;small_or_zero&quot;,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:1&quot;,
+      &quot;cycleNumber&quot;: 1,
+      &quot;feesUnits&quot;: &quot;10701&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:1&quot;,
+      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
+      &quot;operatorGasWei&quot;: &quot;85876962000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;realizedPnlUnits&quot;: &quot;67041&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69871980,
+          &quot;feeUnits&quot;: &quot;5364&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-5187674&quot;,
+              &quot;feeCNS&quot;: &quot;5364&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;42&quot;,
+              &quot;pricePNS&quot;: &quot;370165&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47161332000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:1&quot;,
+          &quot;requestId&quot;: 1,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x398335299fbbd7d6a6aa3e3dc9c7907c5b16345d66cb2494b535f71b4d1ee426&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69874106,
+          &quot;feeUnits&quot;: &quot;5337&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;5254715&quot;,
+              &quot;feeCNS&quot;: &quot;5337&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;42&quot;,
+              &quot;pricePNS&quot;: &quot;368314&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38715630000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:2&quot;,
+          &quot;requestId&quot;: 2,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x22648f6780eeed413bed7ce8b93cfcb9a2d43cc0e2da179669d3ecc03f2d2214&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791650066938,
+      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD positive-cycle threshold&quot;
     },
     {
+      &quot;changed&quot;: null,
+      &quot;classification&quot;: &quot;small_or_zero&quot;,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:2&quot;,
+      &quot;cycleNumber&quot;: 2,
+      &quot;feesUnits&quot;: &quot;20487&quot;,
+      &quot;fundingUnits&quot;: &quot;877&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:2&quot;,
+      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
+      &quot;operatorGasWei&quot;: &quot;85942038000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;realizedPnlUnits&quot;: &quot;133812&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69877802,
+          &quot;feeUnits&quot;: &quot;10270&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-9932024&quot;,
+              &quot;feeCNS&quot;: &quot;10270&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;82&quot;,
+              &quot;pricePNS&quot;: &quot;362991&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47208150000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:3&quot;,
+          &quot;requestId&quot;: 3,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x9f3cecb15a2f2e8151ed18a9244fb77c230c9702abddd4330456c3a51986830c&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69879929,
+          &quot;feeUnits&quot;: &quot;10217&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;10065836&quot;,
+              &quot;feeCNS&quot;: &quot;10217&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;82&quot;,
+              &quot;pricePNS&quot;: &quot;361120&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38733888000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:4&quot;,
+          &quot;requestId&quot;: 4,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x54510cb11f199235bd2b5d385fac64f14164ebb177074c36f493fb46ddcf767e&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791651827122,
+      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD positive-cycle threshold&quot;
+    },
+    {
+      &quot;changed&quot;: &quot;momentumThresholdBps&quot;,
+      &quot;classification&quot;: &quot;trend_reversal_or_stall&quot;,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:3&quot;,
+      &quot;cycleNumber&quot;: 3,
+      &quot;feesUnits&quot;: &quot;17189&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:3&quot;,
+      &quot;nextChange&quot;: &quot;momentumThresholdBps adjusted before cycle 4&quot;,
+      &quot;operatorGasWei&quot;: &quot;86015682000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 50
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;realizedPnlUnits&quot;: &quot;-154913&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69881341,
+          &quot;feeUnits&quot;: &quot;8571&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-8288893&quot;,
+              &quot;feeCNS&quot;: &quot;8571&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;69&quot;,
+              &quot;pricePNS&quot;: &quot;360014&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47301786000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:5&quot;,
+          &quot;requestId&quot;: 5,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x52f86c92bbbfdb1bb620fd807791469b16b88ed113842031ab10e64e12230b65&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69884164,
+          &quot;feeUnits&quot;: &quot;8618&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;8133980&quot;,
+              &quot;feeCNS&quot;: &quot;8618&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;69&quot;,
+              &quot;pricePNS&quot;: &quot;362010&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38713896000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:6&quot;,
+          &quot;requestId&quot;: 6,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791653106365,
+      &quot;workedOrFailed&quot;: &quot;cycle closed at a net loss&quot;
+    },
+    {
+      &quot;changed&quot;: &quot;momentumThresholdBps&quot;,
+      &quot;classification&quot;: &quot;trend_reversal_or_stall&quot;,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:4&quot;,
+      &quot;cycleNumber&quot;: 4,
+      &quot;feesUnits&quot;: &quot;7506&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:4&quot;,
+      &quot;nextChange&quot;: &quot;momentumThresholdBps adjusted before cycle 5&quot;,
+      &quot;operatorGasWei&quot;: &quot;85990284000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 60
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 50
+      },
+      &quot;realizedPnlUnits&quot;: &quot;-47490&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69888334,
+          &quot;feeUnits&quot;: &quot;3746&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-10860218&quot;,
+              &quot;feeCNS&quot;: &quot;3746&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;204&quot;,
+              &quot;pricePNS&quot;: &quot;53218&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;47294034000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:7&quot;,
+          &quot;requestId&quot;: 7,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69892552,
+          &quot;feeUnits&quot;: &quot;3760&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;10812728&quot;,
+              &quot;feeCNS&quot;: &quot;3760&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;204&quot;,
+              &quot;pricePNS&quot;: &quot;53414&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;38696250000000000&quot;,
+          &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:8&quot;,
+          &quot;requestId&quot;: 8,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791655638929,
+      &quot;workedOrFailed&quot;: &quot;cycle closed at a net loss&quot;
+    }
+  ],
+  &quot;mandateMaxLeverage&quot;: 4,
+  &quot;optimizer&quot;: {
+    &quot;activeCycle&quot;: null,
+    &quot;cycleLimit&quot;: 15,
+    &quot;cycles&quot;: 4,
+    &quot;lastCycle&quot;: {
+      &quot;completedAt&quot;: 1791655638929,
+      &quot;cumulativePnlUnits&quot;: &quot;-1550&quot;,
+      &quot;cycleId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:cycle:4&quot;,
+      &quot;cycleNumber&quot;: 4,
+      &quot;realizedPnlUnits&quot;: &quot;-47490&quot;,
+      &quot;winStreak&quot;: 0
+    },
+    &quot;params&quot;: {
+      &quot;executionConservatismBps&quot;: 10000,
+      &quot;momentumThresholdBps&quot;: 60
+    },
+    &quot;positiveCycles&quot;: 2,
+    &quot;profile&quot;: &quot;duration_soak&quot;,
+    &quot;scanner&quot;: {
+      &quot;cadenceMs&quot;: 300000,
+      &quot;consecutiveNoProposal&quot;: 3,
+      &quot;lastAudit&quot;: {
+        &quot;action&quot;: &quot;investigate_scanner_and_market_conditions&quot;,
+        &quot;at&quot;: 1791655418978,
+        &quot;conclusion&quot;: &quot;no_qualified_live_signal&quot;,
+        &quot;consecutiveNoProposal&quot;: 3,
+        &quot;reasonCounts&quot;: {
+          &quot;five_minute_threshold&quot;: 3,
+          &quot;one_minute_confirmation_missing&quot;: 4,
+          &quot;stale_or_irregular_observations&quot;: 1
+        }
+      },
+      &quot;lastProposal&quot;: {
+        &quot;at&quot;: 1791654354201,
+        &quot;blockedByOpenPosition&quot;: false,
+        &quot;estimatedNetMoveBps&quot;: 101,
+        &quot;fiveMinuteMoveBps&quot;: -110,
+        &quot;marketId&quot;: 336,
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;side&quot;: &quot;short&quot;
+      },
+      &quot;totalProposals&quot;: 5,
+      &quot;totalScans&quot;: 21
+    },
+    &quot;status&quot;: &quot;settled&quot;,
+    &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+    &quot;targetWinStreak&quot;: null,
+    &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+    &quot;winStreak&quot;: 0
+  },
+  &quot;pendingOrders&quot;: [],
+  &quot;phase&quot;: &quot;settlement_reconciled&quot;,
+  &quot;recentDecisions&quot;: [
+    {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;20400&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 349271,
-        &quot;observationCount&quot;: 8,
+        &quot;action&quot;: &quot;close_position&quot;,
+        &quot;decision&quot;: {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1262524,
+          &quot;notionalUnits&quot;: &quot;10856472&quot;
+        },
+        &quot;observationCount&quot;: 0,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:8&quot;,
+        &quot;phase&quot;: &quot;submitted&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;txHash&quot;: &quot;0xe8a073b7b29c09757300125f258b3bf481e36a8e2d059e310bc82066c55ca9cd&quot;
+      },
+      &quot;phase&quot;: &quot;owner_stop_or_expiry_exit&quot;,
+      &quot;timestamp&quot;: 1791655628999
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-43394&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1193430,
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
         },
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
       },
       &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642332646
+      &quot;timestamp&quot;: 1791655558968
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-5493&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-44414&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 279379,
-        &quot;observationCount&quot;: 8,
+        &quot;heldMs&quot;: 1123498,
+        &quot;observationCount&quot;: 7,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
         },
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
       },
       &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642263050
+      &quot;timestamp&quot;: 1791655489408
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;20400&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-59714&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 209521,
+        &quot;heldMs&quot;: 1053203,
         &quot;observationCount&quot;: 8,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
         },
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
       },
       &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642193534
+      &quot;timestamp&quot;: 1791655419611
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-57279&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-57279&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-67670&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 139101,
+        &quot;heldMs&quot;: 982411,
         &quot;observationCount&quot;: 8,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
         },
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
       },
       &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642123497
+      &quot;timestamp&quot;: 1791655349113
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-60156&quot;,
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
         &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-60156&quot;,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-47474&quot;,
         &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 69632,
-        &quot;observationCount&quot;: 8,
+        &quot;heldMs&quot;: 911495,
+        &quot;observationCount&quot;: 7,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
         },
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
       },
       &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791642053414
+      &quot;timestamp&quot;: 1791655276724
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-28910&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 840919,
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791655206596
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-33194&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 770725,
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791655136766
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-39314&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 700424,
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791655066921
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-39314&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 630237,
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654997024
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-39314&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 560410,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654925663
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-53594&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 489844,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654855539
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-28910&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 419891,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654785947
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-4634&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 349934,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654716408
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-18914&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-18914&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 280062,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654646841
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33194&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-41354&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 210531,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654575811
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33194&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-33194&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 139988,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654505634
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-41354&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-41354&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 69913,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791654435958
     },
     {
       &quot;details&quot;: {
         &quot;action&quot;: &quot;market_entry&quot;,
         &quot;decision&quot;: {
           &quot;depthConsumptionBps&quot;: 2000,
-          &quot;direction&quot;: &quot;long&quot;,
+          &quot;direction&quot;: &quot;short&quot;,
           &quot;estimatedEntryImpactBps&quot;: 0,
           &quot;estimatedExitImpactBps&quot;: 0,
-          &quot;estimatedNetMoveBps&quot;: 10,
-          &quot;estimatedRoundTripCostBps&quot;: 42,
-          &quot;fifteenMinuteMoveBps&quot;: 66,
-          &quot;fiveMinuteMoveBps&quot;: 52,
-          &quot;fundingEstimateBps&quot;: 0,
+          &quot;estimatedNetMoveBps&quot;: 101,
+          &quot;estimatedRoundTripCostBps&quot;: 9,
+          &quot;fifteenMinuteMoveBps&quot;: -118,
+          &quot;fiveMinuteMoveBps&quot;: -110,
+          &quot;fundingEstimateBps&quot;: 1,
           &quot;leverage&quot;: 1,
-          &quot;marginUnits&quot;: &quot;16304347&quot;,
-          &quot;marketId&quot;: 320,
-          &quot;notionalUnits&quot;: &quot;16304347&quot;,
+          &quot;marginUnits&quot;: &quot;10869565&quot;,
+          &quot;marketId&quot;: 336,
+          &quot;notionalUnits&quot;: &quot;10869565&quot;,
           &quot;observations&quot;: {
             &quot;first15m&quot;: {
-              &quot;blockNumber&quot;: 69844271,
-              &quot;close&quot;: 5619,
-              &quot;observedAt&quot;: 1791641049000
+              &quot;blockNumber&quot;: 69885338,
+              &quot;close&quot;: 53866,
+              &quot;observedAt&quot;: 1791653452000
             },
             &quot;first5m&quot;: {
-              &quot;blockNumber&quot;: 69846320,
-              &quot;close&quot;: 5627,
-              &quot;observedAt&quot;: 1791641668000
+              &quot;blockNumber&quot;: 69887156,
+              &quot;close&quot;: 53825,
+              &quot;observedAt&quot;: 1791654001000
             },
             &quot;latest1m&quot;: {
-              &quot;blockNumber&quot;: 69847305,
-              &quot;close&quot;: 5656,
-              &quot;observedAt&quot;: 1791641965000
+              &quot;blockNumber&quot;: 69888309,
+              &quot;close&quot;: 53231,
+              &quot;observedAt&quot;: 1791654349000
             },
             &quot;prior1m&quot;: {
-              &quot;blockNumber&quot;: 69847087,
-              &quot;close&quot;: 5650,
-              &quot;observedAt&quot;: 1791641900000
+              &quot;blockNumber&quot;: 69888088,
+              &quot;close&quot;: 53338,
+              &quot;observedAt&quot;: 1791654282000
             }
           },
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+            &quot;momentumThresholdBps&quot;: 50
           },
-          &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
           &quot;rejectedMarkets&quot;: [
             {
               &quot;marketId&quot;: 16,
-              &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
               &quot;symbol&quot;: &quot;BTC&quot;
             },
             {
-              &quot;fifteenMinuteMoveBps&quot;: 4,
-              &quot;fiveMinuteMoveBps&quot;: 6,
+              &quot;fifteenMinuteMoveBps&quot;: 5,
+              &quot;fiveMinuteMoveBps&quot;: -5,
               &quot;marketId&quot;: 32,
               &quot;reason&quot;: &quot;five_minute_threshold&quot;,
               &quot;symbol&quot;: &quot;ETH&quot;
             },
             {
-              &quot;fifteenMinuteMoveBps&quot;: 15,
-              &quot;fiveMinuteMoveBps&quot;: 16,
               &quot;marketId&quot;: 48,
-              &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
               &quot;symbol&quot;: &quot;SOL&quot;
             },
             {
-              &quot;fifteenMinuteMoveBps&quot;: 20,
-              &quot;fiveMinuteMoveBps&quot;: 32,
               &quot;marketId&quot;: 64,
-              &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
               &quot;symbol&quot;: &quot;MON&quot;
             },
             {
@@ -1328,36 +2133,493 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
               &quot;symbol&quot;: &quot;LIT&quot;
             },
             {
-              &quot;marketId&quot;: 336,
+              &quot;marketId&quot;: 320,
               &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
-              &quot;symbol&quot;: &quot;NEAR&quot;
+              &quot;symbol&quot;: &quot;PUMP&quot;
             }
           ],
-          &quot;size&quot;: &quot;2877&quot;,
-          &quot;spreadBps&quot;: 35,
-          &quot;symbol&quot;: &quot;PUMP&quot;,
-          &quot;volatilityBps&quot;: 46
+          &quot;size&quot;: &quot;204&quot;,
+          &quot;spreadBps&quot;: 1,
+          &quot;symbol&quot;: &quot;NEAR&quot;,
+          &quot;volatilityBps&quot;: 69
         },
-        &quot;observationCount&quot;: 7,
+        &quot;observationCount&quot;: 8,
         &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 1,
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:7&quot;,
+        &quot;phase&quot;: &quot;submitted&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;txHash&quot;: &quot;0x92750172904f1b338c5849e56b9f2626e86a350b877e4e9c4e00048301781029&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_momentum_entry&quot;,
+      &quot;timestamp&quot;: 1791654355196
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 26,
+            &quot;fiveMinuteMoveBps&quot;: -10,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -16,
+            &quot;fiveMinuteMoveBps&quot;: -11,
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ]
+      },
+      &quot;phase&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+      &quot;timestamp&quot;: 1791654009909
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 74,
+            &quot;fiveMinuteMoveBps&quot;: 25,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ]
+      },
+      &quot;phase&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+      &quot;timestamp&quot;: 1791653663418
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 3,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 50
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ]
+      },
+      &quot;phase&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+      &quot;timestamp&quot;: 1791653316244
+    },
+    {
+      &quot;details&quot;: {
+        &quot;action&quot;: &quot;close_position&quot;,
+        &quot;decision&quot;: {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;-157624&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 841761,
+          &quot;notionalUnits&quot;: &quot;24840966&quot;
+        },
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
           &quot;cycleLimit&quot;: 15,
           &quot;params&quot;: {
             &quot;executionConservatismBps&quot;: 10000,
             &quot;momentumThresholdBps&quot;: 40
           },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
           &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 1
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 2
         },
-        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+        &quot;orderId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75:6&quot;,
         &quot;phase&quot;: &quot;submitted&quot;,
         &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
-        &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
+        &quot;txHash&quot;: &quot;0x93380a01685138ba4a0e4d3b38267254f50fb79692324c862756a900799953eb&quot;
       },
-      &quot;phase&quot;: &quot;optimizer_momentum_entry&quot;,
-      &quot;timestamp&quot;: 1791641974798
+      &quot;phase&quot;: &quot;planned_loss_risk_exit&quot;,
+      &quot;timestamp&quot;: 1791653097211
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;34265&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-135544&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 770704,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;profile&quot;: &quot;duration_soak&quot;,
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;stopCondition&quot;: &quot;run_expiry_or_cycle_cap&quot;,
+          &quot;targetWinStreak&quot;: null,
+          &quot;version&quot;: &quot;perpl-deterministic-v3-soak&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791653025092
+    }
+  ],
+  &quot;recentScans&quot;: [
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: {
+          &quot;action&quot;: &quot;investigate_scanner_and_market_conditions&quot;,
+          &quot;at&quot;: 1791655418978,
+          &quot;conclusion&quot;: &quot;no_qualified_live_signal&quot;,
+          &quot;consecutiveNoProposal&quot;: 3,
+          &quot;reasonCounts&quot;: {
+            &quot;five_minute_threshold&quot;: 3,
+            &quot;one_minute_confirmation_missing&quot;: 4,
+            &quot;stale_or_irregular_observations&quot;: 1
+          }
+        },
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 3,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -1,
+            &quot;fiveMinuteMoveBps&quot;: 4,
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 37,
+            &quot;fiveMinuteMoveBps&quot;: 16,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 32,
+            &quot;fiveMinuteMoveBps&quot;: 43,
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791655418978,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791655418978
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 2,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -1,
+            &quot;fiveMinuteMoveBps&quot;: -5,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -2,
+            &quot;fiveMinuteMoveBps&quot;: -11,
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 42,
+            &quot;fiveMinuteMoveBps&quot;: 14,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 0,
+            &quot;fiveMinuteMoveBps&quot;: -30,
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791655066199,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791655066199
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -123,
+            &quot;fiveMinuteMoveBps&quot;: -6,
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791654715709,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791654715709
     },
     {
       &quot;details&quot;: {
@@ -1365,103 +2627,825 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
         &quot;cadenceMs&quot;: 300000,
         &quot;consecutiveNoProposal&quot;: 0,
         &quot;proposal&quot;: {
-          &quot;at&quot;: 1791641973297,
+          &quot;at&quot;: 1791654354201,
           &quot;blockedByOpenPosition&quot;: false,
-          &quot;estimatedNetMoveBps&quot;: 10,
-          &quot;fiveMinuteMoveBps&quot;: 52,
-          &quot;marketId&quot;: 320,
+          &quot;estimatedNetMoveBps&quot;: 101,
+          &quot;fiveMinuteMoveBps&quot;: -110,
+          &quot;marketId&quot;: 336,
+          &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+          &quot;side&quot;: &quot;short&quot;
+        },
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;rejectedMarkets&quot;: [],
+        &quot;scannedAt&quot;: 1791654354201,
+        &quot;status&quot;: &quot;proposed&quot;
+      },
+      &quot;phase&quot;: &quot;proposed&quot;,
+      &quot;timestamp&quot;: 1791654354201
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: {
+          &quot;action&quot;: &quot;investigate_scanner_and_market_conditions&quot;,
+          &quot;at&quot;: 1791654008841,
+          &quot;conclusion&quot;: &quot;no_qualified_live_signal&quot;,
+          &quot;consecutiveNoProposal&quot;: 3,
+          &quot;reasonCounts&quot;: {
+            &quot;five_minute_threshold&quot;: 2,
+            &quot;one_minute_confirmation_missing&quot;: 6
+          }
+        },
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 3,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 26,
+            &quot;fiveMinuteMoveBps&quot;: -10,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -16,
+            &quot;fiveMinuteMoveBps&quot;: -11,
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791654008841,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791654008841
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 2,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 74,
+            &quot;fiveMinuteMoveBps&quot;: 25,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791653662601,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791653662601
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791653315627,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791653315627
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 0,
+        &quot;proposal&quot;: {
+          &quot;at&quot;: 1791652954241,
+          &quot;blockedByOpenPosition&quot;: true,
+          &quot;estimatedNetMoveBps&quot;: 45,
+          &quot;fiveMinuteMoveBps&quot;: 56,
+          &quot;marketId&quot;: 272,
           &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
           &quot;side&quot;: &quot;long&quot;
         },
         &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
         &quot;rejectedMarkets&quot;: [],
-        &quot;scannedAt&quot;: 1791641973297,
+        &quot;scannedAt&quot;: 1791652954241,
+        &quot;status&quot;: &quot;deferred_position_open&quot;
+      },
+      &quot;phase&quot;: &quot;deferred_position_open&quot;,
+      &quot;timestamp&quot;: 1791652954241
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 15,
+            &quot;fiveMinuteMoveBps&quot;: -3,
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791652603902,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791652603902
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 0,
+        &quot;proposal&quot;: {
+          &quot;at&quot;: 1791652242564,
+          &quot;blockedByOpenPosition&quot;: false,
+          &quot;estimatedNetMoveBps&quot;: 31,
+          &quot;fiveMinuteMoveBps&quot;: -43,
+          &quot;marketId&quot;: 272,
+          &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+          &quot;side&quot;: &quot;short&quot;
+        },
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;rejectedMarkets&quot;: [],
+        &quot;scannedAt&quot;: 1791652242564,
         &quot;status&quot;: &quot;proposed&quot;
       },
       &quot;phase&quot;: &quot;proposed&quot;,
-      &quot;timestamp&quot;: 1791641973297
+      &quot;timestamp&quot;: 1791652242564
     },
     {
       &quot;details&quot;: {
-        &quot;action&quot;: &quot;close_position&quot;,
-        &quot;decision&quot;: {
-          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
-          &quot;closeImpactBps&quot;: 0,
-          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
-          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-          &quot;heldMs&quot;: 1679297,
-          &quot;notionalUnits&quot;: &quot;27803790&quot;
-        },
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 0,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 2,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
           },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 0
-        },
-        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
-        &quot;phase&quot;: &quot;submitted&quot;,
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
-        &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -74,
+            &quot;fiveMinuteMoveBps&quot;: 62,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;fifteen_minute_trend_disagrees&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791651897727,
+        &quot;status&quot;: &quot;no_proposal&quot;
       },
-      &quot;phase&quot;: &quot;net_take_profit_exit&quot;,
-      &quot;timestamp&quot;: 1791641757058
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791651897727
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-53729&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1608589,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 0,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
           },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 0
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791651534836,
+        &quot;status&quot;: &quot;no_proposal&quot;
       },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791641685110
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791651534836
     },
     {
       &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-78404&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1538452,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 0,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 0
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 0,
+        &quot;proposal&quot;: {
+          &quot;at&quot;: 1791651174417,
+          &quot;blockedByOpenPosition&quot;: false,
+          &quot;estimatedNetMoveBps&quot;: 51,
+          &quot;fiveMinuteMoveBps&quot;: -60,
+          &quot;marketId&quot;: 272,
+          &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+          &quot;side&quot;: &quot;short&quot;
         },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;rejectedMarkets&quot;: [],
+        &quot;scannedAt&quot;: 1791651174417,
+        &quot;status&quot;: &quot;proposed&quot;
       },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791641615405
+      &quot;phase&quot;: &quot;proposed&quot;,
+      &quot;timestamp&quot;: 1791651174417
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 4,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 5,
+            &quot;fiveMinuteMoveBps&quot;: -3,
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 29,
+            &quot;fiveMinuteMoveBps&quot;: 24,
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791650829292,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791650829292
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: {
+          &quot;action&quot;: &quot;investigate_scanner_and_market_conditions&quot;,
+          &quot;at&quot;: 1791650483339,
+          &quot;conclusion&quot;: &quot;no_qualified_live_signal&quot;,
+          &quot;consecutiveNoProposal&quot;: 3,
+          &quot;reasonCounts&quot;: {
+            &quot;five_minute_threshold&quot;: 2,
+            &quot;one_minute_confirmation_missing&quot;: 5,
+            &quot;stale_or_irregular_observations&quot;: 1
+          }
+        },
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 3,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 3,
+            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -1,
+            &quot;fiveMinuteMoveBps&quot;: 3,
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791650483339,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791650483339
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 2,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -1,
+            &quot;fiveMinuteMoveBps&quot;: 4,
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -13,
+            &quot;fiveMinuteMoveBps&quot;: 7,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791650136822,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791650136822
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;stale_or_irregular_observations&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -16,
+            &quot;fiveMinuteMoveBps&quot;: -9,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 9,
+            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -41,
+            &quot;fiveMinuteMoveBps&quot;: 11,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791649775922,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791649775922
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 0,
+        &quot;proposal&quot;: {
+          &quot;at&quot;: 1791649414089,
+          &quot;blockedByOpenPosition&quot;: false,
+          &quot;estimatedNetMoveBps&quot;: 52,
+          &quot;fiveMinuteMoveBps&quot;: -61,
+          &quot;marketId&quot;: 272,
+          &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+          &quot;side&quot;: &quot;short&quot;
+        },
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;rejectedMarkets&quot;: [],
+        &quot;scannedAt&quot;: 1791649414089,
+        &quot;status&quot;: &quot;proposed&quot;
+      },
+      &quot;phase&quot;: &quot;proposed&quot;,
+      &quot;timestamp&quot;: 1791649414089
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: {
+          &quot;action&quot;: &quot;investigate_scanner_and_market_conditions&quot;,
+          &quot;at&quot;: 1791649066087,
+          &quot;conclusion&quot;: &quot;no_qualified_live_signal&quot;,
+          &quot;consecutiveNoProposal&quot;: 3,
+          &quot;reasonCounts&quot;: {
+            &quot;five_or_fifteen_minute_history_missing&quot;: 7,
+            &quot;one_minute_confirmation_missing&quot;: 1
+          }
+        },
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 3,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791649066087,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791649066087
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 2,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791648721004,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791648721004
     },
     {
       &quot;details&quot;: {
@@ -1512,74 +3496,24 @@ body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:
             &quot;symbol&quot;: &quot;NEAR&quot;
           }
         ],
-        &quot;scannedAt&quot;: 1791641614799,
+        &quot;scannedAt&quot;: 1791648376647,
         &quot;status&quot;: &quot;no_proposal&quot;
       },
       &quot;phase&quot;: &quot;no_proposal&quot;,
-      &quot;timestamp&quot;: 1791641614799
-    },
-    {
-      &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-73469&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1468196,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 0,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 0
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791641545483
-    },
-    {
-      &quot;details&quot;: {
-        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
-        &quot;closeImpactBps&quot;: 0,
-        &quot;estimatedNetProfitUnits&quot;: &quot;-93209&quot;,
-        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
-        &quot;heldMs&quot;: 1398194,
-        &quot;observationCount&quot;: 8,
-        &quot;optimizer&quot;: {
-          &quot;cycleCount&quot;: 0,
-          &quot;cycleLimit&quot;: 15,
-          &quot;params&quot;: {
-            &quot;executionConservatismBps&quot;: 10000,
-            &quot;momentumThresholdBps&quot;: 40
-          },
-          &quot;status&quot;: &quot;running&quot;,
-          &quot;targetWinStreak&quot;: 2,
-          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
-          &quot;winStreak&quot;: 0
-        },
-        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
-      },
-      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
-      &quot;timestamp&quot;: 1791641474024
+      &quot;timestamp&quot;: 1791648376647
     }
   ],
-  &quot;returnedUnits&quot;: &quot;100137256&quot;,
-  &quot;runDurationSeconds&quot;: 43200,
-  &quot;runId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002&quot;,
-  &quot;runStartedAt&quot;: 1791634621703,
+  &quot;returnedUnits&quot;: &quot;99998450&quot;,
+  &quot;runDurationSeconds&quot;: 7200,
+  &quot;runId&quot;: &quot;7971a58c-54c0-4409-89a9-08fcbae4ee75&quot;,
+  &quot;runStartedAt&quot;: 1791648368106,
   &quot;runStatus&quot;: &quot;completed&quot;,
   &quot;settlement&quot;: {
-    &quot;blockNumber&quot;: 69851354,
-    &quot;ownerBalanceUnits&quot;: &quot;9999869917&quot;,
-    &quot;returnedUnits&quot;: &quot;100137256&quot;,
-    &quot;txHash&quot;: &quot;0x0e1b8f15f4020233290513c9052bc5242e28fd818b94ef407285ded5de23c9d7&quot;
+    &quot;blockNumber&quot;: 69892672,
+    &quot;ownerBalanceUnits&quot;: &quot;9999998450&quot;,
+    &quot;returnedUnits&quot;: &quot;99998450&quot;,
+    &quot;txHash&quot;: &quot;0x762379522ed5b4c7c6b0416f22b1b4a863cc78e843395c7f726e5def2f0a78a0&quot;
   },
-  &quot;generatedAt&quot;: &quot;2026-10-10T14:42:42.440Z&quot;
+  &quot;generatedAt&quot;: &quot;2026-10-10T18:19:56.219Z&quot;
 }</pre></section>
 </main></body></html>

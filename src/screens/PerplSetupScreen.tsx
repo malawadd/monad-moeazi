@@ -4,9 +4,13 @@ import type {TypedDataDefinition} from 'viem';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, Field, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
 import {perplApi, createPerplIdempotencyKey} from '../services/perplApi';
+import {monadApi} from '../services/monadApi';
 import {formatMonadTimestamp, formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
 import {openMeraSigningSession} from '../services/wallet/meraAuth';
-import {effectivePerplMarketSlippageBps, findPerplVenue, validatePreparedPerpl, validatePerplRawTransaction, validatePerplSignature} from '../services/perplValidation';
+import {effectivePerplMarketSlippageBps, findPerplVenue, isPerplDirectOptimizerDuration,
+  PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS, PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS,
+  PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS, validatePreparedPerpl, validatePerplRawTransaction,
+  validatePerplSignature} from '../services/perplValidation';
 import type {PerplPreparedEnrollment, PerplVenue} from '../types/perpl';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
@@ -16,26 +20,39 @@ export function PerplSetupScreen() {
   const {ownerAddress} = useApp();
   const [venue, setVenue] = useState<PerplVenue | null>(null);
   const [amount, setAmount] = useState('100');
-  const [durationMinutes, setDurationMinutes] = useState('60');
+  const [durationMinutes, setDurationMinutes] = useState('120');
   const [prepared, setPrepared] = useState<PerplPreparedEnrollment | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState('');
+  const [walletAusd, setWalletAusd] = useState('Checking Mera balance…');
 
   const loadVenue = useCallback(async () => {
     setError('');
     try {
       const next = findPerplVenue((await perplApi.venues()).venues);
       setVenue(next);
-      if (next.venueId === 'perpl-direct-testnet-v1') { setAmount('100'); setDurationMinutes('720'); }
-      else {
+      if (next.venueId === 'perpl-direct-testnet-v1') {
+        setAmount('100'); setDurationMinutes(String(PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS / 60));
+      } else {
         if (next.limits?.minDurationSeconds) setDurationMinutes(String(Math.ceil(next.limits.minDurationSeconds / 60)));
         if (next.limits?.minFundingUnits) setAmount(formatMonadUnits(next.limits.minFundingUnits, 6));
         else if (next.limits?.minAccountOpenUnits) setAmount(formatMonadUnits(next.limits.minAccountOpenUnits, 6));
       }
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Perpl setup limits could not be loaded.'); }
   }, []);
-  useFocusEffect(useCallback(() => { void loadVenue(); }, [loadVenue]));
+  const loadWalletAusd = useCallback(async () => {
+    if (!ownerAddress) { setWalletAusd('Unavailable'); return; }
+    try {
+      const snapshot = await monadApi.wallet();
+      if (snapshot.chainId !== 10143 || snapshot.ownerAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+        throw new Error('Wallet does not match the Mera session.');
+      }
+      const balance = snapshot.balances.find(item => item.asset === 'AUSD');
+      setWalletAusd(balance ? `${formatMonadUnits(balance.amountUnits, balance.decimals)} AUSD` : 'Not returned');
+    } catch { setWalletAusd('Unavailable'); }
+  }, [ownerAddress]);
+  useFocusEffect(useCallback(() => { void loadVenue(); void loadWalletAusd(); }, [loadVenue, loadWalletAusd]));
 
   function terms() {
     if (!venue?.enabled || !venue.collateral || !venue.limits) throw new Error(venue?.reasonMessage || venue?.reason || 'Perpl enrollment is currently unavailable.');
@@ -53,7 +70,9 @@ export function PerplSetupScreen() {
     const minutes = Number(durationMinutes.trim());
     if (!Number.isSafeInteger(minutes) || minutes < 1) throw new Error('Enter a whole number of minutes for the run duration.');
     const durationSeconds = minutes * 60;
-    if (directOptimizer && durationSeconds !== 43_200) throw new Error('The direct optimizer review is fixed at 12 hours.');
+    if (directOptimizer && !isPerplDirectOptimizerDuration(durationSeconds)) {
+      throw new Error('Choose a direct optimizer duration from 10 to 720 minutes.');
+    }
     if (durationSeconds < venue.limits.minDurationSeconds || durationSeconds > venue.limits.maxDurationSeconds) {
       throw new Error(`Choose a duration from ${Math.ceil(venue.limits.minDurationSeconds / 60)} to ${Math.floor(venue.limits.maxDurationSeconds / 60)} minutes.`);
     }
@@ -108,14 +127,15 @@ export function PerplSetupScreen() {
     {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>The service may still be reconciling your signed setup. Check the run and Activity before preparing another enrollment.</Text><Button label="Check Perpl status" onPress={() => navigation.navigate('PerplStatus')} /></Card> : null}
     {!prepared && !uncertain && venue?.enabled ? <Card>
       <Text style={s.strong}>Live AUSD setup</Text>
-      {directOptimizer ? <><DataRow label="Funding amount" value="100 AUSD · fixed for this experiment" /><DataRow label="Run duration" value="12 hours · fixed for this experiment" /></> : <>
-        <Field label="AUSD funding amount" value={amount} onChangeText={setAmount} placeholder="100" keyboardType="decimal-pad" />
-        <Field label="Duration in minutes" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="60" keyboardType="number-pad" />
-      </>}
+      <DataRow label="Available in Mera wallet" value={walletAusd} />
+      {directOptimizer ? <DataRow label="Funding amount" value="100 AUSD · fixed for this experiment" /> : null}
+      <Field label="Duration in minutes" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="120" keyboardType="number-pad" />
+      {!directOptimizer ? <Field label="AUSD funding amount" value={amount} onChangeText={setAmount} placeholder="100" keyboardType="decimal-pad" /> : null}
       {venue.collateral ? <DataRow label="AUSD token" value={venue.collateral.address} /> : null}
       {venue.limits?.minFundingUnits || venue.limits?.minAccountOpenUnits ? <DataRow label="Minimum funding" value={`${formatMonadUnits(venue.limits.minFundingUnits ?? venue.limits.minAccountOpenUnits!, 6)} AUSD`} /> : null}
       {venue.limits?.backendMaxMarketSlippageBps ? <DataRow label="Backend market-order slippage cap" value={`${venue.limits.backendMaxMarketSlippageBps} bps`} /> : null}
-      {lowerBound && upperBound ? <DataRow label="Allowed duration" value={`${Math.ceil(lowerBound / 60)}–${Math.floor(upperBound / 60)} minutes`} /> : null}
+      {directOptimizer ? <DataRow label="Allowed duration" value={`${PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS / 60}–${PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS / 60} minutes · default ${PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS / 60}`} />
+        : lowerBound && upperBound ? <DataRow label="Allowed duration" value={`${Math.ceil(lowerBound / 60)}–${Math.floor(upperBound / 60)} minutes`} /> : null}
       <Button label="Prepare exact Perpl review" onPress={() => { void prepare(); }} loading={busy} />
     </Card> : null}
     {prepared ? <>
@@ -147,7 +167,8 @@ export function PerplSetupScreen() {
         <Text style={s.body}>This cap is enforced by the Moeazi backend before market orders are sent; the Perpl contract does not enforce slippage. A market can impose a lower cap.</Text>
         {prepared.optimizerReview ? <>
           <DataRow label="Automatic market detection" value={`Across all eligible markets even with a position open; every ${prepared.optimizerReview.marketScanIntervalMs / 60_000} minutes. Three scans without a proposal trigger a scanner review, not an automatic trade or rule change. A proposal during an open position is recorded and deferred.`} />
-          <DataRow label="Cycle limit and success target" value={`Up to ${prepared.optimizerReview.maxCycles} completed cycles; stop entries after ${prepared.optimizerReview.targetWinStreak} consecutive cycles each netting at least ${formatMonadUnits(prepared.optimizerReview.minimumPositivePnlUnits, prepared.collateral.decimals)} AUSD`} />
+          <DataRow label="Optimizer profile" value={`Duration soak · keep scanning and trading through the signed ${prepared.durationSeconds / 60}-minute run; stop new entries after ${prepared.optimizerReview.maxCycles} completed cycles or run expiry`} />
+          <DataRow label="Positive-cycle tracking" value={`A cycle netting at least ${formatMonadUnits(prepared.optimizerReview.minimumPositivePnlUnits, prepared.collateral.decimals)} AUSD counts as positive; wins do not stop new entries`} />
           <DataRow label="Normal hold and exit checks" value={`${prepared.optimizerReview.cycleHoldMinMs / 60_000}–${prepared.optimizerReview.cycleHoldMaxMs / 60_000} minutes; executable close checks every minute`} />
           <DataRow label="Backend-enforced sizing" value={`≤${formatMonadUnits(prepared.optimizerReview.maxNotionalUnits, prepared.collateral.decimals)} AUSD notional · ≤${formatMonadUnits(prepared.optimizerReview.maxMarginUnits, prepared.collateral.decimals)} AUSD margin · ≤${prepared.optimizerReview.maxDepthConsumptionBps / 100}% displayed depth`} />
           <DataRow label="Leverage and risk budget" value={`1×–${Math.min(prepared.maxLeverage, prepared.optimizerReview.maxLeverage)}×, subject to each live market and signed mandate · planned loss ≤${formatMonadUnits(prepared.optimizerReview.plannedLossUnits, prepared.collateral.decimals)} AUSD`} />

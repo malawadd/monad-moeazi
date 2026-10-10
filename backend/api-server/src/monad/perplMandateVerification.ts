@@ -2,7 +2,7 @@ import { Contract, verifyTypedData } from "ethers";
 import { MonadApiError } from "./config.js";
 import { PERPL_TESTNET_AUSD } from "./perplConfig.js";
 import { PERPL_DIRECT_VENUE_ID, PERPL_VENUE_ID } from "./perplConfig.js";
-import { PERPL_OPTIMIZER_VERSION, parsePerplOptimizerState } from "./perplOptimizerConfig.js";
+import { isPerplOptimizerDuration, parsePerplOptimizerState } from "./perplOptimizerConfig.js";
 import { buildPerplMandate, perplMandateHash } from "./perplContracts.js";
 
 const fail = (message: string, code: string): never => { throw new MonadApiError(message, 409, code); };
@@ -20,14 +20,15 @@ export async function verifyPerplRunMandate(provider: any, row: any, deployment:
   const network = await provider.getNetwork();
   const amount = BigInt(String(row.amountUnits)); const leverage = Number(row.maxLeverage);
   const optimizer = parsePerplOptimizerState(row.optimizerStateJson);
-  const optimizerRun = row.venueId === PERPL_DIRECT_VENUE_ID && optimizer?.version === PERPL_OPTIMIZER_VERSION;
+  const optimizerRun = row.venueId === PERPL_DIRECT_VENUE_ID && Boolean(optimizer);
   const exposure = BigInt(String(row.maxPositionExposureUnits)); const markets = parsedIds(String(row.marketIdsJson));
   const min = BigInt(row.delegatedAccountAddress ? deployment.live.limits.minDepositUnits : deployment.live.limits.minAccountOpenUnits);
   if (network.chainId !== 10143n || row.chainId !== 10143 || amount < min || amount > BigInt(deployment.live.limits.maxFundingUnits)
     || !Number.isSafeInteger(leverage) || leverage < 1 || leverage > (optimizerRun
       ? Math.min(4, Math.max(...deployment.live.markets.filter((market: any) => markets.includes(market.id)).map((market: any) => market.maxLeverage)))
       : Math.min(3, deployment.live.limits.maxLeverage))
-    || optimizerRun && (amount !== 100_000_000n || row.durationSeconds !== 43_200)
+    || !Number.isSafeInteger(row.durationSeconds)
+    || optimizerRun && (amount !== 100_000_000n || !isPerplOptimizerDuration(row.durationSeconds))
     || row.venueId === PERPL_DIRECT_VENUE_ID && row.optimizerStateJson && !optimizerRun
     || exposure <= 0n || exposure > amount * BigInt(leverage) || row.durationSeconds < deployment.live.limits.minDurationSeconds
     || row.durationSeconds > deployment.live.limits.maxDurationSeconds || Number(row.policyVersion) !== 2

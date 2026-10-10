@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Wallet } from "ethers";
 import { decidePerplOptimizer, type PerplPriceObservation } from "../api-server/src/monad/perplOptimizationStrategy.js";
-import { adaptPerplOptimizerAfterCycle, createPerplOptimizerState, PERPL_OPTIMIZER_POLICY } from "../api-server/src/monad/perplOptimizerConfig.js";
+import { adaptPerplOptimizerAfterCycle, createPerplOptimizerState, isPerplOptimizerDuration,
+  PERPL_LEGACY_OPTIMIZER_VERSION, PERPL_OPTIMIZER_POLICY, PERPL_OPTIMIZER_VERSION,
+  parsePerplOptimizerState, perplOptimizerReview } from "../api-server/src/monad/perplOptimizerConfig.js";
+import { verifyPerplRunMandate } from "../api-server/src/monad/perplMandateVerification.js";
+import { PERPL_DIRECT_VENUE_ID } from "../api-server/src/monad/perplConfig.js";
+import { buildPerplMandate, perplMandateHash } from "../api-server/src/monad/perplContracts.js";
 import { classifyDirectOrderOutcome } from "../api-server/src/monad/perplDirectOrders.js";
 import { optimizerCycleHasPendingOrder, optimizerFinalOrderUnprocessed } from "../api-server/src/monad/perplOptimizerExecution.js";
 import { optimizerObservationClose } from "../api-server/src/monad/perplWorkerCycle.js";
@@ -58,11 +64,50 @@ function acct(positions: unknown[] = [], balance = "100000000"): VenueAccountSna
     lastRequestId: 0, positions, orders: [], observedAt: now, blockNumber: 120 };
 }
 function input(market = makeMarket(), samples = history(), extra: Partial<Parameters<typeof decidePerplOptimizer>[0]> = {}) {
-  return { now, expiresAt: now + PERPL_OPTIMIZER_POLICY.runDurationSeconds * 1000,
+  return { now, expiresAt: now + PERPL_OPTIMIZER_POLICY.maxDurationSeconds * 1000,
     run: { amountUnits: "100000000", maxPositionExposureUnits: "400000000", maxLeverage: 4, marketIdsJson: `[${market.id}]` },
     account: acct(), markets: [market], histories: { [market.id]: samples },
     params: createPerplOptimizerState().params, ...extra };
 }
+
+test("direct optimizer duration policy allows 10–720 minutes and defaults to two hours", () => {
+  assert.equal(perplOptimizerReview().version, PERPL_OPTIMIZER_VERSION);
+  assert.equal(perplOptimizerReview().profile, "duration_soak");
+  assert.equal(perplOptimizerReview().stopCondition, "run_expiry_or_cycle_cap");
+  assert.equal(perplOptimizerReview().targetWinStreak, null);
+  assert.equal(PERPL_OPTIMIZER_POLICY.defaultDurationSeconds, 7_200);
+  assert.equal(isPerplOptimizerDuration(600), true);
+  assert.equal(isPerplOptimizerDuration(7_200), true);
+  assert.equal(isPerplOptimizerDuration(43_200), true);
+  assert.equal(isPerplOptimizerDuration(599), false);
+  assert.equal(isPerplOptimizerDuration(43_201), false);
+  assert.equal(isPerplOptimizerDuration(600.5), false);
+  assert.deepEqual([perplOptimizerReview().minDurationSeconds, perplOptimizerReview().defaultDurationSeconds,
+    perplOptimizerReview().maxDurationSeconds], [600, 7_200, 43_200]);
+});
+
+test("direct optimizer mandate revalidation binds the exact signed duration", async () => {
+  const owner = Wallet.createRandom(); const vault = Wallet.createRandom().address;
+  const operator = Wallet.createRandom().address; const factoryAddress = Wallet.createRandom().address;
+  const durationSeconds = 7_200; const deadline = Math.floor(Date.now() / 1000) + 120;
+  const typed = buildPerplMandate({ owner: owner.address, vault, operator, transport: 1, amountUnits: "100000000",
+    maxExposureUnits: "400000000", maxLeverage: 4, durationSeconds, deadline, nonce: "0", marketIds: [16] });
+  const signature = await owner.signTypedData(typed.domain, typed.types, typed.message);
+  const typedHash = perplMandateHash(typed);
+  const row: any = { venueId: PERPL_DIRECT_VENUE_ID, chainId: 10143, ownerAddress: owner.address, vaultAddress: vault,
+    factoryAddress, amountUnits: "100000000", maxPositionExposureUnits: "400000000", maxLeverage: 4,
+    durationSeconds, setupDeadline: deadline, nonce: "0", marketIdsJson: "[16]", policyVersion: 2,
+    mandateTypedDataJson: JSON.stringify(typed), mandateHash: typedHash, mandateSignature: signature,
+    optimizerStateJson: JSON.stringify(createPerplOptimizerState()) };
+  const deployment: any = { address: factoryAddress, operator: { address: operator },
+    live: { limits: { minAccountOpenUnits: "1", maxFundingUnits: "1000000000", minDurationSeconds: 600,
+      maxDurationSeconds: 86_400 }, markets: [{ id: 16, maxLeverage: 4 }] },
+    factory: { mandateDigest: async () => typedHash } };
+  const provider: any = { getNetwork: async () => ({ chainId: 10143n }), getCode: async () => "0x" };
+  assert.equal((await verifyPerplRunMandate(provider, row, deployment)).typed.message.durationSeconds, durationSeconds);
+  await assert.rejects(verifyPerplRunMandate(provider, { ...row, durationSeconds: durationSeconds + 1 }, deployment),
+    /Stored Perpl mandate differs/);
+});
 
 test("enrollment signs every open Perpl market and never truncates the list", () => {
   const eight = Array.from({ length: 8 }, (_, i) => makeMarket({ id: (i + 1) * 16 }));
@@ -165,13 +210,24 @@ test("forced exit, bounded adaptation, two-win target, 15-cycle cap, and duplica
   assert.deepEqual(adaptPerplOptimizerAfterCycle(createPerplOptimizerState(), -1n, "execution_costs").after,
     { momentumThresholdBps: 40, executionConservatismBps: 11_000 });
   assert.equal(adaptPerplOptimizerAfterCycle(createPerplOptimizerState(), 10_000n, "execution_costs").changed, null);
-  assert.equal(optimizerCycleStatus(2, 2), "target_reached_awaiting_settlement");
-  assert.equal(optimizerCycleStatus(15, 0), "cycle_cap_reached_awaiting_settlement");
+  assert.equal(optimizerCycleStatus(2, 2, PERPL_LEGACY_OPTIMIZER_VERSION), "target_reached_awaiting_settlement");
+  assert.equal(optimizerCycleStatus(2, 2, PERPL_OPTIMIZER_VERSION), "running");
+  assert.equal(optimizerCycleStatus(15, 0, PERPL_OPTIMIZER_VERSION), "cycle_cap_reached_awaiting_settlement");
   const duplicate = duplicateCycleResult({ cycleNumber: 3, realizedPnlUnits: "10000" },
     { cycles: 3, winStreak: 2, status: "target_reached_awaiting_settlement", params: { momentumThresholdBps: 40, executionConservatismBps: 10_000 } },
     { realizedPnlUnits: "25000" });
   assert.equal(duplicate.winStreak, 2); assert.equal(duplicate.optimizerStatus, "target_reached_awaiting_settlement");
   assert.equal(duplicate.cumulativePnlUnits, "25000");
+});
+
+test("legacy optimizer state keeps its two-win identity while new states use the duration soak profile", () => {
+  const legacy = parsePerplOptimizerState(JSON.stringify({ ...createPerplOptimizerState(),
+    version: PERPL_LEGACY_OPTIMIZER_VERSION, status: "target_reached_awaiting_settlement", cycles: 2, winStreak: 2 }));
+  const soak = parsePerplOptimizerState(JSON.stringify(createPerplOptimizerState()));
+  assert.equal(legacy?.version, PERPL_LEGACY_OPTIMIZER_VERSION);
+  assert.equal(legacy?.status, "target_reached_awaiting_settlement");
+  assert.equal(soak?.version, PERPL_OPTIMIZER_VERSION);
+  assert.equal(soak?.status, "running");
 });
 
 test("final no-fill is distinct from uncertainty and restart recovery only replays unprocessed work", () => {

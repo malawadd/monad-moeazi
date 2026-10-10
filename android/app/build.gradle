@@ -8,7 +8,7 @@ if (moeaziLocalFile.exists()) {
     moeaziLocalFile.withInputStream { moeaziLocalProperties.load(it) }
 }
 def moeaziConfig = { String propertyName, String environmentName, String fallback ->
-    def value = moeaziLocalProperties.getProperty(propertyName) ?: System.getenv(environmentName) ?: fallback
+    def value = project.findProperty('moeaziApiBaseUrl') ?: moeaziLocalProperties.getProperty(propertyName) ?: System.getenv(environmentName) ?: fallback
     return value.replace("\\", "\\\\").replace('"', '\\"')
 }
 
@@ -100,8 +100,8 @@ android {
         applicationId "com.moeazi.monad.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.2"
         buildConfigField "String", "MOEAZI_API_BASE_URL", "\"${moeaziConfig('moeazi.apiBaseUrl', 'MOEAZI_API_BASE_URL', 'http://10.0.2.2:3102')}\""
         if (System.getProperty('os.name').toLowerCase().contains('windows')) {
             externalNativeBuild {

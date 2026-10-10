@@ -69,8 +69,10 @@ export type PerplPreparedEnrollment = {
   markets: PerplMarketSnapshot[];
   limits: PerplLimits;
   optimizerReview?: {
-    version: string; maxCycles: number; targetWinStreak: number; minimumPositivePnlUnits: string;
-    maxDurationSeconds: number; marketScanIntervalMs: number; exitCheckIntervalMs: number;
+    version: string; profile: string; stopCondition: string; maxCycles: number; targetWinStreak: number | null;
+    minimumPositivePnlUnits: string;
+    minDurationSeconds: number; defaultDurationSeconds: number; maxDurationSeconds: number;
+    marketScanIntervalMs: number; exitCheckIntervalMs: number;
     scannerReviewAfterMisses?: number;
     cycleHoldMinMs: number; cycleHoldMaxMs: number; plannedLossUnits: string;
     maxNotionalUnits: string; maxMarginUnits: string; maxLeverage: number; maxDepthConsumptionBps: number;
@@ -151,8 +153,8 @@ export type PerplRun = {
   settlement?: Record<string, unknown> | null;
   events?: PerplEvent[];
   optimizer?: {
-    version: string; status: string; cycleCount: number; cycleLimit: number; winStreak: number;
-    targetWinStreak: number; minimumPositivePnlUnits: string; positiveCycles: number;
+    version: string; profile: string; stopCondition: string; status: string; cycleCount: number; cycleLimit: number;
+    winStreak: number; targetWinStreak: number | null; minimumPositivePnlUnits: string; positiveCycles: number;
     params: Record<string, number>; scanner?: { cadenceMs: number; consecutiveNoProposal: number;
       totalScans: number; totalProposals: number; lastProposal?: Record<string, unknown> | null;
       lastAudit?: Record<string, unknown> | null } | null; activeCycle?: Record<string, unknown> | null;

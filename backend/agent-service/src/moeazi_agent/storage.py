@@ -10,8 +10,34 @@ from .evidence_lifecycle_locking import lock_lifecycle_artifacts
 
 
 class AnalysisRepository:
+    _worker_engine: AsyncEngine | None = None
+    _worker_dsn: str | None = None
+
+    @classmethod
+    def create_worker_engine(cls, dsn: str) -> AsyncEngine:
+        return create_async_engine(
+            dsn, pool_pre_ping=True, pool_size=10, max_overflow=0, pool_timeout=30,
+        )
+
+    @classmethod
+    def install_worker_engine(cls, dsn: str, engine: AsyncEngine) -> None:
+        if cls._worker_engine is not None:
+            raise RuntimeError("A shared worker database engine is already installed")
+        cls._worker_dsn = dsn
+        cls._worker_engine = engine
+
+    @classmethod
+    def release_worker_engine(cls, engine: AsyncEngine) -> None:
+        if cls._worker_engine is engine:
+            cls._worker_dsn = None
+            cls._worker_engine = None
+
     def __init__(self, dsn: str):
-        self.engine: AsyncEngine = create_async_engine(dsn, pool_pre_ping=True)
+        worker_engine = type(self)._worker_engine
+        if worker_engine is not None and type(self)._worker_dsn == dsn:
+            self.engine = worker_engine
+        else:
+            self.engine = create_async_engine(dsn, pool_pre_ping=True)
 
     async def save_evidence(self, item) -> None:
         raise RuntimeError(

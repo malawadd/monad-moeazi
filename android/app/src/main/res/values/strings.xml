@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Moeazi Monad</string>
+    <string name="asset_statements" translatable="false">[{\"include\":\"https://moeazi-monad.kiyan.finance/.well-known/assetlinks.json\"}]</string>
 </resources>

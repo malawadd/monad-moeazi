@@ -115,6 +115,7 @@ import type * as monadPerpWorker from "../monadPerpWorker.js";
 import type * as monadQuotes from "../monadQuotes.js";
 import type * as monadSchema from "../monadSchema.js";
 import type * as monadVenueActions from "../monadVenueActions.js";
+import type * as monadVenueOptimizer from "../monadVenueOptimizer.js";
 import type * as monadVenueOrders from "../monadVenueOrders.js";
 import type * as monadVenueRuns from "../monadVenueRuns.js";
 import type * as monadVenueScenarios from "../monadVenueScenarios.js";
@@ -263,6 +264,7 @@ declare const fullApi: ApiFromModules<{
   monadQuotes: typeof monadQuotes;
   monadSchema: typeof monadSchema;
   monadVenueActions: typeof monadVenueActions;
+  monadVenueOptimizer: typeof monadVenueOptimizer;
   monadVenueOrders: typeof monadVenueOrders;
   monadVenueRuns: typeof monadVenueRuns;
   monadVenueScenarios: typeof monadVenueScenarios;

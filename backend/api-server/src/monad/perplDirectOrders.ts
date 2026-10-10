@@ -13,6 +13,13 @@ export const PERPL_DIRECT_EXEC_ABI = [
   "function execOrder((uint256 orderDescId,uint256 perpId,uint8 orderType,uint256 orderId,uint256 pricePNS,uint256 lotLNS,uint256 expiryBlock,bool postOnly,bool fillOrKill,bool immediateOrCancel,uint256 maxMatches,uint256 leverageHdths,uint256 lastExecutionBlock,uint256 amountCNS,uint256 maxNegPnlCollatBPS)) returns ((uint256 perpId,uint256 orderId))",
 ];
 
+export function classifyDirectOrderOutcome(input: { requestFound: boolean; changed: boolean; fillCount: number; kind: string }): VenueOrderPhase {
+  if (input.requestFound && input.changed) return "finalized";
+  if (input.requestFound && !input.changed && input.fillCount === 0
+    && ["market_entry", "close_position", "reduce_size"].includes(input.kind)) return "no_fill";
+  return "uncertain";
+}
+
 // Exchange OrderDescEnum is zero-based; Perpl's HTTP OrderType is one-based.
 const types: Record<string, number> = { market_entry_long: 0, market_entry_short: 1,
   limit_entry_long: 0, limit_entry_short: 1, close_position_long: 2, close_position_short: 3,
@@ -137,16 +144,17 @@ export async function reconcileDirectOrder(provider: any, run: any, order: any) 
     : ["close_position", "reduce_size"].includes(action.kind) ? filled && after < before
     : action.kind === "cancel_limit" ? account.orders.length < Number(action.preOrderLockCount ?? 0)
     : action.kind === "amend_limit" ? account.orders.length > 0 : action.kind === "add_margin" ? account.balanceUnits !== action.preAccountBalanceUnits : false;
-  const phase: VenueOrderPhase = request && changed ? "finalized" : "uncertain";
+  const phase = classifyDirectOrderOutcome({ requestFound: Boolean(request), changed, fillCount: decoded.fills.length, kind: action.kind });
+  const verifiedNoFill = phase === "no_fill";
   await operatorMutation("monadVenueOrders", "updateOrder", { orderId: order.orderId, status: phase,
     txHash: order.txHash, blockNumber: state.receipt?.blockNumber,
     rawResponseJson: JSON.stringify({ transport: "direct", receiptStatus: state.receipt?.status,
       beforePositionSize: before.toString(), afterPositionSize: after.toString(), finalizedAccountBlock: account.blockNumber,
-      exchangeRequest: request ?? null, feeUnits: decoded.feeUnits,
+      exchangeRequest: request ?? null, feeUnits: decoded.feeUnits, noFill: verifiedNoFill,
       operatorGasWei: (BigInt(state.receipt?.gasUsed ?? 0) * BigInt(state.receipt?.gasPrice ?? 0)).toString() }),
     fillsJson: JSON.stringify(decoded.fills),
     ...(request?.orderId ? { orderIdAtVenue: String(request.orderId) } : {}),
-    ...(changed ? {} : { errorCode: "perpl_direct_no_verified_position_change" }) });
+    ...(changed ? {} : { errorCode: verifiedNoFill ? "perpl_direct_no_fill" : "perpl_direct_no_verified_position_change" }) });
   return { phase, requestId: order.requestId, orderId: order.orderId, txHash: order.txHash,
     filled, feeUnits: decoded.feeUnits, account, venueOrderId: request?.orderId };
 }

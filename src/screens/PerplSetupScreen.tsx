@@ -27,9 +27,12 @@ export function PerplSetupScreen() {
     try {
       const next = findPerplVenue((await perplApi.venues()).venues);
       setVenue(next);
-      if (next.limits?.minDurationSeconds) setDurationMinutes(String(Math.ceil(next.limits.minDurationSeconds / 60)));
-      if (next.limits?.minFundingUnits) setAmount(formatMonadUnits(next.limits.minFundingUnits, 6));
-      else if (next.limits?.minAccountOpenUnits) setAmount(formatMonadUnits(next.limits.minAccountOpenUnits, 6));
+      if (next.venueId === 'perpl-direct-testnet-v1') { setAmount('100'); setDurationMinutes('720'); }
+      else {
+        if (next.limits?.minDurationSeconds) setDurationMinutes(String(Math.ceil(next.limits.minDurationSeconds / 60)));
+        if (next.limits?.minFundingUnits) setAmount(formatMonadUnits(next.limits.minFundingUnits, 6));
+        else if (next.limits?.minAccountOpenUnits) setAmount(formatMonadUnits(next.limits.minAccountOpenUnits, 6));
+      }
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Perpl setup limits could not be loaded.'); }
   }, []);
   useFocusEffect(useCallback(() => { void loadVenue(); }, [loadVenue]));
@@ -41,6 +44,8 @@ export function PerplSetupScreen() {
       throw new Error('The service did not return live Perpl funding and duration limits.');
     }
     const amountUnits = parseMonadAmount(amount, venue.collateral.decimals);
+    const directOptimizer = venue.venueId === 'perpl-direct-testnet-v1';
+    if (directOptimizer && amountUnits !== '100000000') throw new Error('The direct optimizer review is fixed at 100 AUSD.');
     if (BigInt(amountUnits) < BigInt(minimum)) throw new Error(`Perpl requires at least ${formatMonadUnits(minimum, venue.collateral.decimals)} AUSD.`);
     if (venue.limits.maxFundingUnits && BigInt(amountUnits) > BigInt(venue.limits.maxFundingUnits)) {
       throw new Error(`Perpl allows at most ${formatMonadUnits(venue.limits.maxFundingUnits, venue.collateral.decimals)} AUSD for this setup.`);
@@ -48,6 +53,7 @@ export function PerplSetupScreen() {
     const minutes = Number(durationMinutes.trim());
     if (!Number.isSafeInteger(minutes) || minutes < 1) throw new Error('Enter a whole number of minutes for the run duration.');
     const durationSeconds = minutes * 60;
+    if (directOptimizer && durationSeconds !== 43_200) throw new Error('The direct optimizer review is fixed at 12 hours.');
     if (durationSeconds < venue.limits.minDurationSeconds || durationSeconds > venue.limits.maxDurationSeconds) {
       throw new Error(`Choose a duration from ${Math.ceil(venue.limits.minDurationSeconds / 60)} to ${Math.floor(venue.limits.maxDurationSeconds / 60)} minutes.`);
     }
@@ -93,6 +99,7 @@ export function PerplSetupScreen() {
 
   const lowerBound = venue?.limits?.minDurationSeconds;
   const upperBound = venue?.limits?.maxDurationSeconds;
+  const directOptimizer = venue?.venueId === 'perpl-direct-testnet-v1';
   return <Screen onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perpl · AUSD Testnet setup" title="Choose amount and duration" copy="One Mera unlock signs the exact AUSD funding transaction and Perpl mandate. Per-order limits and market selection come from the prepared review." />
     {error ? <Notice live tone="rose" title="Perpl setup could not continue" message={error} actionLabel={!prepared && !uncertain ? 'Retry context' : undefined} onAction={() => { void loadVenue(); }} /> : null}
@@ -101,8 +108,10 @@ export function PerplSetupScreen() {
     {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>The service may still be reconciling your signed setup. Check the run and Activity before preparing another enrollment.</Text><Button label="Check Perpl status" onPress={() => navigation.navigate('PerplStatus')} /></Card> : null}
     {!prepared && !uncertain && venue?.enabled ? <Card>
       <Text style={s.strong}>Live AUSD setup</Text>
-      <Field label="AUSD funding amount" value={amount} onChangeText={setAmount} placeholder="100" keyboardType="decimal-pad" />
-      <Field label="Duration in minutes" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="60" keyboardType="number-pad" />
+      {directOptimizer ? <><DataRow label="Funding amount" value="100 AUSD · fixed for this experiment" /><DataRow label="Run duration" value="12 hours · fixed for this experiment" /></> : <>
+        <Field label="AUSD funding amount" value={amount} onChangeText={setAmount} placeholder="100" keyboardType="decimal-pad" />
+        <Field label="Duration in minutes" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="60" keyboardType="number-pad" />
+      </>}
       {venue.collateral ? <DataRow label="AUSD token" value={venue.collateral.address} /> : null}
       {venue.limits?.minFundingUnits || venue.limits?.minAccountOpenUnits ? <DataRow label="Minimum funding" value={`${formatMonadUnits(venue.limits.minFundingUnits ?? venue.limits.minAccountOpenUnits!, 6)} AUSD`} /> : null}
       {venue.limits?.backendMaxMarketSlippageBps ? <DataRow label="Backend market-order slippage cap" value={`${venue.limits.backendMaxMarketSlippageBps} bps`} /> : null}
@@ -136,6 +145,14 @@ export function PerplSetupScreen() {
         <DataRow label="Maximum leverage" value={`${prepared.maxLeverage}×`} />
         <DataRow label="Market-order slippage cap" value={`${prepared.maxSlippageBps} bps (${(prepared.maxSlippageBps / 100).toFixed(2)}%)`} />
         <Text style={s.body}>This cap is enforced by the Moeazi backend before market orders are sent; the Perpl contract does not enforce slippage. A market can impose a lower cap.</Text>
+        {prepared.optimizerReview ? <>
+          <DataRow label="Automatic market detection" value={`Across all eligible markets even with a position open; every ${prepared.optimizerReview.marketScanIntervalMs / 60_000} minutes. Three scans without a proposal trigger a scanner review, not an automatic trade or rule change. A proposal during an open position is recorded and deferred.`} />
+          <DataRow label="Cycle limit and success target" value={`Up to ${prepared.optimizerReview.maxCycles} completed cycles; stop entries after ${prepared.optimizerReview.targetWinStreak} consecutive cycles each netting at least ${formatMonadUnits(prepared.optimizerReview.minimumPositivePnlUnits, prepared.collateral.decimals)} AUSD`} />
+          <DataRow label="Normal hold and exit checks" value={`${prepared.optimizerReview.cycleHoldMinMs / 60_000}–${prepared.optimizerReview.cycleHoldMaxMs / 60_000} minutes; executable close checks every minute`} />
+          <DataRow label="Backend-enforced sizing" value={`≤${formatMonadUnits(prepared.optimizerReview.maxNotionalUnits, prepared.collateral.decimals)} AUSD notional · ≤${formatMonadUnits(prepared.optimizerReview.maxMarginUnits, prepared.collateral.decimals)} AUSD margin · ≤${prepared.optimizerReview.maxDepthConsumptionBps / 100}% displayed depth`} />
+          <DataRow label="Leverage and risk budget" value={`1×–${Math.min(prepared.maxLeverage, prepared.optimizerReview.maxLeverage)}×, subject to each live market and signed mandate · planned loss ≤${formatMonadUnits(prepared.optimizerReview.plannedLossUnits, prepared.collateral.decimals)} AUSD`} />
+          <Text style={s.body}>The strategy skips markets that fail its movement, trend, book freshness, fee, or depth checks. After 10 minutes it may exit on net profit or a trailing giveback; it exits earlier on the risk limit, owner stop, or run expiry. Operator MON gas is recorded separately from AUSD PnL.</Text>
+        </> : null}
         <DataRow label="Operator permissions" value={`${prepared.operatorPermission.scope}; withdrawals ${prepared.operatorPermission.withdrawals ? 'allowed' : 'disabled'}`} />
         <DataRow label="Operator address" value={prepared.operatorPermission.address} />
         <DataRow label="Per-order caps" value={`Enforced by ${prepared.operatorPermission.perOrderCapsEnforcedBy}`} />

@@ -43,9 +43,11 @@ export const scheduleRetry = internalMutation({ args: { runId: v.string(), tickI
     { runId: args.runId, tickId: args.tickId }); return true;
 } });
 
-export const getObservations = query({ args: { runId: v.string(), limit: v.optional(v.number()) }, handler: async (ctx, args) => {
-  await requireMonadOperator(ctx); return await ctx.db.query("monadVenueObservations").withIndex("by_run_time", (q: any) => q.eq("runId", args.runId))
-    .order("desc").take(Math.max(3, Math.min(240, Math.floor(args.limit ?? 120))));
+export const getObservations = query({ args: { runId: v.string(), marketId: v.optional(v.number()), limit: v.optional(v.number()) }, handler: async (ctx, args) => {
+  await requireMonadOperator(ctx); const limit = Math.max(3, Math.min(240, Math.floor(args.limit ?? 120)));
+  if (Number.isSafeInteger(args.marketId)) return await ctx.db.query("monadVenueObservations").withIndex("by_run_market_time", (q: any) =>
+    q.eq("runId", args.runId).eq("marketId", args.marketId)).order("desc").take(limit);
+  return await ctx.db.query("monadVenueObservations").withIndex("by_run_time", (q: any) => q.eq("runId", args.runId)).order("desc").take(limit);
 } });
 
 export const recordObservations = mutation({ args: { runId: v.string(), snapshots: v.array(v.any()) }, handler: async (ctx, args) => {

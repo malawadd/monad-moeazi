@@ -8,6 +8,7 @@ import {validatePerplRunOwner} from '../services/perplValidation';
 import {useApp} from '../state/AppContext';
 import type {PerplEvent, PerplOrder, PerplRun, PerplRunHistoryPage} from '../types/perpl';
 import {screenStyles as s} from '../theme/screenStyles';
+import {PerplOptimizerCard} from '../components/PerplOptimizerCard';
 
 export function PerplHistoryScreen() {
   const navigation = useNavigation<any>();
@@ -39,7 +40,7 @@ export function PerplHistoryScreen() {
       const next = await perplApi.runHistory(runId, 50, page.nextCursor);
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
       validatePerplRunOwner(next.run, ownerAddress);
-      setPage(previous => previous ? {...next, events: [...previous.events, ...next.events], orders: [...previous.orders, ...next.orders], observations: [...previous.observations, ...next.observations]} : next);
+      setPage(previous => previous ? {...next, events: [...previous.events, ...next.events], orders: [...previous.orders, ...next.orders], observations: [...previous.observations, ...next.observations], cycles: next.cycles ?? previous.cycles, journal: next.journal ?? previous.journal} : next);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'More Perpl events could not be loaded.'); }
     finally { setLoadingMore(false); }
   }
@@ -50,6 +51,7 @@ export function PerplHistoryScreen() {
     {loading && !page ? <LoadingBlock label="Loading Perpl run history" lines={3} /> : null}
     {page ? <>
       <RunSummary run={page.run} />
+      <PerplOptimizerCard run={{...page.run, cycles: page.cycles, journal: page.journal}} />
       {page.events.length ? <Card><Text style={s.strong}>Perpl cycle events</Text>{page.events.map((event, index) => <EventCard key={String(event.id ?? event.eventId ?? `${event.timestamp}:${index}`)} event={event} />)}</Card>
         : <Card><Text style={s.body}>No Perpl events have been recorded for this run yet.</Text></Card>}
       {page.orders.length ? <Card><Text style={s.strong}>Order records</Text>{page.orders.map((order, index) => <OrderCard key={String(order.orderId ?? `${order.marketId}:${index}`)} order={order} />)}</Card> : null}

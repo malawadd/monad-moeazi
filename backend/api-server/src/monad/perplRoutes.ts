@@ -13,6 +13,8 @@ import { AUSD_ABI, PERPL_DA_ABI, PERPL_STRATEGY_VAULT_ABI, PERPL_STRATEGY_FACTOR
   buildAusdFundingTransaction, buildOperatorConsent, buildPerplMandate, openPerplStrategy, perplMandateHash } from "./perplContracts.js";
 import { operatorWallet } from "./vaultTrades.js";
 import { perplMobileTransaction } from "./perplMobileTransaction.js";
+import { createPerplOptimizerState, perplOptimizerReview, PERPL_OPTIMIZER_VERSION } from "./perplOptimizerConfig.js";
+import { allOpenPerplMarketIds } from "./perplMarketSelection.js";
 
 const activeStatuses = ["prepared", "activation_pending", "active", "stopping", "settling", "uncertain", "incomplete_settlement"];
 function validKey(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z0-9._:-]{8,160}$/.test(value); }
@@ -81,6 +83,9 @@ async function prepare(context: any) {
     if (body.durationSeconds < live.limits.minDurationSeconds || body.durationSeconds > live.limits.maxDurationSeconds) {
       throw new MonadApiError("Perpl run duration is outside the allowed policy range.", 400, "perpl_duration_limits");
     }
+    if (direct && (amount !== 100_000_000n || body.durationSeconds !== 43_200)) {
+      throw new MonadApiError("The reviewed direct optimizer run is fixed at 100 AUSD for 12 hours.", 400, "perpl_optimizer_terms_fixed");
+    }
     const vaultAddress = getAddress(await factory.predictVault(auth.ownerAddress));
     const [currentVault, nonce, accountAddress, runStatus] = await Promise.all([factory.vaultFor(auth.ownerAddress),
       factory.mandateNonce(auth.ownerAddress), factory.delegatedAccount(auth.ownerAddress), factory.runStatus(auth.ownerAddress)]);
@@ -96,9 +101,12 @@ async function prepare(context: any) {
     }
     const minFunding = BigInt(accountId > 0 ? live.limits.minDepositUnits : live.limits.minAccountOpenUnits);
     if (amount < minFunding) throw new MonadApiError(`Perpl requires at least ${accountId > 0 ? "the live deposit minimum" : "the live account-opening minimum"} AUSD.`, 400, "perpl_funding_below_minimum");
-    const maxLeverage = Math.min(3, live.limits.maxLeverage); const maxPositionExposure = amount * BigInt(maxLeverage);
-    const marketIds = live.markets.filter((market: any) => market.isOpen).slice(0, 16).map((market: any) => market.id);
-    if (!marketIds.length) throw new MonadApiError("Perpl has no currently open markets for enrollment.", 503, "perpl_markets_unavailable");
+    const marketIds = allOpenPerplMarketIds(live.markets);
+    const optimizerStateJson = direct ? JSON.stringify(createPerplOptimizerState()) : undefined;
+    const liveMarketLeverage = Math.max(...live.markets.filter((market: any) => marketIds.includes(market.id)).map((market: any) => market.maxLeverage));
+    const maxLeverage = Math.min(direct ? 4 : 3, direct ? liveMarketLeverage : live.limits.maxLeverage);
+    if (maxLeverage < 1) throw new MonadApiError("No eligible Perpl market supports the reviewed leverage bound.", 503, "perpl_optimizer_leverage_unavailable");
+    const maxPositionExposure = amount * BigInt(maxLeverage);
     const enrollmentReview = await preparePerplVenueEnrollment({ ownerAddress: auth.ownerAddress,
       terms: { amountUnits: amount.toString(), durationSeconds: body.durationSeconds, marketIds } });
     const now = Math.floor(Date.now() / 1000); const setupDeadline = now + 240;
@@ -121,6 +129,8 @@ async function prepare(context: any) {
       mandateTypedDataJson: JSON.stringify(mandateTypedData), mandateHash: typedHash,
       operatorSignature: operatorConsent.signature, operatorDeadline: operatorConsent.deadline,
       fundingTransactionJson: JSON.stringify(funding.transaction), ownerAusdBeforeUnits: funding.balanceBeforeUnits, policyVersion: 2,
+      ...(delegatedAccountAddress ? { delegatedAccountAddress, accountId } : {}),
+      ...(optimizerStateJson ? { optimizerStateJson } : {}),
     });
     return context.json({ runId: saved.runId, venueId: body.venueId, chainId: PERPL_CHAIN_ID,
       ownerAddress: auth.ownerAddress, vaultAddress, ...(delegatedAccountAddress ? { delegatedAccountAddress, accountId } : {}),
@@ -131,6 +141,8 @@ async function prepare(context: any) {
         backendMaxMarketSlippageBps: perplMaxSlippageBps() }, maxSlippageBps: perplMaxSlippageBps(),
       operatorPermission: { address: operator.address, scope: "trade", withdrawals: false,
         perOrderCapsEnforcedBy: "Moeazi backend; Perpl contracts do not enforce per-order caps" },
+      ...(direct ? { optimizerReview: { ...perplOptimizerReview(), version: PERPL_OPTIMIZER_VERSION,
+        amountUnits: amount.toString(), target: "two_consecutive_cycles_at_least_0.01_AUSD" } } : {}),
       fundingTransaction: perplMobileTransaction(saved.fundingTransaction ?? funding.transaction),
       mandateTypedData: saved.mandateTypedData ?? mandateTypedData, walletBalanceBeforeUnits: saved.ownerAusdBeforeUnits,
       preparedExpiresAt: saved.preparedExpiresAt }, 201);

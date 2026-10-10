@@ -7,6 +7,12 @@ is evidence, not a price or PnL target: Perpl prices and depth cannot be control
 Orders can lose AUSD. The operator pays MON gas; the Mera wallet needs MON for
 funding and, if used, owner stop. No Perpl API key or Origin approval is needed.
 
+> This is the historical October 7 acceptance workflow. Fresh direct runs use
+> the [deterministic optimizer runbook](REPEAT_PERPL_OPTIMIZER.md), with a fixed
+> 100 AUSD / 12-hour review and automatic market selection. Manual scenarios
+> are rejected for optimizer runs; do not follow the scenario steps below for
+> a fresh optimizer enrollment.
+
 Use only this repository and its `moeazi-monad` local stack. Keep keys in the
 ignored `backend/.data` directory. The steps below broadcast funded Testnet
 transactions; do them only with a deliberately capped amount.

@@ -1,4 +1,4 @@
-export type VenueOrderPhase = "accepted_for_forwarding" | "submitted" | "executed" | "partially_filled" | "filled" | "finalized" | "canceled" | "failed" | "uncertain";
+export type VenueOrderPhase = "accepted_for_forwarding" | "submitted" | "executed" | "partially_filled" | "filled" | "finalized" | "no_fill" | "canceled" | "failed" | "uncertain";
 export type VenueCapability = "market_data" | "order_book" | "account_read" | "history" | "market_orders" | "limit_orders" | "linked_exits" | "margin_changes" | "owner_withdrawal";
 export type VenueLimits = {
   collateralSymbol: string;
@@ -26,6 +26,9 @@ export type VenueMarket = {
   maxMarketSlippageBps: number;
   makerFeeMicros: number;
   takerFeeMicros: number;
+  fundingRateMicros?: number;
+  fundingIntervalSeconds?: number;
+  fundingObservedAt?: number;
   orderTtlBlocks: number;
   price: { oracle: number; mark: number; last: number; mid: number; bid: number; ask: number; blockNumber: number; observedAt: number } | null;
   book?: { blockNumber: number; observedAt: number; bids: Array<{ price: number; size: number }>; asks: Array<{ price: number; size: number }> };
@@ -42,7 +45,7 @@ export type VenueAccountSnapshot = {
   observedAt: number;
   blockNumber: number;
 };
-export type VenueAction = { kind: string; marketId: number; accountId: number; side?: "long" | "short"; size: number; price?: number; leverage: number; flags?: number; validThroughBlock?: number; orderId?: number; linkedRequestId?: number; linkedPositionId?: number; triggerPrice?: number; triggerCondition?: number; collateralAmount?: string; requestId?: number; maxCollateralUnits?: string; maxExposureUnits?: string; maxLeverage?: number; maxSlippageBps?: number; allowedMarketIds?: number[]; activePositionCount?: number; expiresAt?: number };
+export type VenueAction = { kind: string; marketId: number; accountId: number; side?: "long" | "short"; size: number; price?: number; leverage: number; flags?: number; validThroughBlock?: number; orderId?: number; linkedRequestId?: number; linkedPositionId?: number; triggerPrice?: number; triggerCondition?: number; collateralAmount?: string; requestId?: number; maxCollateralUnits?: string; maxExposureUnits?: string; maxLeverage?: number; maxSlippageBps?: number; allowedMarketIds?: number[]; activePositionCount?: number; expiresAt?: number; optimizerMetadata?: Record<string, unknown> };
 export type VenueOrderResult = { requestId: number; phase: VenueOrderPhase; rawResponse: unknown };
 export type VenueReconciliation = { phase: VenueOrderPhase; requestId: number; order: unknown | null; fills: unknown[]; events: unknown[]; rawResponse: unknown };
 

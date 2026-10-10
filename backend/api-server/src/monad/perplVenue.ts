@@ -45,17 +45,13 @@ export class PerplTestnetVenue implements PerplVenueAdapter {
     const markets = await this.readMarkets(marketIds, true);
     const latest = Math.max(...markets.flatMap((market) => [market.price?.blockNumber ?? 0, market.book?.blockNumber ?? 0]));
     const deadline = Date.now() + 20_000;
+    let checkpoint = 0;
     while (Date.now() <= deadline) {
-      const checkpoint = await this.finalizedBlock();
-      if (checkpoint >= latest) {
-        const stale = markets.find((market) => !market.price || !market.book
-          || Date.now() - market.price.observedAt > 60_000 || Date.now() - market.book.observedAt > 60_000);
-        if (stale) throw new PerplApiError("Captured Perpl market snapshot became stale while waiting for finality.", 503, "perpl_snapshot_stale", true);
-        return markets;
-      }
+      checkpoint = await this.finalizedBlock();
+      if (checkpoint >= latest) break;
       await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
-    throw new PerplApiError("Perpl market or book snapshot did not reach Monad finality in time.", 503, "perpl_snapshot_unfinalized", true);
+    return screenFinalizedMarketSnapshots(markets, checkpoint);
   }
 
   async readAccount(accountId: number, credentials?: PerplCredentials): Promise<VenueAccountSnapshot> {
@@ -175,6 +171,20 @@ export class PerplTestnetVenue implements PerplVenueAdapter {
       return receipt.status === 1 ? "finalized" : "failed";
     } finally { await provider.destroy(); }
   }
+}
+
+export function screenFinalizedMarketSnapshots(markets: VenueMarket[], checkpoint: number, now = Date.now()): VenueMarket[] {
+  const available = markets.map((market) => {
+    const price = market.price; const book = market.book;
+    const finalized = price && book && price.blockNumber <= checkpoint && book.blockNumber <= checkpoint;
+    const fresh = price && book && now - price.observedAt <= 60_000 && now - book.observedAt <= 60_000
+      && price.observedAt <= now + 5_000 && book.observedAt <= now + 5_000;
+    return finalized && fresh ? market : { ...market, price: null, book: undefined };
+  });
+  if (available.length === 1 && !available[0].price) {
+    throw new PerplApiError("Requested Perpl market snapshot is stale or unfinalized.", 503, "perpl_snapshot_stale", true);
+  }
+  return available;
 }
 
 function digitString(value: any, label: string) {

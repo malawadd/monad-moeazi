@@ -19,6 +19,7 @@ export const createScenario = mutation({ args: { scenarioId: v.string(), idempot
   actionsJson: v.string(), intervalSeconds: v.number() }, handler: async (ctx, args) => {
   await requireMonadOperator(ctx); const row = await run(ctx, args.runId); let actions: any;
   try { actions = JSON.parse(args.actionsJson); } catch { throw new Error("Perpl scenario actions are invalid."); }
+  if (row?.optimizerStateJson) throw new Error("Deterministic optimizer runs do not accept competing scenarios.");
   if (!row || !["perpl-testnet-v1", "perpl-direct-testnet-v1"].includes(row.venueId) || row.status !== "active" || args.actionsJson.length > 30_000
     || !Array.isArray(actions) || actions.length < 1 || actions.length > 30 || args.intervalSeconds < 15 || args.intervalSeconds > 120
     || !/^[A-Za-z0-9._:-]{8,160}$/.test(args.idempotencyKey)) throw new Error("Perpl scenario requires an active run and 1–30 valid actions.");

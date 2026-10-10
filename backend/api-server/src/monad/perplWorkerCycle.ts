@@ -143,21 +143,31 @@ export async function completedVaultTick(provider: any, row: any): Promise<TickR
 }
 
 export async function readObservations(row: any, account: VenueAccountSnapshot, forced: boolean) {
-  if (forced) return { histories: {} as Record<number, number[]>, snapshots: [] };
+  if (forced) return { histories: {} as Record<number, number[]>, samples: {} as Record<number, any[]>, snapshots: [] };
   const markets = await readPerplVenueMarkets({ marketIds: safeIds(row.marketIdsJson), finalized: true });
-  const snapshots = markets.map((market) => ({ marketId: market.id, blockNumber: market.price!.blockNumber,
-    observedAt: market.price!.observedAt, finalized: true, snapshotJson: JSON.stringify(market.price) }));
+  const snapshots = markets.filter((market) => Boolean(market.price)).map((market) => ({ marketId: market.id,
+    blockNumber: market.price!.blockNumber, observedAt: market.price!.observedAt, finalized: true,
+    snapshotJson: JSON.stringify(market.price) }));
   await operatorMutation("monadVenueWorker", "recordObservations", { runId: row.runId, snapshots });
-  const prior: any[] = await operatorQuery("monadVenueWorker", "getObservations", { runId: row.runId, limit: 180 });
-  const histories: Record<number, number[]> = {};
+  const histories: Record<number, number[]> = {}; const samples: Record<number, any[]> = {};
   for (const market of markets) {
+    const prior: any[] = await operatorQuery("monadVenueWorker", "getObservations", { runId: row.runId, marketId: market.id, limit: 240 });
     const unique = new Map<number, any>();
     for (const item of prior.filter((candidate) => candidate.marketId === market.id && candidate.finalized)) unique.set(item.blockNumber, item);
-    histories[market.id] = [...unique.values()].sort((a, b) => a.observedAt - b.observedAt).map((item) => {
-      try { return Number(JSON.parse(item.snapshotJson).last); } catch { return 0; }
-    }).filter((value) => Number.isSafeInteger(value) && value > 0).slice(-3);
+    const sorted = [...unique.values()].sort((a, b) => a.observedAt - b.observedAt);
+    samples[market.id] = sorted.map((item) => {
+      try { const price = JSON.parse(item.snapshotJson); return { observedAt: item.observedAt, blockNumber: item.blockNumber, close: optimizerObservationClose(price) }; }
+      catch { return null; }
+    }).filter((item) => item && Number.isSafeInteger(item.close) && item.close > 0).slice(-240);
+    histories[market.id] = samples[market.id].map((item) => item.close).slice(-3);
   }
-  void account; return { histories, snapshots };
+  void account; return { histories, samples, snapshots };
+}
+
+export function optimizerObservationClose(price: { mid?: unknown; bid?: unknown; ask?: unknown }): number {
+  const mid = Number(price.mid); const bid = Number(price.bid); const ask = Number(price.ask);
+  if (![mid, bid, ask].every((value) => Number.isSafeInteger(value) && value > 0) || bid > mid || mid > ask) return 0;
+  return mid;
 }
 
 export function stateResult(row: any, account: VenueAccountSnapshot, tickId: string, status: string, phase: string, kind: string, details?: unknown, observation?: any): TickResult {

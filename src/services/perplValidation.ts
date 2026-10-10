@@ -56,6 +56,15 @@ export function validatePreparedPerpl(review: PerplPreparedEnrollment, expected:
   if (!review.markets.length || review.markets.some(market => !expected.venue.markets?.some(item => item.id === market.id))) {
     throw new Error('The prepared review includes a market that is absent from live Perpl context.');
   }
+  const optimizer = review.optimizerReview;
+  if (review.venueId === PERPL_DIRECT_VENUE_ID && (!optimizer || optimizer.version !== 'perpl-deterministic-v2' || review.amountUnits !== '100000000'
+      || review.durationSeconds !== 43_200 || optimizer.maxCycles !== 15 || optimizer.targetWinStreak !== 2
+      || optimizer.minimumPositivePnlUnits !== '10000' || optimizer.maxNotionalUnits !== '30000000'
+      || optimizer.maxMarginUnits !== '25000000' || optimizer.plannedLossUnits !== '150000'
+      || optimizer.maxDepthConsumptionBps !== 2_000)) {
+    throw new Error('The fresh direct Perpl review does not match the fixed deterministic optimizer policy.');
+  }
+  const optimizerRun = review.venueId === PERPL_DIRECT_VENUE_ID && Boolean(optimizer);
   const backendSlippageCap = expected.venue.limits?.backendMaxMarketSlippageBps;
   if (!Number.isSafeInteger(review.maxSlippageBps) || review.maxSlippageBps <= 0
       || !Number.isSafeInteger(backendSlippageCap) || review.maxSlippageBps > (backendSlippageCap ?? 0)) {
@@ -70,7 +79,7 @@ export function validatePreparedPerpl(review: PerplPreparedEnrollment, expected:
     effectivePerplMarketSlippageBps(review.maxSlippageBps, market.maxMarketSlippageBps!);
   }
   if (!/^\d+$/.test(review.maxPositionExposureUnits) || BigInt(review.maxPositionExposureUnits) <= 0n
-      || !Number.isFinite(review.maxLeverage) || review.maxLeverage < 1
+      || !Number.isFinite(review.maxLeverage) || review.maxLeverage < 1 || review.maxLeverage > (optimizerRun ? 4 : 3)
       || review.operatorPermission.withdrawals !== false || !ADDRESS.test(review.operatorPermission.address)
       || review.operatorPermission.scope !== 'trade') {
     throw new Error('The prepared Perpl review has invalid trading limits or operator permissions.');

@@ -25,6 +25,7 @@ export const monadVenueTables = {
     ownerAusdBeforeUnits: v.optional(v.string()), lastTickId: v.optional(v.string()),
     status: v.string(), phase: v.optional(v.string()), scenarioId: v.optional(v.string()), scenarioStep: v.optional(v.number()),
     balanceUnits: v.optional(v.string()), equityUnits: v.optional(v.string()), realizedPnlUnits: v.optional(v.string()),
+    optimizerStateJson: v.optional(v.string()),
     unrealizedPnlUnits: v.optional(v.string()), feesUnits: v.optional(v.string()), fundingUnits: v.optional(v.string()),
     returnedUnits: v.optional(v.string()), settlementJson: v.optional(v.string()), lastAccountBlock: v.optional(v.number()),
     lastObservedAt: v.optional(v.number()),
@@ -65,6 +66,14 @@ export const monadVenueTables = {
     observedAt: v.number(), finalized: v.boolean(), snapshotJson: v.string(), createdAt: v.number(),
   }).index("by_run_market_time", ["runId", "marketId", "observedAt"])
     .index("by_run_time", ["runId", "observedAt"]),
+
+  monadVenueOptimizerCycles: defineTable({ runId: v.string(), venueId: v.string(), ownerAddress: v.string(),
+    cycleId: v.string(), cycleNumber: v.number(), realizedPnlUnits: v.string(), cycleJson: v.string(), createdAt: v.number(),
+  }).index("by_cycleId", ["cycleId"]).index("by_run_createdAt", ["runId", "createdAt"]),
+
+  monadVenueOptimizerJournal: defineTable({ runId: v.string(), venueId: v.string(), ownerAddress: v.string(),
+    journalId: v.string(), cycleNumber: v.number(), entryJson: v.string(), createdAt: v.number(),
+  }).index("by_journalId", ["journalId"]).index("by_run_createdAt", ["runId", "createdAt"]),
 
   monadVenueRequestCounters: defineTable({ venueId: v.string(), accountId: v.number(), lastRequestId: v.number(),
     lastReconciledAt: v.optional(v.number()), updatedAt: v.number() })

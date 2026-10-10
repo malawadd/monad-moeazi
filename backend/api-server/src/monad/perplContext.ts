@@ -49,6 +49,9 @@ export async function readPerplContext(api = new PerplApiClient()): Promise<Perp
       initialMarginBps, maintenanceMarginBps: integer(config.maintenance_margin), maxLeverage,
       maxMarketSlippageBps: integer(market.order_max_market_slippage_bps),
       makerFeeMicros: integer(config.maker_fee), takerFeeMicros: integer(config.taker_fee),
+      fundingRateMicros: integer(object(config.funding).rate ?? object(market.funding).rate ?? config.funding_rate),
+      fundingIntervalSeconds: integer(object(config.funding).interval_sec ?? object(market.funding).interval_sec
+        ?? config.funding_interval_sec ?? market.funding_interval_sec),
       orderTtlBlocks: integer(market.order_ttl_blocks), price: null };
   });
   const minAccountOpenUnits = amount(instance.min_account_open_amount, "minimum account amount");
@@ -83,11 +86,25 @@ export async function readPerplMarkets(api = new PerplApiClient(), marketIds?: n
     if ([price.oracle, price.mark, price.last, price.bid, price.ask].some((value) => value <= 0)) {
       throw new PerplApiError("Perpl market returned an invalid executable price.", 503, "perpl_market_state_invalid");
     }
-    const updated: VenueMarket = { ...market, price };
+    let updated: VenueMarket = { ...market, price };
     if (!withBook) return updated;
+    const funding = await latestFunding(api, market);
+    updated = { ...updated, fundingRateMicros: funding?.rate, fundingObservedAt: funding?.observedAt };
     const book: any = await api.publicGet("/v1/market-data/" + market.id + "/book?levels=100");
     return { ...updated, book: { blockNumber: integer(book?.sn), observedAt: integer(object(book?.at).t),
       bids: (Array.isArray(book?.bid) ? book.bid : []).map((row: any) => ({ price: integer(row.p), size: integer(row.s) })),
       asks: (Array.isArray(book?.ask) ? book.ask : []).map((row: any) => ({ price: integer(row.p), size: integer(row.s) })) } };
   }));
+}
+
+async function latestFunding(api: PerplApiClient, market: VenueMarket): Promise<{rate: number; observedAt: number} | null> {
+  const now = Date.now(); const interval = Number(market.fundingIntervalSeconds ?? 0);
+  const from = now - Math.max(24 * 60 * 60_000, Number.isSafeInteger(interval) && interval > 0 ? interval * 2 * 1_000 : 0);
+  try {
+    const response: any = await api.publicGet(`/v1/market-data/${market.id}/funding/${from}-${now}`);
+    const rows = Array.isArray(response?.d) ? response.d : [];
+    const latest = rows.filter((item: any) => Number.isSafeInteger(integer(item?.rate, Number.NaN)))
+      .sort((a: any, b: any) => integer(object(b?.at).t) - integer(object(a?.at).t)).at(0);
+    return latest ? { rate: integer(latest.rate), observedAt: now } : null;
+  } catch { return null; }
 }

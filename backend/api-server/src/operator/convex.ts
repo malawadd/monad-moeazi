@@ -42,3 +42,9 @@ export async function operatorConvex() {
   await bootstrap;
   return client;
 }
+
+export async function operatorReadOnlyConvex() {
+  const client = new ConvexHttpClient(localConvexUrl());
+  client.setAuth(await signedOperatorToken());
+  return client;
+}

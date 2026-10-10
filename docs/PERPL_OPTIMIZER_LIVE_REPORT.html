@@ -1,0 +1,1585 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Perpl deterministic optimizer live report</title><style>
+body{font:16px/1.5 system-ui,sans-serif;background:#f5f3ee;color:#17211b;margin:0;padding:28px}main{max-width:1000px;margin:auto}header,section{background:white;border:1px solid #dedbd2;border-radius:14px;padding:20px;margin:0 0 16px}h1{font-size:1.5rem;margin:0 0 8px}.status{font-weight:700;color:#355b4b}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f2ed;padding:16px;border-radius:10px;font-size:12px}small{color:#555}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid #eee;padding:8px;vertical-align:top}code{overflow-wrap:anywhere}</style></head><body><main>
+<header><h1>Perpl deterministic optimizer · live report</h1><div class="status">Completed · two-win target reached</div>
+<p>Run: bd35898c-a8c4-4aa2-aa78-1c7d8101b002 · Cycles: 2/15 · Win streak: 2/2</p>
+<p>Chain state: completed · settlement_reconciled · Approved: +100.000000 AUSD · Expires: 2026-10-11T00:16:55.000Z</p>
+<p>Cumulative realized PnL: +0.137256 AUSD · Operator gas recorded: +0.172127652000000000 MON</p>
+<p>Scanner: 3 scans · 1 proposals · 1 consecutive scans without a proposal · cadence 5 minute(s). It continues while a position is open; such proposals are deferred.</p>
+<small>Regenerated from persisted Convex cycle and journal records at 2026-10-10T14:42:42.440Z. Operator MON gas is reported separately from realized AUSD PnL.</small></header>
+<section><h2>Strategy decisions</h2><p>24 recent persisted decisions shown, newest first.</p><div style="overflow-x:auto"><table><thead><tr><th>Time UTC</th><th>Decision</th><th>Market rejection reasons</th></tr></thead><tbody><tr><td>2026-10-10T14:37:14.463Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:36:05.805Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:34:57.566Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:33:48.047Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:32:40.567Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:31:31.441Z</td><td>optimizer_target_or_cycle_cap_reached</td><td>—</td></tr><tr><td>2026-10-10T14:30:13.628Z</td><td>net_take_profit_exit</td><td>undefined , ? bps; order bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14; 0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95</td></tr><tr><td>2026-10-10T14:29:02.360Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.043416 AUSD; held 9 minutes</td></tr><tr><td>2026-10-10T14:27:52.725Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.014646 AUSD; held 8 minutes</td></tr><tr><td>2026-10-10T14:26:43.562Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.014646 AUSD; held 6 minutes</td></tr><tr><td>2026-10-10T14:25:33.114Z</td><td>no_proposal</td><td>BTC: five_or_fifteen_minute_history_missing · ETH: five_minute_threshold (2 bps) · SOL: five_minute_threshold (5 bps) · MON: one_minute_confirmation_missing · ZEC: one_minute_confirmation_missing · LIT: one_minute_confirmation_missing · PUMP: one_minute_confirmation_missing · NEAR: five_minute_threshold (-12 bps)</td></tr><tr><td>2026-10-10T14:25:32.646Z</td><td>position_within_optimizer_exit_rules</td><td>Executable close estimate +0.020400 AUSD; held 5 minutes</td></tr></tbody></table></div>
+<p><small>A rejected scan is a measured decision, not an order or fill. Parameter changes begin only after a finalized entry→exit cycle. No cycle means no PnL optimization iteration has happened yet.</small></p></section>
+<section><h2>Measured cycle outcomes</h2><svg viewBox="0 0 980 180" role="img" aria-label="Observed cumulative AUSD profit and loss after each finalized cycle" style="width:100%;height:auto;background:#f4f7f4;border-radius:8px"><line x1="40" x2="940" y1="145.0" y2="145.0" stroke="#9aa99f"/><polyline points="40.0,145.0 490.0,81.3 940.0,35.0" fill="none" stroke="#227b59" stroke-width="3"/><text x="40" y="170" font-size="12">Start</text><text x="875" y="170" font-size="12">Cycle 2</text></svg><div style="overflow-x:auto"><table><thead><tr><th>Cycle</th><th>Market</th><th>Flat AUSD</th><th>Net PnL</th><th>Fees / funding</th><th>Operator gas</th><th>Finalized order / transaction</th></tr></thead><tbody><tr><td>1</td>
+    <td>PUMP · long</td>
+    <td>+100.000000 → +100.079480 AUSD</td>
+    <td>+0.079480 AUSD</td>
+    <td>+0.019220 AUSD · 0.000000 AUSD funding</td>
+    <td>+0.086074026000000000 MON</td>
+    <td><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11</code><br><code>0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c</code><br><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12</code><br><code>0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde</code></td></tr><tr><td>2</td>
+    <td>PUMP · long</td>
+    <td>+100.079480 → +100.137256 AUSD</td>
+    <td>+0.057776 AUSD</td>
+    <td>+0.011272 AUSD · 0.000000 AUSD funding</td>
+    <td>+0.086053626000000000 MON</td>
+    <td><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13</code><br><code>0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b</code><br><code>bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14</code><br><code>0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95</code></td></tr></tbody></table></div>
+<p><small>The chart uses finalized flat-account AUSD balances after Perpl fees and funding. It is measured history, not a forecast. Submitted and unfilled orders do not enter this ledger.</small></p></section>
+<section><h2>Persisted run, positions, orders, cycle records, and optimization journal</h2><pre>{
+  &quot;activePositions&quot;: [],
+  &quot;approvedAmountUnits&quot;: &quot;100000000&quot;,
+  &quot;cumulativePnlUnits&quot;: &quot;137256&quot;,
+  &quot;cycles&quot;: [
+    {
+      &quot;adaptation&quot;: {
+        &quot;changed&quot;: null,
+        &quot;classification&quot;: &quot;small_or_zero&quot;
+      },
+      &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
+      &quot;completedAt&quot;: 1791641766435,
+      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
+      &quot;cycleNumber&quot;: 1,
+      &quot;endingBalanceUnits&quot;: &quot;100079480&quot;,
+      &quot;endingFlat&quot;: true,
+      &quot;entryAt&quot;: 1791640076347,
+      &quot;entryBlockNumber&quot;: 69841022,
+      &quot;entryDecision&quot;: {
+        &quot;depthConsumptionBps&quot;: 2000,
+        &quot;direction&quot;: &quot;long&quot;,
+        &quot;estimatedEntryImpactBps&quot;: 0,
+        &quot;estimatedExitImpactBps&quot;: 0,
+        &quot;estimatedNetMoveBps&quot;: 31,
+        &quot;estimatedRoundTripCostBps&quot;: 14,
+        &quot;fifteenMinuteMoveBps&quot;: 59,
+        &quot;fiveMinuteMoveBps&quot;: 45,
+        &quot;fundingEstimateBps&quot;: 0,
+        &quot;leverage&quot;: 4,
+        &quot;marginUnits&quot;: &quot;6944445&quot;,
+        &quot;marketId&quot;: 320,
+        &quot;notionalUnits&quot;: &quot;27777777&quot;,
+        &quot;observations&quot;: {
+          &quot;first15m&quot;: {
+            &quot;blockNumber&quot;: 69838009,
+            &quot;close&quot;: 5593,
+            &quot;observedAt&quot;: 1791639157000
+          },
+          &quot;first5m&quot;: {
+            &quot;blockNumber&quot;: 69839837,
+            &quot;close&quot;: 5601,
+            &quot;observedAt&quot;: 1791639710000
+          },
+          &quot;latest1m&quot;: {
+            &quot;blockNumber&quot;: 69840986,
+            &quot;close&quot;: 5626,
+            &quot;observedAt&quot;: 1791640057000
+          },
+          &quot;prior1m&quot;: {
+            &quot;blockNumber&quot;: 69840727,
+            &quot;close&quot;: 5623,
+            &quot;observedAt&quot;: 1791639979000
+          }
+        },
+        &quot;params&quot;: {
+          &quot;executionConservatismBps&quot;: 10000,
+          &quot;momentumThresholdBps&quot;: 40
+        },
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;entryImpactBps&quot;: 0,
+            &quot;exitImpactBps&quot;: 0,
+            &quot;fifteenMinuteMoveBps&quot;: 36,
+            &quot;fiveMinuteMoveBps&quot;: 41,
+            &quot;marketId&quot;: 336,
+            &quot;netMoveBps&quot;: 29,
+            &quot;reason&quot;: &quot;accepted&quot;,
+            &quot;spreadBps&quot;: 4,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          },
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -5,
+            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 9,
+            &quot;fiveMinuteMoveBps&quot;: 15,
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: -13,
+            &quot;fiveMinuteMoveBps&quot;: -11,
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          }
+        ],
+        &quot;size&quot;: &quot;4935&quot;,
+        &quot;spreadBps&quot;: 7,
+        &quot;symbol&quot;: &quot;PUMP&quot;,
+        &quot;volatilityBps&quot;: 27
+      },
+      &quot;entryFeeUnits&quot;: &quot;9593&quot;,
+      &quot;entryFills&quot;: [
+        {
+          &quot;amountCNS&quot;: &quot;-6995086&quot;,
+          &quot;feeCNS&quot;: &quot;9593&quot;,
+          &quot;kind&quot;: &quot;taker&quot;,
+          &quot;lotLNS&quot;: &quot;4935&quot;,
+          &quot;pricePNS&quot;: &quot;5634&quot;
+        }
+      ],
+      &quot;entryImpactBps&quot;: 0,
+      &quot;entryOrderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
+      &quot;entryPosition&quot;: {
+        &quot;depositUnits&quot;: &quot;6985493&quot;,
+        &quot;entryPrice&quot;: &quot;5634&quot;,
+        &quot;size&quot;: &quot;4935&quot;
+      },
+      &quot;entryRequestId&quot;: 11,
+      &quot;entryTxHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 14,
+      &quot;exitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1679297,
+        &quot;notionalUnits&quot;: &quot;27803790&quot;,
+        &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
+      },
+      &quot;exitDecisions&quot;: [
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1679297,
+          &quot;notionalUnits&quot;: &quot;27803790&quot;
+        },
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1679297,
+          &quot;notionalUnits&quot;: &quot;27803790&quot;,
+          &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
+        }
+      ],
+      &quot;exitFillCount&quot;: 1,
+      &quot;exitFinalized&quot;: true,
+      &quot;exitPending&quot;: true,
+      &quot;exitReason&quot;: &quot;net_take_profit_exit&quot;,
+      &quot;exitTxHashes&quot;: [
+        &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+      ],
+      &quot;feesUnits&quot;: &quot;19220&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;lastExitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1679297,
+        &quot;notionalUnits&quot;: &quot;27803790&quot;
+      },
+      &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
+      &quot;leverage&quot;: 4,
+      &quot;marginUnits&quot;: &quot;6944445&quot;,
+      &quot;marketId&quot;: 320,
+      &quot;notionalUnits&quot;: &quot;27777777&quot;,
+      &quot;observationBlocks&quot;: [
+        {
+          &quot;blockNumber&quot;: 69838009,
+          &quot;observedAt&quot;: 1791639157000
+        },
+        {
+          &quot;blockNumber&quot;: 69839837,
+          &quot;observedAt&quot;: 1791639710000
+        },
+        {
+          &quot;blockNumber&quot;: 69840727,
+          &quot;observedAt&quot;: 1791639979000
+        },
+        {
+          &quot;blockNumber&quot;: 69840986,
+          &quot;observedAt&quot;: 1791640057000
+        }
+      ],
+      &quot;operatorGasWei&quot;: &quot;86074026000000000&quot;,
+      &quot;orderIds&quot;: [
+        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
+        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;
+      ],
+      &quot;orderReceipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69841022,
+          &quot;feeUnits&quot;: &quot;9593&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-6995086&quot;,
+              &quot;feeCNS&quot;: &quot;9593&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;4935&quot;,
+              &quot;pricePNS&quot;: &quot;5634&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;44820942000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
+          &quot;requestId&quot;: 11,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69846618,
+          &quot;feeUnits&quot;: &quot;9627&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;7074566&quot;,
+              &quot;feeCNS&quot;: &quot;9627&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;4935&quot;,
+              &quot;pricePNS&quot;: &quot;5654&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;41253084000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
+          &quot;requestId&quot;: 12,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+        }
+      ],
+      &quot;params&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;positiveAtTarget&quot;: true,
+      &quot;realizedPnlUnits&quot;: &quot;79480&quot;,
+      &quot;rejectedAlternatives&quot;: [
+        {
+          &quot;entryImpactBps&quot;: 0,
+          &quot;exitImpactBps&quot;: 0,
+          &quot;fifteenMinuteMoveBps&quot;: 36,
+          &quot;fiveMinuteMoveBps&quot;: 41,
+          &quot;marketId&quot;: 336,
+          &quot;netMoveBps&quot;: 29,
+          &quot;reason&quot;: &quot;accepted&quot;,
+          &quot;spreadBps&quot;: 4,
+          &quot;symbol&quot;: &quot;NEAR&quot;
+        },
+        {
+          &quot;marketId&quot;: 16,
+          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;symbol&quot;: &quot;BTC&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: -5,
+          &quot;fiveMinuteMoveBps&quot;: 2,
+          &quot;marketId&quot;: 32,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;ETH&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 9,
+          &quot;fiveMinuteMoveBps&quot;: 15,
+          &quot;marketId&quot;: 48,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;SOL&quot;
+        },
+        {
+          &quot;marketId&quot;: 64,
+          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;symbol&quot;: &quot;MON&quot;
+        },
+        {
+          &quot;marketId&quot;: 256,
+          &quot;reason&quot;: &quot;insufficient_observations&quot;,
+          &quot;symbol&quot;: &quot;ZEC&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: -13,
+          &quot;fiveMinuteMoveBps&quot;: -11,
+          &quot;marketId&quot;: 272,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;LIT&quot;
+        }
+      ],
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+      &quot;selectedMarket&quot;: {
+        &quot;id&quot;: 320,
+        &quot;symbol&quot;: &quot;PUMP&quot;
+      },
+      &quot;startedAt&quot;: 1791640065732,
+      &quot;startingBalanceUnits&quot;: &quot;100000000&quot;,
+      &quot;symbol&quot;: &quot;PUMP&quot;,
+      &quot;txHashes&quot;: [
+        &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;,
+        &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+      ],
+      &quot;winStreak&quot;: 1
+    },
+    {
+      &quot;adaptation&quot;: {
+        &quot;changed&quot;: null,
+        &quot;classification&quot;: &quot;small_or_zero&quot;
+      },
+      &quot;bestEstimatedProfitUnits&quot;: &quot;43416&quot;,
+      &quot;completedAt&quot;: 1791642622883,
+      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
+      &quot;cycleNumber&quot;: 2,
+      &quot;endingBalanceUnits&quot;: &quot;100137256&quot;,
+      &quot;endingFlat&quot;: true,
+      &quot;entryAt&quot;: 1791641983843,
+      &quot;entryBlockNumber&quot;: 69847338,
+      &quot;entryDecision&quot;: {
+        &quot;depthConsumptionBps&quot;: 2000,
+        &quot;direction&quot;: &quot;long&quot;,
+        &quot;estimatedEntryImpactBps&quot;: 0,
+        &quot;estimatedExitImpactBps&quot;: 0,
+        &quot;estimatedNetMoveBps&quot;: 10,
+        &quot;estimatedRoundTripCostBps&quot;: 42,
+        &quot;fifteenMinuteMoveBps&quot;: 66,
+        &quot;fiveMinuteMoveBps&quot;: 52,
+        &quot;fundingEstimateBps&quot;: 0,
+        &quot;leverage&quot;: 1,
+        &quot;marginUnits&quot;: &quot;16304347&quot;,
+        &quot;marketId&quot;: 320,
+        &quot;notionalUnits&quot;: &quot;16304347&quot;,
+        &quot;observations&quot;: {
+          &quot;first15m&quot;: {
+            &quot;blockNumber&quot;: 69844271,
+            &quot;close&quot;: 5619,
+            &quot;observedAt&quot;: 1791641049000
+          },
+          &quot;first5m&quot;: {
+            &quot;blockNumber&quot;: 69846320,
+            &quot;close&quot;: 5627,
+            &quot;observedAt&quot;: 1791641668000
+          },
+          &quot;latest1m&quot;: {
+            &quot;blockNumber&quot;: 69847305,
+            &quot;close&quot;: 5656,
+            &quot;observedAt&quot;: 1791641965000
+          },
+          &quot;prior1m&quot;: {
+            &quot;blockNumber&quot;: 69847087,
+            &quot;close&quot;: 5650,
+            &quot;observedAt&quot;: 1791641900000
+          }
+        },
+        &quot;params&quot;: {
+          &quot;executionConservatismBps&quot;: 10000,
+          &quot;momentumThresholdBps&quot;: 40
+        },
+        &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 4,
+            &quot;fiveMinuteMoveBps&quot;: 6,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 15,
+            &quot;fiveMinuteMoveBps&quot;: 16,
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 20,
+            &quot;fiveMinuteMoveBps&quot;: 32,
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;size&quot;: &quot;2877&quot;,
+        &quot;spreadBps&quot;: 35,
+        &quot;symbol&quot;: &quot;PUMP&quot;,
+        &quot;volatilityBps&quot;: 46
+      },
+      &quot;entryFeeUnits&quot;: &quot;5624&quot;,
+      &quot;entryFills&quot;: [
+        {
+          &quot;amountCNS&quot;: &quot;-16332599&quot;,
+          &quot;feeCNS&quot;: &quot;5624&quot;,
+          &quot;kind&quot;: &quot;taker&quot;,
+          &quot;lotLNS&quot;: &quot;2877&quot;,
+          &quot;pricePNS&quot;: &quot;5666&quot;
+        }
+      ],
+      &quot;entryImpactBps&quot;: 0,
+      &quot;entryOrderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+      &quot;entryPosition&quot;: {
+        &quot;depositUnits&quot;: &quot;16326975&quot;,
+        &quot;entryPrice&quot;: &quot;5666&quot;,
+        &quot;size&quot;: &quot;2877&quot;
+      },
+      &quot;entryRequestId&quot;: 13,
+      &quot;entryTxHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;,
+      &quot;estimatedRoundTripCostBps&quot;: 42,
+      &quot;exitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
+        &quot;closeImpactBps&quot;: 3,
+        &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 628394,
+        &quot;notionalUnits&quot;: &quot;16301082&quot;,
+        &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
+      },
+      &quot;exitDecisions&quot;: [
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
+          &quot;closeImpactBps&quot;: 3,
+          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 628394,
+          &quot;notionalUnits&quot;: &quot;16301082&quot;
+        },
+        {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
+          &quot;closeImpactBps&quot;: 3,
+          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 628394,
+          &quot;notionalUnits&quot;: &quot;16301082&quot;,
+          &quot;reasonCode&quot;: &quot;net_take_profit_exit&quot;
+        }
+      ],
+      &quot;exitFillCount&quot;: 1,
+      &quot;exitFinalized&quot;: true,
+      &quot;exitPending&quot;: true,
+      &quot;exitReason&quot;: &quot;net_take_profit_exit&quot;,
+      &quot;exitTxHashes&quot;: [
+        &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+      ],
+      &quot;feesUnits&quot;: &quot;11272&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;lastExitDecision&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
+        &quot;closeImpactBps&quot;: 3,
+        &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 628394,
+        &quot;notionalUnits&quot;: &quot;16301082&quot;
+      },
+      &quot;lastFundingPnlUnits&quot;: &quot;0&quot;,
+      &quot;leverage&quot;: 1,
+      &quot;marginUnits&quot;: &quot;16304347&quot;,
+      &quot;marketId&quot;: 320,
+      &quot;notionalUnits&quot;: &quot;16304347&quot;,
+      &quot;observationBlocks&quot;: [
+        {
+          &quot;blockNumber&quot;: 69844271,
+          &quot;observedAt&quot;: 1791641049000
+        },
+        {
+          &quot;blockNumber&quot;: 69846320,
+          &quot;observedAt&quot;: 1791641668000
+        },
+        {
+          &quot;blockNumber&quot;: 69847087,
+          &quot;observedAt&quot;: 1791641900000
+        },
+        {
+          &quot;blockNumber&quot;: 69847305,
+          &quot;observedAt&quot;: 1791641965000
+        }
+      ],
+      &quot;operatorGasWei&quot;: &quot;86053626000000000&quot;,
+      &quot;orderIds&quot;: [
+        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+        &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;
+      ],
+      &quot;orderReceipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69847338,
+          &quot;feeUnits&quot;: &quot;5624&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-16332599&quot;,
+              &quot;feeCNS&quot;: &quot;5624&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;2877&quot;,
+              &quot;pricePNS&quot;: &quot;5666&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;44815638000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+          &quot;requestId&quot;: 13,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69849454,
+          &quot;feeUnits&quot;: &quot;5648&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;16390375&quot;,
+              &quot;feeCNS&quot;: &quot;5648&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;2877&quot;,
+              &quot;pricePNS&quot;: &quot;5690&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;41237988000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
+          &quot;requestId&quot;: 14,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+        }
+      ],
+      &quot;params&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;positiveAtTarget&quot;: true,
+      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
+      &quot;rejectedAlternatives&quot;: [
+        {
+          &quot;marketId&quot;: 16,
+          &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+          &quot;symbol&quot;: &quot;BTC&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 4,
+          &quot;fiveMinuteMoveBps&quot;: 6,
+          &quot;marketId&quot;: 32,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;ETH&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 15,
+          &quot;fiveMinuteMoveBps&quot;: 16,
+          &quot;marketId&quot;: 48,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;SOL&quot;
+        },
+        {
+          &quot;fifteenMinuteMoveBps&quot;: 20,
+          &quot;fiveMinuteMoveBps&quot;: 32,
+          &quot;marketId&quot;: 64,
+          &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+          &quot;symbol&quot;: &quot;MON&quot;
+        },
+        {
+          &quot;marketId&quot;: 256,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;ZEC&quot;
+        },
+        {
+          &quot;marketId&quot;: 272,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;LIT&quot;
+        },
+        {
+          &quot;marketId&quot;: 336,
+          &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+          &quot;symbol&quot;: &quot;NEAR&quot;
+        }
+      ],
+      &quot;ruleVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+      &quot;selectedMarket&quot;: {
+        &quot;id&quot;: 320,
+        &quot;symbol&quot;: &quot;PUMP&quot;
+      },
+      &quot;startedAt&quot;: 1791641973297,
+      &quot;startingBalanceUnits&quot;: &quot;100079480&quot;,
+      &quot;symbol&quot;: &quot;PUMP&quot;,
+      &quot;txHashes&quot;: [
+        &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;,
+        &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+      ],
+      &quot;winStreak&quot;: 2
+    }
+  ],
+  &quot;expiresAt&quot;: 1791677815000,
+  &quot;exposureCapUnits&quot;: &quot;400000000&quot;,
+  &quot;feesUnits&quot;: &quot;30492&quot;,
+  &quot;fundingUnits&quot;: &quot;0&quot;,
+  &quot;journal&quot;: [
+    {
+      &quot;changed&quot;: null,
+      &quot;classification&quot;: &quot;small_or_zero&quot;,
+      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
+      &quot;cycleNumber&quot;: 1,
+      &quot;feesUnits&quot;: &quot;19220&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:1&quot;,
+      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
+      &quot;operatorGasWei&quot;: &quot;86074026000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;realizedPnlUnits&quot;: &quot;79480&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69841022,
+          &quot;feeUnits&quot;: &quot;9593&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-6995086&quot;,
+              &quot;feeCNS&quot;: &quot;9593&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;4935&quot;,
+              &quot;pricePNS&quot;: &quot;5634&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;44820942000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:11&quot;,
+          &quot;requestId&quot;: 11,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0x1a7923d42d32c946158d5b9408f59d862a32d9ede3dd34e0c68bcf14ce02970c&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69846618,
+          &quot;feeUnits&quot;: &quot;9627&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;7074566&quot;,
+              &quot;feeCNS&quot;: &quot;9627&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;4935&quot;,
+              &quot;pricePNS&quot;: &quot;5654&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;41253084000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
+          &quot;requestId&quot;: 12,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791641766435,
+      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD target&quot;
+    },
+    {
+      &quot;changed&quot;: null,
+      &quot;classification&quot;: &quot;small_or_zero&quot;,
+      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
+      &quot;cycleNumber&quot;: 2,
+      &quot;feesUnits&quot;: &quot;11272&quot;,
+      &quot;fundingUnits&quot;: &quot;0&quot;,
+      &quot;hypothesis&quot;: &quot;A five-minute move with aligned fifteen-minute trend and executable depth can cover round-trip costs.&quot;,
+      &quot;journalId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
+      &quot;nextChange&quot;: &quot;parameters remain unchanged for the next cycle&quot;,
+      &quot;operatorGasWei&quot;: &quot;86053626000000000&quot;,
+      &quot;paramsAfter&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;paramsBefore&quot;: {
+        &quot;executionConservatismBps&quot;: 10000,
+        &quot;momentumThresholdBps&quot;: 40
+      },
+      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
+      &quot;receipts&quot;: [
+        {
+          &quot;blockNumber&quot;: 69847338,
+          &quot;feeUnits&quot;: &quot;5624&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;-16332599&quot;,
+              &quot;feeCNS&quot;: &quot;5624&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;2877&quot;,
+              &quot;pricePNS&quot;: &quot;5666&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;market_entry&quot;,
+          &quot;operatorGasWei&quot;: &quot;44815638000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+          &quot;requestId&quot;: 13,
+          &quot;role&quot;: &quot;entry&quot;,
+          &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
+        },
+        {
+          &quot;blockNumber&quot;: 69849454,
+          &quot;feeUnits&quot;: &quot;5648&quot;,
+          &quot;fills&quot;: [
+            {
+              &quot;amountCNS&quot;: &quot;16390375&quot;,
+              &quot;feeCNS&quot;: &quot;5648&quot;,
+              &quot;kind&quot;: &quot;taker&quot;,
+              &quot;lotLNS&quot;: &quot;2877&quot;,
+              &quot;pricePNS&quot;: &quot;5690&quot;
+            }
+          ],
+          &quot;kind&quot;: &quot;close_position&quot;,
+          &quot;operatorGasWei&quot;: &quot;41237988000000000&quot;,
+          &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
+          &quot;requestId&quot;: 14,
+          &quot;role&quot;: &quot;exit&quot;,
+          &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+        }
+      ],
+      &quot;timestamp&quot;: 1791642622883,
+      &quot;workedOrFailed&quot;: &quot;cycle met the one-cent net AUSD target&quot;
+    }
+  ],
+  &quot;mandateMaxLeverage&quot;: 4,
+  &quot;optimizer&quot;: {
+    &quot;activeCycle&quot;: null,
+    &quot;cycleLimit&quot;: 15,
+    &quot;cycles&quot;: 2,
+    &quot;lastCycle&quot;: {
+      &quot;completedAt&quot;: 1791642622883,
+      &quot;cumulativePnlUnits&quot;: &quot;137256&quot;,
+      &quot;cycleId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:cycle:2&quot;,
+      &quot;cycleNumber&quot;: 2,
+      &quot;realizedPnlUnits&quot;: &quot;57776&quot;,
+      &quot;winStreak&quot;: 2
+    },
+    &quot;params&quot;: {
+      &quot;executionConservatismBps&quot;: 10000,
+      &quot;momentumThresholdBps&quot;: 40
+    },
+    &quot;positiveCycles&quot;: 2,
+    &quot;scanner&quot;: {
+      &quot;cadenceMs&quot;: 300000,
+      &quot;consecutiveNoProposal&quot;: 1,
+      &quot;lastAudit&quot;: null,
+      &quot;lastProposal&quot;: {
+        &quot;at&quot;: 1791641973297,
+        &quot;blockedByOpenPosition&quot;: false,
+        &quot;estimatedNetMoveBps&quot;: 10,
+        &quot;fiveMinuteMoveBps&quot;: 52,
+        &quot;marketId&quot;: 320,
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;side&quot;: &quot;long&quot;
+      },
+      &quot;totalProposals&quot;: 1,
+      &quot;totalScans&quot;: 3
+    },
+    &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+    &quot;targetWinStreak&quot;: 2,
+    &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+    &quot;winStreak&quot;: 2
+  },
+  &quot;pendingOrders&quot;: [],
+  &quot;phase&quot;: &quot;settlement_reconciled&quot;,
+  &quot;recentScans&quot;: [
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791643034463
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791642965805
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791642897566
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791642828047
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791642760567
+    },
+    {
+      &quot;details&quot;: {
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 2,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;target_reached_awaiting_settlement&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 2
+        },
+        &quot;optimizerStatus&quot;: &quot;target_reached_awaiting_settlement&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_target_or_cycle_cap_reached&quot;,
+      &quot;timestamp&quot;: 1791642691441
+    },
+    {
+      &quot;details&quot;: {
+        &quot;action&quot;: &quot;close_position&quot;,
+        &quot;decision&quot;: {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;49170&quot;,
+          &quot;closeImpactBps&quot;: 3,
+          &quot;estimatedNetProfitUnits&quot;: &quot;49170&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 628394,
+          &quot;notionalUnits&quot;: &quot;16301082&quot;
+        },
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:14&quot;,
+        &quot;phase&quot;: &quot;submitted&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;txHash&quot;: &quot;0x1832183ea8e271a173c7b38a3643c10a1a46b5ec39ecbf4338ddddcb5737ce95&quot;
+      },
+      &quot;phase&quot;: &quot;net_take_profit_exit&quot;,
+      &quot;timestamp&quot;: 1791642613628
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;43416&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;43416&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 558327,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642542360
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;14646&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 488337,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642472725
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;14646&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 418829,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642403562
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;five_or_fifteen_minute_history_missing&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 10,
+            &quot;fiveMinuteMoveBps&quot;: 2,
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 30,
+            &quot;fiveMinuteMoveBps&quot;: 5,
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;fifteenMinuteMoveBps&quot;: 30,
+            &quot;fiveMinuteMoveBps&quot;: -12,
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791642333114,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791642333114
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;20400&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 349271,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642332646
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-5493&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 279379,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642263050
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;20400&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;20400&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 209521,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642193534
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-57279&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-57279&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 139101,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642123497
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-60156&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-60156&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 69632,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791642053414
+    },
+    {
+      &quot;details&quot;: {
+        &quot;action&quot;: &quot;market_entry&quot;,
+        &quot;decision&quot;: {
+          &quot;depthConsumptionBps&quot;: 2000,
+          &quot;direction&quot;: &quot;long&quot;,
+          &quot;estimatedEntryImpactBps&quot;: 0,
+          &quot;estimatedExitImpactBps&quot;: 0,
+          &quot;estimatedNetMoveBps&quot;: 10,
+          &quot;estimatedRoundTripCostBps&quot;: 42,
+          &quot;fifteenMinuteMoveBps&quot;: 66,
+          &quot;fiveMinuteMoveBps&quot;: 52,
+          &quot;fundingEstimateBps&quot;: 0,
+          &quot;leverage&quot;: 1,
+          &quot;marginUnits&quot;: &quot;16304347&quot;,
+          &quot;marketId&quot;: 320,
+          &quot;notionalUnits&quot;: &quot;16304347&quot;,
+          &quot;observations&quot;: {
+            &quot;first15m&quot;: {
+              &quot;blockNumber&quot;: 69844271,
+              &quot;close&quot;: 5619,
+              &quot;observedAt&quot;: 1791641049000
+            },
+            &quot;first5m&quot;: {
+              &quot;blockNumber&quot;: 69846320,
+              &quot;close&quot;: 5627,
+              &quot;observedAt&quot;: 1791641668000
+            },
+            &quot;latest1m&quot;: {
+              &quot;blockNumber&quot;: 69847305,
+              &quot;close&quot;: 5656,
+              &quot;observedAt&quot;: 1791641965000
+            },
+            &quot;prior1m&quot;: {
+              &quot;blockNumber&quot;: 69847087,
+              &quot;close&quot;: 5650,
+              &quot;observedAt&quot;: 1791641900000
+            }
+          },
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;policyVersion&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;rejectedMarkets&quot;: [
+            {
+              &quot;marketId&quot;: 16,
+              &quot;reason&quot;: &quot;market_or_book_unavailable&quot;,
+              &quot;symbol&quot;: &quot;BTC&quot;
+            },
+            {
+              &quot;fifteenMinuteMoveBps&quot;: 4,
+              &quot;fiveMinuteMoveBps&quot;: 6,
+              &quot;marketId&quot;: 32,
+              &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+              &quot;symbol&quot;: &quot;ETH&quot;
+            },
+            {
+              &quot;fifteenMinuteMoveBps&quot;: 15,
+              &quot;fiveMinuteMoveBps&quot;: 16,
+              &quot;marketId&quot;: 48,
+              &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+              &quot;symbol&quot;: &quot;SOL&quot;
+            },
+            {
+              &quot;fifteenMinuteMoveBps&quot;: 20,
+              &quot;fiveMinuteMoveBps&quot;: 32,
+              &quot;marketId&quot;: 64,
+              &quot;reason&quot;: &quot;five_minute_threshold&quot;,
+              &quot;symbol&quot;: &quot;MON&quot;
+            },
+            {
+              &quot;marketId&quot;: 256,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+              &quot;symbol&quot;: &quot;ZEC&quot;
+            },
+            {
+              &quot;marketId&quot;: 272,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+              &quot;symbol&quot;: &quot;LIT&quot;
+            },
+            {
+              &quot;marketId&quot;: 336,
+              &quot;reason&quot;: &quot;one_minute_confirmation_missing&quot;,
+              &quot;symbol&quot;: &quot;NEAR&quot;
+            }
+          ],
+          &quot;size&quot;: &quot;2877&quot;,
+          &quot;spreadBps&quot;: 35,
+          &quot;symbol&quot;: &quot;PUMP&quot;,
+          &quot;volatilityBps&quot;: 46
+        },
+        &quot;observationCount&quot;: 7,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 1,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 1
+        },
+        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:13&quot;,
+        &quot;phase&quot;: &quot;submitted&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;txHash&quot;: &quot;0xe0b275f7cf7ff6e348f715e7d92547178c60b83a4351f09c1b393eb54fb1200b&quot;
+      },
+      &quot;phase&quot;: &quot;optimizer_momentum_entry&quot;,
+      &quot;timestamp&quot;: 1791641974798
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 0,
+        &quot;proposal&quot;: {
+          &quot;at&quot;: 1791641973297,
+          &quot;blockedByOpenPosition&quot;: false,
+          &quot;estimatedNetMoveBps&quot;: 10,
+          &quot;fiveMinuteMoveBps&quot;: 52,
+          &quot;marketId&quot;: 320,
+          &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+          &quot;side&quot;: &quot;long&quot;
+        },
+        &quot;reasonCode&quot;: &quot;optimizer_momentum_entry&quot;,
+        &quot;rejectedMarkets&quot;: [],
+        &quot;scannedAt&quot;: 1791641973297,
+        &quot;status&quot;: &quot;proposed&quot;
+      },
+      &quot;phase&quot;: &quot;proposed&quot;,
+      &quot;timestamp&quot;: 1791641973297
+    },
+    {
+      &quot;details&quot;: {
+        &quot;action&quot;: &quot;close_position&quot;,
+        &quot;decision&quot;: {
+          &quot;bestEstimatedProfitUnits&quot;: &quot;89386&quot;,
+          &quot;closeImpactBps&quot;: 0,
+          &quot;estimatedNetProfitUnits&quot;: &quot;89386&quot;,
+          &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+          &quot;heldMs&quot;: 1679297,
+          &quot;notionalUnits&quot;: &quot;27803790&quot;
+        },
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 0,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;orderId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002:12&quot;,
+        &quot;phase&quot;: &quot;submitted&quot;,
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;,
+        &quot;txHash&quot;: &quot;0x3625ec8f262f4640034bcc08059b9fb7482846cf07cee16aba9a572c491fabde&quot;
+      },
+      &quot;phase&quot;: &quot;net_take_profit_exit&quot;,
+      &quot;timestamp&quot;: 1791641757058
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-53729&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1608589,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 0,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791641685110
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-78404&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1538452,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 0,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791641615405
+    },
+    {
+      &quot;details&quot;: {
+        &quot;audit&quot;: null,
+        &quot;cadenceMs&quot;: 300000,
+        &quot;consecutiveNoProposal&quot;: 1,
+        &quot;proposal&quot;: null,
+        &quot;reasonCode&quot;: &quot;no_market_passed_optimizer_filters&quot;,
+        &quot;rejectedMarkets&quot;: [
+          {
+            &quot;marketId&quot;: 16,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;BTC&quot;
+          },
+          {
+            &quot;marketId&quot;: 32,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;ETH&quot;
+          },
+          {
+            &quot;marketId&quot;: 48,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;SOL&quot;
+          },
+          {
+            &quot;marketId&quot;: 64,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;MON&quot;
+          },
+          {
+            &quot;marketId&quot;: 256,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;ZEC&quot;
+          },
+          {
+            &quot;marketId&quot;: 272,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;LIT&quot;
+          },
+          {
+            &quot;marketId&quot;: 320,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;PUMP&quot;
+          },
+          {
+            &quot;marketId&quot;: 336,
+            &quot;reason&quot;: &quot;insufficient_observations&quot;,
+            &quot;symbol&quot;: &quot;NEAR&quot;
+          }
+        ],
+        &quot;scannedAt&quot;: 1791641614799,
+        &quot;status&quot;: &quot;no_proposal&quot;
+      },
+      &quot;phase&quot;: &quot;no_proposal&quot;,
+      &quot;timestamp&quot;: 1791641614799
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-73469&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1468196,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 0,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791641545483
+    },
+    {
+      &quot;details&quot;: {
+        &quot;bestEstimatedProfitUnits&quot;: &quot;-33989&quot;,
+        &quot;closeImpactBps&quot;: 0,
+        &quot;estimatedNetProfitUnits&quot;: &quot;-93209&quot;,
+        &quot;fundingPnlUnits&quot;: &quot;0&quot;,
+        &quot;heldMs&quot;: 1398194,
+        &quot;observationCount&quot;: 8,
+        &quot;optimizer&quot;: {
+          &quot;cycleCount&quot;: 0,
+          &quot;cycleLimit&quot;: 15,
+          &quot;params&quot;: {
+            &quot;executionConservatismBps&quot;: 10000,
+            &quot;momentumThresholdBps&quot;: 40
+          },
+          &quot;status&quot;: &quot;running&quot;,
+          &quot;targetWinStreak&quot;: 2,
+          &quot;version&quot;: &quot;perpl-deterministic-v2&quot;,
+          &quot;winStreak&quot;: 0
+        },
+        &quot;policyId&quot;: &quot;perpl-trend-3-finalized-v1&quot;
+      },
+      &quot;phase&quot;: &quot;position_within_optimizer_exit_rules&quot;,
+      &quot;timestamp&quot;: 1791641474024
+    }
+  ],
+  &quot;returnedUnits&quot;: &quot;100137256&quot;,
+  &quot;runDurationSeconds&quot;: 43200,
+  &quot;runId&quot;: &quot;bd35898c-a8c4-4aa2-aa78-1c7d8101b002&quot;,
+  &quot;runStartedAt&quot;: 1791634621703,
+  &quot;runStatus&quot;: &quot;completed&quot;,
+  &quot;settlement&quot;: {
+    &quot;blockNumber&quot;: 69851354,
+    &quot;ownerBalanceUnits&quot;: &quot;9999869917&quot;,
+    &quot;returnedUnits&quot;: &quot;100137256&quot;,
+    &quot;txHash&quot;: &quot;0x0e1b8f15f4020233290513c9052bc5242e28fd818b94ef407285ded5de23c9d7&quot;
+  },
+  &quot;generatedAt&quot;: &quot;2026-10-10T14:42:42.440Z&quot;
+}</pre></section>
+</main></body></html>

@@ -1,7 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
 import { localMonadServiceUrl } from "../operator/local-service.js";
-import { operatorConvex } from "../operator/convex.js";
+import { operatorConvex, operatorReadOnlyConvex } from "../operator/convex.js";
 
 const api = anyApi as any;
 
@@ -33,6 +33,12 @@ export async function operatorQuery(moduleName: string, functionName: string, ar
   const ref = api[moduleName]?.[functionName];
   if (!ref) throw new Error("Monad Convex service query is unavailable.");
   return await (await operatorConvex() as any).query(ref, args);
+}
+
+export async function operatorReadOnlyQuery(moduleName: string, functionName: string, args: unknown) {
+  const ref = api[moduleName]?.[functionName];
+  if (!ref) throw new Error("Monad Convex service query is unavailable.");
+  return await (await operatorReadOnlyConvex() as any).query(ref, args);
 }
 
 export async function operatorMutation(moduleName: string, functionName: string, args: unknown) {

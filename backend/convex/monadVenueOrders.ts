@@ -79,8 +79,8 @@ export const updateOrder = mutation({ args: { orderId: v.string(), status: v.str
   orderIdAtVenue: v.optional(v.string()), txHash: v.optional(v.string()), blockNumber: v.optional(v.number()),
   fillsJson: v.optional(v.string()), errorCode: v.optional(v.string()) }, handler: async (ctx, args) => {
   await requireMonadOperator(ctx); const row = await order(ctx, args.orderId); if (!row) throw new Error("Perpl order was not found.");
-  const phases = ["prepared", "accepted_for_forwarding", "submitted", "executed", "partially_filled", "filled", "finalized", "canceled", "failed", "uncertain"];
-  if (!phases.includes(args.status) || ["finalized", "failed", "canceled"].includes(row.status) && row.status !== args.status
+  const phases = ["prepared", "accepted_for_forwarding", "submitted", "executed", "partially_filled", "filled", "finalized", "no_fill", "canceled", "failed", "uncertain"];
+  if (!phases.includes(args.status) || ["finalized", "no_fill", "failed", "canceled"].includes(row.status) && row.status !== args.status
     || (args.rawResponseJson?.length ?? 0) > 40_000 || (args.fillsJson?.length ?? 0) > 40_000) throw new Error("Perpl order state transition is invalid.");
   await ctx.db.patch(row._id, { status: args.status, rawResponseJson: args.rawResponseJson ?? row.rawResponseJson,
     orderIdAtVenue: args.orderIdAtVenue ?? row.orderIdAtVenue, txHash: args.txHash ?? row.txHash,
@@ -99,6 +99,7 @@ function perplOrderSummary(status: string) {
   const labels: Record<string, string> = { accepted_for_forwarding: "Perpl accepted the order for forwarding; no fill is confirmed.",
     submitted: "Perpl order transaction was broadcast; no execution is confirmed.", executed: "Perpl order transaction executed; finality is pending.", partially_filled: "Perpl reported a partial fill.",
     filled: "Perpl reported a fill; waiting for Monad finality.", finalized: "Perpl order transaction reached Monad finality.",
+    no_fill: "Direct Perpl transaction finalized with a verified market order no-fill; no cycle was consumed.",
     canceled: "Perpl order was canceled.", failed: "Perpl order was rejected or failed.", uncertain: "Perpl order result is uncertain and must be reconciled." };
   return labels[status] ?? `Perpl order status: ${status}`;
 }

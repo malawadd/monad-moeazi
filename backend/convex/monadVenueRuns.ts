@@ -15,6 +15,7 @@ async function ownedRun(ctx: any, runId: string) {
 }
 function dto(row: any) {
   const markets = parse(row.marketsJson) ?? [];
+  const optimizerState = parse(row.optimizerStateJson);
   const rawPosition = parse(row.positionsJson)?.[0] ?? null;
   const position = row.venueId === "perpl-direct-testnet-v1" && rawPosition
     ? { ...rawPosition, marketId: Number(rawPosition.mkt),
@@ -38,7 +39,12 @@ function dto(row: any) {
     position, orders: parse(row.ordersJson) ?? [], markets,
     settlement: parse(row.settlementJson), recoveryActions, recoveryReason: row.recoveryReason ?? null,
     policy: { maxPositionExposureUnits: row.maxPositionExposureUnits,
-      maxLeverage: row.maxLeverage, marketIds: parse(row.marketIdsJson) ?? [], policyVersion: row.policyVersion } };
+      maxLeverage: row.maxLeverage, marketIds: parse(row.marketIdsJson) ?? [], policyVersion: row.policyVersion },
+    optimizer: optimizerState ? { version: optimizerState.version, status: optimizerState.status,
+      cycleCount: optimizerState.cycles, cycleLimit: 15, winStreak: optimizerState.winStreak,
+      targetWinStreak: 2, minimumPositivePnlUnits: "10000", positiveCycles: optimizerState.positiveCycles,
+      params: optimizerState.params, scanner: optimizerState.scanner ?? null, activeCycle: optimizerState.activeCycle ?? null,
+      lastCycle: optimizerState.lastCycle ?? null, successTargetReached: optimizerState.status === "target_reached_awaiting_settlement" } : null };
 }
 async function recordEvent(ctx: any, row: any, input: any) {
   const eventId = `${row.venueId}:${row.runId}:${input.eventId}`;
@@ -64,21 +70,28 @@ async function scheduleTick(ctx: any, row: any, delayMs = 0) {
 }
 
 export const prepareRun = mutation({ args: { runId: v.string(), venueId: v.string(), chainId: v.number(), ownerAddress: v.string(),
-  factoryAddress: v.string(), vaultAddress: v.string(), nonce: v.string(), idempotencyKey: v.string(), amountUnits: v.string(),
+  factoryAddress: v.string(), vaultAddress: v.string(), delegatedAccountAddress: v.optional(v.string()), accountId: v.optional(v.number()),
+  nonce: v.string(), idempotencyKey: v.string(), amountUnits: v.string(),
   durationSeconds: v.number(), setupDeadline: v.number(), preparedExpiresAt: v.number(), minFundingUnits: v.string(), maxPositionExposureUnits: v.string(),
   maxLeverage: v.number(), marketIdsJson: v.string(), marketsJson: v.string(), mandateJson: v.string(), mandateTypedDataJson: v.string(),
   mandateHash: v.string(), operatorSignature: v.string(), operatorDeadline: v.number(), fundingTransactionJson: v.string(),
-  ownerAusdBeforeUnits: v.string(), policyVersion: v.number() },
+  ownerAusdBeforeUnits: v.string(), policyVersion: v.number(), optimizerStateJson: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { user, owner } = await requireMeraViewer(ctx); const amount = /^\d+$/.test(args.amountUnits) ? BigInt(args.amountUnits) : 0n;
+    let optimizer: any = null; try { optimizer = args.optimizerStateJson ? JSON.parse(args.optimizerStateJson) : null; } catch { /* rejected below */ }
+    const optimizerRun = args.venueId === "perpl-direct-testnet-v1" && optimizer?.version === "perpl-deterministic-v2";
     if (!["perpl-testnet-v1", "perpl-direct-testnet-v1"].includes(args.venueId) || args.chainId !== 10143 || args.ownerAddress.toLowerCase() !== owner
       || !/^\d+$/.test(args.minFundingUnits) || ![10_000_000n, 100_000_000n].includes(BigInt(args.minFundingUnits))
       || amount < BigInt(args.minFundingUnits) || amount > BigInt(process.env.MONAD_TESTNET_PERPL_MAX_FUNDING_UNITS ?? "1000000000")
-      || args.durationSeconds < 60 || args.durationSeconds > 86400 || args.maxLeverage < 1 || args.maxLeverage > 3
+      || args.durationSeconds < 60 || args.durationSeconds > 86400 || args.maxLeverage < 1 || args.maxLeverage > (optimizerRun ? 4 : 3)
+      || optimizerRun && (amount !== 100_000_000n || args.durationSeconds !== 43_200 || args.optimizerStateJson!.length > 4000)
+      || args.venueId === "perpl-direct-testnet-v1" && args.optimizerStateJson && !optimizerRun
       || BigInt(args.maxPositionExposureUnits) > amount * BigInt(args.maxLeverage) || args.policyVersion !== 2
       || args.setupDeadline <= Math.floor(Date.now() / 1000) || args.setupDeadline > Math.floor(Date.now() / 1000) + 300
       || args.preparedExpiresAt <= Date.now() || !/^[A-Za-z0-9._:-]{8,160}$/.test(args.idempotencyKey)
-      || !/^0x[a-f0-9]{40}$/i.test(args.factoryAddress) || !/^0x[a-f0-9]{40}$/i.test(args.vaultAddress)) throw new Error("Perpl enrollment terms are invalid or expired.");
+      || !/^0x[a-f0-9]{40}$/i.test(args.factoryAddress) || !/^0x[a-f0-9]{40}$/i.test(args.vaultAddress)
+      || args.delegatedAccountAddress !== undefined && (!/^0x[a-f0-9]{40}$/i.test(args.delegatedAccountAddress)
+        || !Number.isSafeInteger(args.accountId) || (args.accountId ?? 0) <= 0)) throw new Error("Perpl enrollment terms are invalid or expired.");
     if (!/^\d+$/.test(args.ownerAusdBeforeUnits)) throw new Error("Perpl owner balance snapshot is invalid.");
     const prior = await ctx.db.query("monadVenueRuns").withIndex("by_userId_idempotencyKey", (q: any) =>
       q.eq("userId", user._id).eq("idempotencyKey", args.idempotencyKey)).first();
@@ -128,14 +141,24 @@ export const getCurrent = query({ args: {}, handler: async (ctx) => {
   if (!row) return { current: null };
   const events = await ctx.db.query("monadVenueEvents").withIndex("by_run_timestamp", (q: any) => q.eq("runId", row.runId)).order("desc").take(50);
   const orders = await ctx.db.query("monadVenueOrders").withIndex("by_runId_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(50);
-  return { current: { ...dto(row), events: events.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })), orders: orders.reverse() } };
+  const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
+  const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
+  return { current: { ...dto(row), events: events.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })), orders: orders.reverse(),
+    cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)), journal: journal.reverse().map((item: any) => parse(item.entryJson)) } };
 } });
 
 export const getHistory = query({ args: { limit: v.optional(v.number()), cursor: v.optional(v.string()) }, handler: async (ctx, args) => {
   const { user, owner } = await requireMeraViewer(ctx); const limit = Math.max(1, Math.min(30, Math.floor(args.limit ?? 20)));
   const page = await ctx.db.query("monadVenueRuns").withIndex("by_userId_owner_createdAt", (q: any) =>
     q.eq("userId", user._id).eq("ownerAddress", owner)).order("desc").paginate({ numItems: limit, cursor: args.cursor ?? null });
-  return { runs: page.page.map(dto), hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
+  const runs = await Promise.all(page.page.map(async (row: any) => {
+    const summary = dto(row); if (!row.optimizerStateJson) return summary;
+    const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
+    const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", row.runId)).order("desc").take(15);
+    return { ...summary, cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)),
+      journal: journal.reverse().map((item: any) => parse(item.entryJson)) };
+  }));
+  return { runs, hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
 } });
 
 export const getRunHistory = query({ args: { runId: v.string(), limit: v.optional(v.number()), cursor: v.optional(v.string()) }, handler: async (ctx, args) => {
@@ -144,8 +167,11 @@ export const getRunHistory = query({ args: { runId: v.string(), limit: v.optiona
     .paginate({ numItems: limit, cursor: args.cursor ?? null });
   const orders = await ctx.db.query("monadVenueOrders").withIndex("by_runId_createdAt", (q: any) => q.eq("runId", args.runId)).order("desc").take(limit);
   const observations = await ctx.db.query("monadVenueObservations").withIndex("by_run_time", (q: any) => q.eq("runId", args.runId)).order("desc").take(limit);
+  const cycles = await ctx.db.query("monadVenueOptimizerCycles").withIndex("by_run_createdAt", (q: any) => q.eq("runId", args.runId)).order("desc").take(15);
+  const journal = await ctx.db.query("monadVenueOptimizerJournal").withIndex("by_run_createdAt", (q: any) => q.eq("runId", args.runId)).order("desc").take(15);
   return { run: dto(found.row), events: page.page.reverse().map((event: any) => ({ ...event, details: parse(event.dataJson) })),
-    orders: orders.reverse(), observations: observations.reverse(), hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
+    orders: orders.reverse(), observations: observations.reverse(), cycles: cycles.reverse().map((item: any) => parse(item.cycleJson)),
+    journal: journal.reverse().map((item: any) => parse(item.entryJson)), hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor };
 } });
 
 export const getEnrollmentForOwner = query({ args: { runId: v.string() }, handler: async (ctx, args) => {

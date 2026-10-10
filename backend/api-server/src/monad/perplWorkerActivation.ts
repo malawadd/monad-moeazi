@@ -60,7 +60,7 @@ export async function runPerplEnrollmentTick(provider: any, row: any): Promise<T
       throw new MonadApiError("Perpl vault or mandate nonce changed since Mera review.", 409, "perpl_mandate_nonce_changed");
     }
     const existing = String(account).toLowerCase() === ZeroAddress.toLowerCase() ? undefined : String(account);
-    if ((row.delegatedAccountAddress ?? undefined)?.toLowerCase() !== existing?.toLowerCase()) {
+    if (row.delegatedAccountAddress && row.delegatedAccountAddress.toLowerCase() !== existing?.toLowerCase()) {
       throw new MonadApiError("Perpl delegated account changed since Mera review.", 409, "perpl_account_changed");
     }
     const consent = await buildOperatorConsent(deployment.factory, row.vaultAddress, existing);

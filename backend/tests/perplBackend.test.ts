@@ -6,7 +6,7 @@ import test from "node:test";
 import { keccak256, toUtf8Bytes } from "ethers";
 import { PerplSecretStore } from "../api-server/src/monad/perplSecrets.js";
 import { decidePerplRun } from "../api-server/src/monad/perplDecisionProvider.js";
-import { PerplTestnetVenue, toPerplOrderSpec } from "../api-server/src/monad/perplVenue.js";
+import { PerplTestnetVenue, screenFinalizedMarketSnapshots, toPerplOrderSpec } from "../api-server/src/monad/perplVenue.js";
 import { PERPL_TESTNET_AUSD, PERPL_TESTNET_EXCHANGE, PERPL_VENUE_ID } from "../api-server/src/monad/perplConfig.js";
 import { perplSettlementStateHash } from "../api-server/src/monad/perplWorkerSettlement.js";
 import { buildPerplScenarioAction, perplScenarioOrderProgress } from "../api-server/src/monad/perplScenarioPolicy.js";
@@ -40,6 +40,20 @@ const market: VenueMarket = { id: 12, symbol: "BTC16", name: "BTC16", isOpen: tr
   makerFeeMicros: 100, takerFeeMicros: 500, orderTtlBlocks: 20,
   price: { oracle: 100_000, mark: 100_000, last: 100_000, mid: 100_000, bid: 99_900, ask: 100_100, blockNumber: 5, observedAt: 10_000 },
   book: { blockNumber: 5, observedAt: 10_000, bids: [{ price: 99_900, size: 1_000 }], asks: [{ price: 100_100, size: 1_000 }] } };
+
+test("a stale Perpl book cannot block fresh markets or enter a single-market order", () => {
+  const now = 100_000;
+  const fresh = { ...market, price: { ...market.price!, blockNumber: 90, observedAt: now - 2_000 },
+    book: { ...market.book!, blockNumber: 90, observedAt: now - 2_000 } };
+  const stale = { ...market, id: 64, symbol: "MON", price: { ...market.price!, blockNumber: 80, observedAt: now - 2_000 },
+    book: { ...market.book!, blockNumber: 70, observedAt: now - 450_000 } };
+  const screened = screenFinalizedMarketSnapshots([fresh, stale], 95, now);
+  assert.equal(screened[0].price?.blockNumber, 90);
+  assert.equal(screened[1].price, null);
+  assert.equal(screened[1].book, undefined);
+  assert.throws(() => screenFinalizedMarketSnapshots([stale], 95, now), /stale or unfinalized/);
+  assert.throws(() => screenFinalizedMarketSnapshots([fresh], 85, now), /stale or unfinalized/);
+});
 
 test("Perpl cancel orders use zeroed trade-only fields", () => {
   assert.deepEqual(toPerplOrderSpec({ kind: "cancel_limit", requestId: 9, marketId: 12, accountId: 7,

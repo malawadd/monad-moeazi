@@ -68,6 +68,14 @@ export type PerplPreparedEnrollment = {
   maxSlippageBps: number;
   markets: PerplMarketSnapshot[];
   limits: PerplLimits;
+  optimizerReview?: {
+    version: string; maxCycles: number; targetWinStreak: number; minimumPositivePnlUnits: string;
+    maxDurationSeconds: number; marketScanIntervalMs: number; exitCheckIntervalMs: number;
+    scannerReviewAfterMisses?: number;
+    cycleHoldMinMs: number; cycleHoldMaxMs: number; plannedLossUnits: string;
+    maxNotionalUnits: string; maxMarginUnits: string; maxLeverage: number; maxDepthConsumptionBps: number;
+    initialMomentumThresholdBps: number; amountUnits: string; target: string;
+  };
   operatorPermission: {address: string; scope: string; withdrawals: boolean; perOrderCapsEnforcedBy: string};
   fundingTransaction: PerplTransaction;
   mandateTypedData: MonadTypedData;
@@ -142,6 +150,16 @@ export type PerplRun = {
   markets?: PerplMarketSnapshot[];
   settlement?: Record<string, unknown> | null;
   events?: PerplEvent[];
+  optimizer?: {
+    version: string; status: string; cycleCount: number; cycleLimit: number; winStreak: number;
+    targetWinStreak: number; minimumPositivePnlUnits: string; positiveCycles: number;
+    params: Record<string, number>; scanner?: { cadenceMs: number; consecutiveNoProposal: number;
+      totalScans: number; totalProposals: number; lastProposal?: Record<string, unknown> | null;
+      lastAudit?: Record<string, unknown> | null } | null; activeCycle?: Record<string, unknown> | null;
+    lastCycle?: Record<string, unknown> | null; successTargetReached?: boolean;
+  } | null;
+  cycles?: Array<Record<string, unknown>>;
+  journal?: Array<Record<string, unknown>>;
   recoveryAvailable?: boolean;
   recoveryReason?: string;
   recoveryActions?: PerplRecoveryAction[];
@@ -154,6 +172,8 @@ export type PerplRunHistoryPage = {
   events: PerplEvent[];
   orders: PerplOrder[];
   observations: Array<Record<string, unknown>>;
+  cycles?: Array<Record<string, unknown>>;
+  journal?: Array<Record<string, unknown>>;
   hasMore: boolean;
   nextCursor: string | null;
 };

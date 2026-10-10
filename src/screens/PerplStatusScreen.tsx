@@ -10,6 +10,7 @@ import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../service
 import {openMeraSigningSession} from '../services/wallet/meraAuth';
 import {validatePerplRawTransaction, validatePerplRunOwner, validatePerplStop} from '../services/perplValidation';
 import {PerplRecoveryPanel} from './PerplRecoveryPanel';
+import {PerplOptimizerCard} from '../components/PerplOptimizerCard';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -102,6 +103,7 @@ export function PerplStatusScreen() {
     {loading && !current && !history.runs.length ? <LoadingBlock label="Loading Perpl status" lines={3} /> : null}
     {current ? <>
       <RunCard run={current} />
+      <PerplOptimizerCard run={current} />
       {current.position ? <PositionCard run={current} /> : <Card><Text style={s.strong}>No open position</Text><Text style={s.body}>Positions and orders appear here after the selected Perpl transport confirms them.</Text></Card>}
       {current.orders?.length ? <Card><Text style={s.strong}>Orders</Text>{current.orders.map((order, index) => <OrderCard key={String(order.orderId ?? `${order.marketId}:${index}`)} order={order} run={current} />)}</Card> : null}
       {current.markets?.length ? <MarketSnapshots markets={current.markets} /> : null}
@@ -124,7 +126,7 @@ export function PerplStatusScreen() {
       <Button label="Open complete run history" variant="secondary" onPress={() => navigation.navigate('PerplHistory', {runId: current.runId})} />
     </> : <Card><Text style={s.strong}>No active Perpl run</Text><Text style={s.body}>Previous enrollment and trading cycles remain available below.</Text><Button label="Review Perpl markets" onPress={() => navigation.navigate('PerplMarkets')} /></Card>}
     {history.runs.length ? <Card><Text style={s.strong}>Previous Perpl runs</Text>
-      {history.runs.filter(run => run.runId !== current?.runId).map(run => <RunSummary key={run.runId} run={run} navigation={navigation} />)}
+      {history.runs.filter(run => run.runId !== current?.runId).map(run => <React.Fragment key={run.runId}><RunSummary run={run} navigation={navigation} /><PerplOptimizerCard run={run} compact /></React.Fragment>)}
       {history.hasMore ? <Button label="Load more runs" variant="secondary" onPress={() => { void loadMore(); }} loading={busy} /> : null}
     </Card> : null}
     <Button label="Review Perpl markets" variant="secondary" onPress={() => navigation.navigate('PerplMarkets')} />

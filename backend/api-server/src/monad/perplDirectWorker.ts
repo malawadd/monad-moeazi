@@ -11,6 +11,9 @@ import { completedVaultTick, readObservations, reconcileOwnerStop, stateResult }
 import { runPerplRecoveryTick, settleFlatPerplRun } from "./perplWorkerSettlement.js";
 import { event, type TickResult, waitResult } from "./perplWorkerHelpers.js";
 import { runPerplDirectScenarioTick } from "./perplDirectScenario.js";
+import { parsePerplOptimizerState, PERPL_OPTIMIZER_POLICY } from "./perplOptimizerConfig.js";
+import { optimizerFinalOrderUnprocessed, reconcileOptimizerOrder } from "./perplOptimizerExecution.js";
+import { runPerplOptimizerDecisionTick } from "./perplOptimizerDirectCycle.js";
 import type { VenueAccountSnapshot, VenueAction } from "./venueTypes.js";
 
 const daAbi = [...PERPL_DA_ABI, "function owner() view returns(address)", "function exchange() view returns(address)",
@@ -20,10 +23,11 @@ const blocked = (reason: string, status = "incomplete_settlement"): TickResult =
   patch: { recoveryReason: reason }, event: event(reason, "perpl_direct_blocked", "blocked", reason.replaceAll("_", " ")),
   continueAfter: status === "active", nextDelayMs: 5_000 });
 function directStateResult(row: any, account: VenueAccountSnapshot, tickId: string, status: string,
-  phase: string, kind: string, details?: unknown, observation?: any) {
+  phase: string, kind: string, details?: unknown, observation?: any, nextDelayMs?: number) {
   const state = stateResult(row, account, tickId, status, phase, kind, details, observation);
   const pnl = account.positions.reduce<bigint>((sum, position: any) => sum + BigInt(position.pnlUnits ?? "0"), 0n);
   state.patch = { ...state.patch, unrealizedPnlUnits: pnl.toString() };
+  if (nextDelayMs) state.nextDelayMs = nextDelayMs;
   return state;
 }
 
@@ -47,8 +51,12 @@ export async function runPerplDirectCycleTick(provider: any, row: any, tickId: s
   }
   const account = await readDirectAccount(provider, accountId, ids(row.marketIdsJson), String(daAddress), Number(row.lastRequestId ?? 0));
   const allOrders: any[] = await operatorQuery("monadVenueOrders", "getOrders", { runId: row.runId });
+  const optimizer = parsePerplOptimizerState(row.optimizerStateJson);
+  if (row.optimizerStateJson && !optimizer) throw new MonadApiError("Direct optimizer state failed validation.", 409, "perpl_optimizer_state_invalid");
   for (const pending of allOrders) {
-    if (!["prepared", "submitted", "executed", "uncertain", "filled", "partially_filled"].includes(pending.status)) continue;
+    const meta = optimizer ? safeJson(pending.actionJson)?.optimizerMetadata : null;
+    const unprocessedFinal = optimizerFinalOrderUnprocessed(pending, optimizer);
+    if (!["prepared", "submitted", "executed", "uncertain", "filled", "partially_filled"].includes(pending.status) && !unprocessedFinal) continue;
     if (pending.status === "prepared" && !pending.rawTransaction) {
       if (!perplDirectExecutionEnabled()) return blocked("perpl_direct_prepared_order_gate_disabled");
       const preparedAction: VenueAction = JSON.parse(pending.actionJson);
@@ -60,7 +68,7 @@ export async function runPerplDirectCycleTick(provider: any, row: any, tickId: s
         "perpl_direct_order_recovered", { orderId: pending.orderId, phase: retried.phase, txHash: retried.txHash });
     }
     const result = await reconcileDirectOrder(provider, row, pending);
-    if (!["finalized", "failed", "canceled"].includes(result.phase)) {
+    if (!["finalized", "no_fill", "failed", "canceled"].includes(result.phase)) {
       return directStateResult(row, account, tickId, forced ? "settling" : "active", "direct_order_reconciling",
         "perpl_direct_order_reconciling", { orderId: pending.orderId, txHash: pending.txHash, phase: result.phase });
     }
@@ -70,15 +78,24 @@ export async function runPerplDirectCycleTick(provider: any, row: any, tickId: s
       try { return sum + BigInt(JSON.parse(item.rawResponseJson ?? "{}").feeUnits ?? "0"); } catch { return sum; }
     }, 0n);
     const observed = result.account ?? account;
+    let optimizerDetails: unknown;
+    if (optimizer && meta?.cycleId === optimizer.activeCycle?.cycleId) {
+      const freshPending = refreshed.find((item) => item.orderId === pending.orderId) ?? pending;
+      const tracked = await reconcileOptimizerOrder({ runId: row.runId, state: optimizer, pending: freshPending,
+        result, account: observed, orders: refreshed });
+      if (tracked.handled) optimizerDetails = { optimizer: { cycleCount: tracked.state.cycles,
+        winStreak: tracked.state.winStreak, status: tracked.state.status }, cycle: tracked.cycle };
+    }
     const completed = directStateResult(row, observed, tickId, forced ? "settling" : "active",
-      result.phase === "finalized" ? "direct_order_finalized" : "direct_order_failed",
-      result.phase === "finalized" ? "perpl_direct_order_finalized" : "perpl_direct_order_failed",
+      result.phase === "finalized" ? "direct_order_finalized" : result.phase === "no_fill" ? "direct_order_no_fill" : "direct_order_failed",
+      result.phase === "finalized" ? "perpl_direct_order_finalized" : result.phase === "no_fill" ? "perpl_direct_order_no_fill" : "perpl_direct_order_failed",
       { orderId: pending.orderId, txHash: pending.txHash, filled: result.filled ?? false,
-        feeUnits: result.feeUnits ?? "0", phase: result.phase });
+        feeUnits: result.feeUnits ?? "0", phase: result.phase, ...((optimizerDetails as any) ?? {}) }, undefined,
+      forced ? 5_000 : optimizer ? PERPL_OPTIMIZER_POLICY.exitCheckIntervalMs : undefined);
     completed.patch = { ...completed.patch, feesUnits: feeUnits.toString() };
     return completed;
   }
-  const observation = await readObservations(row, account, forced);
+  const observation = optimizer ? { histories: {}, snapshots: [] } : await readObservations(row, account, forced);
   if (forced && account.orders.length) {
     if (!perplDirectExecutionEnabled()) return blocked("perpl_direct_cancel_gate_disabled");
     let cancellable: { marketId: number; orderId: number } | null = null;
@@ -104,6 +121,8 @@ export async function runPerplDirectCycleTick(provider: any, row: any, tickId: s
     return directStateResult(row, account, tickId, "settling", "direct_cancel_submitted",
       "perpl_direct_cancel_submitted", { txHash: submitted.txHash, orderId: cancellable.orderId, phase: submitted.phase });
   }
+  if (optimizer) return await runPerplOptimizerDecisionTick({ provider, row, tickId, account, allOrders,
+    accountId, delegatedAccountAddress: String(daAddress), expiresAt: Number(expiresAt) * 1000, forced });
   const markets = await readPerplVenueMarkets({ marketIds: ids(row.marketIdsJson), withBook: true, finalized: true });
   const scenario: any = !forced ? await operatorQuery("monadVenueScenarios", "getScenarioForRun", { runId: row.runId }) : null;
   if (scenario) return await runPerplDirectScenarioTick({ provider, run: row, scenario, account, markets, tickId });
@@ -132,3 +151,5 @@ export async function runPerplDirectCycleTick(provider: any, row: any, tickId: s
     `perpl_direct_order_${submitted.phase}`, { action: action.kind, orderId: submitted.orderId,
       txHash: submitted.txHash, phase: submitted.phase, decision: decision.details }, observation);
 }
+
+function safeJson(raw?: string) { try { return raw ? JSON.parse(raw) : null; } catch { return null; } }

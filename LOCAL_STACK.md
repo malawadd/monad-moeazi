@@ -108,8 +108,10 @@ acceptance steps. The default-off `MONAD_TESTNET_PERPL_AUTONOMY_ENABLED` and
 `MONAD_TESTNET_PERPL_DIRECT_EXECUTION_ENABLED` gates are distinct from the mock
 Perp gate; action, broadcast, and operator gates are also required for funded
 direct runs. Direct runs do not require a Perpl API key or Origin whitelist.
-For a hands-on three-cycle repeat, follow the
-[direct Perpl manual guide](docs/REPEAT_PERPL_DIRECT_CYCLES.md).
+For the current deterministic optimizer runbook, follow
+[Perpl optimizer operations](docs/REPEAT_PERPL_OPTIMIZER.md). The
+[three-cycle manual guide](docs/REPEAT_PERPL_DIRECT_CYCLES.md) describes the
+earlier acceptance workflow.
 The API transport still requires `PERPL_API_ORIGIN` in ignored
 `backend/.env.local` and an origin whitelisted by Perpl. On 2026-10-07, Perpl
 rejected the intended Moeazi origin for API-key enrollment. The

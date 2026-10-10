@@ -11,6 +11,27 @@ const vaultInterface = new Interface(AUTONOMY_VAULT_ABI);
 const factoryInterface = new Interface(AUTONOMY_FACTORY_ABI);
 const ORDER_TTL_MS = 25_000;
 
+export function decodeAutonomyReceiptEvidence(receipt: { logs: readonly any[] }, orderId: string, vaultAddress: string) {
+  let amountOutUnits: string | undefined;
+  let realizedProfitLossUnits: string | undefined;
+  let settlementStatus: number | undefined;
+  for (const log of receipt.logs) {
+    if (String(log.address ?? "").toLowerCase() !== vaultAddress.toLowerCase()) continue;
+    try {
+      const parsed = vaultInterface.parseLog(log);
+      if (["BuyExecuted", "SellExecuted"].includes(parsed?.name ?? "")
+          && String(parsed?.args.orderId).toLowerCase() === orderId.toLowerCase()) {
+        amountOutUnits = String(parsed?.args.amountOut);
+      }
+      if (parsed?.name === "CycleCompleted") realizedProfitLossUnits = String(parsed.args.realizedProfitLoss);
+      if (parsed?.name === "Settled") settlementStatus = Number(parsed.args.status);
+    } catch { /* unrelated pool/factory event */ }
+  }
+  return { ...(amountOutUnits !== undefined ? { amountOutUnits } : {}),
+    ...(realizedProfitLossUnits !== undefined ? { realizedProfitLossUnits } : {}),
+    ...(settlementStatus !== undefined ? { settlementStatus } : {}) };
+}
+
 export async function prepareTradeOrder(provider: JsonRpcProvider, wallet: Wallet, row: any, tickId: string,
   kind: "buy" | "sell" | "settle", state: any, deployment: any, blockNumber: number,
   extra?: { tokenIndex: number; amountIn: bigint }) {
@@ -135,18 +156,15 @@ export async function reconcileOrder(provider: JsonRpcProvider, initial: any, ch
     const canonical = await provider.getBlock(receipt.blockNumber);
     if (!canonical || canonical.hash?.toLowerCase() !== receipt.blockHash.toLowerCase()) return { order, finalized: false };
     const finalized = receipt.blockNumber <= checkpoint;
-    let amountOutUnits: string | undefined;
-    for (const log of receipt.logs) {
-      try {
-        const parsed = vaultInterface.parseLog(log);
-        if (["BuyExecuted", "SellExecuted"].includes(parsed?.name ?? "")
-            && String(parsed?.args.orderId).toLowerCase() === order.orderId.toLowerCase()) amountOutUnits = String(parsed?.args.amountOut);
-      } catch { /* unrelated pool/factory event */ }
-    }
+    let vaultAddress = "";
+    try { vaultAddress = String(JSON.parse(order.transactionJson).to); } catch { /* malformed persisted transaction is not evidence */ }
+    if (!/^0x[a-f0-9]{40}$/i.test(vaultAddress)) throw new Error("Autonomy order destination is unavailable for receipt verification.");
+    const evidence = decodeAutonomyReceiptEvidence(receipt, order.orderId, vaultAddress);
     order = await operatorMutation("monadAutonomyOrders", "recordReceipt", { orderId: order.orderId,
       txHash: order.txHash, receiptStatus: receipt.status ?? 0, blockNumber: receipt.blockNumber,
       blockHash: receipt.blockHash, canonicalBlockHash: canonical.hash, finalized,
-      amountOutUnits, gasUsed: receipt.gasUsed.toString(), effectiveGasPrice: (receipt.gasPrice ?? tx?.gasPrice ?? 0n).toString() });
+      finalizedAt: Number(canonical.timestamp) * 1000, ...evidence,
+      gasUsed: receipt.gasUsed.toString(), effectiveGasPrice: (receipt.gasPrice ?? tx?.gasPrice ?? 0n).toString() });
     return { order, finalized };
   }
   if (tx && ["broadcasting", "uncertain"].includes(order.status)) {

@@ -3,11 +3,12 @@ import { Contract, formatUnits, getAddress, Interface } from "ethers";
 import { Hono } from "hono";
 import { meraQuery, operatorMutation } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
-import { chooseVenue, configuredAdapter, configuredVault, maxSlippageBps, MonadApiError, venueData } from "./config.js";
+import { chooseVenue, configuredAdapter, configuredVault, maxSlippageBps, MonadApiError, venueData, type MonadVenue } from "./config.js";
 import { ADAPTER_ABI, ASSETS, MONAD_CHAIN_ID, USDC_ADDRESS, WMON_ADDRESS, VAULT_ABI } from "./constants.js";
 import { monadProvider, readTokenBalance, readWalletBalances, requireContractCode } from "./provider.js";
 import { amountUnits } from "./transactions.js";
 import { reconcileOwnerPendingOperations } from "./operations.js";
+import { MOCK_SPOT_VENUE, quoteMockPool, resolveMockPool } from "./mockSpot.js";
 
 function jsonRecord(value: unknown) {
   if (typeof value !== "string") return {};
@@ -16,10 +17,12 @@ function jsonRecord(value: unknown) {
 }
 
 export function monadQuoteId(input: { ownerAddress: string; scope: string; venue: string; tokenIn: string;
-  tokenOut: string; amountIn: string; amountOut: string; minimumOut: string; slippageBps: number; expiresAt: number }) {
+  tokenOut: string; amountIn: string; amountOut: string; minimumOut: string; slippageBps: number; expiresAt: number;
+  poolAddress?: string }) {
   const digest = createHash("sha256").update([input.ownerAddress.toLowerCase(), input.scope, input.venue,
     input.tokenIn.toLowerCase(), input.tokenOut.toLowerCase(), input.amountIn, input.amountOut,
-    input.minimumOut, String(input.slippageBps), String(input.expiresAt)].join(":")).digest("hex");
+    input.minimumOut, String(input.slippageBps), String(input.expiresAt),
+    ...(input.poolAddress ? [input.poolAddress.toLowerCase()] : [])].join(":")).digest("hex");
   return `0x${digest}`;
 }
 
@@ -87,46 +90,58 @@ async function activity(context: any) {
 async function quote(context: any) {
   const auth = await requireMera(context);
   const body = parseBody(await context.req.json());
-  const venue = chooseVenue(body.venue);
+  const mockPool = body.venue === MOCK_SPOT_VENUE;
+  const venue = mockPool ? MOCK_SPOT_VENUE : chooseVenue(body.venue);
+  if (!venue) throw new MonadApiError("Selected Monad Testnet venue is not configured.", 503, "venue_disabled");
   const scope = body.accountScope;
   if (scope !== "wallet" && scope !== "vault") throw new MonadApiError("Quote scope must be wallet or vault.");
+  if (mockPool && scope !== "wallet") throw new MonadApiError("Mock pool swaps are Mera-wallet only.", 403, "operator_only");
   const tokenIn = getAddress(body.tokenIn); const tokenOut = getAddress(body.tokenOut);
-  if (tokenIn.toLowerCase() === tokenOut.toLowerCase()
-      || ![tokenIn.toLowerCase(), tokenOut.toLowerCase()].every((token) => [USDC_ADDRESS, WMON_ADDRESS].some((a) => a.toLowerCase() === token))) {
+  if (!mockPool && (tokenIn.toLowerCase() === tokenOut.toLowerCase()
+      || ![tokenIn.toLowerCase(), tokenOut.toLowerCase()].every((token) => [USDC_ADDRESS, WMON_ADDRESS].some((a) => a.toLowerCase() === token)))) {
     throw new MonadApiError("Only the reviewed USDC/WMON testnet pair is supported.", 400, "pair_unsupported");
   }
-  const inputDecimals = tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals;
-  const outputDecimals = tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals;
+  const provider = await monadProvider();
+  let pool: Awaited<ReturnType<typeof resolveMockPool>> | undefined;
+  try {
+  if (mockPool) pool = await resolveMockPool(provider, tokenIn, tokenOut);
+  const inputDecimals = pool?.tokenInDecimals ?? (tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
+  const outputDecimals = pool?.tokenOutDecimals ?? (tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
   const inputUnits = amountUnits(body.amountIn, inputDecimals);
   const slippageBps = maxSlippageBps(body.slippageBps);
-  const adapter = configuredAdapter(venue);
-  if (!adapter) throw new MonadApiError("Selected Monad Testnet venue is not configured.", 503, "venue_disabled");
-  const provider = await monadProvider();
-  try {
-    await requireContractCode(provider, adapter, "Monad swap adapter");
-    if (scope === "vault") await assertVaultQuoteScope(provider, auth.token, auth.ownerAddress, tokenIn, tokenOut, adapter);
-    const router = new Contract(adapter, ADAPTER_ABI, provider);
     let result: any;
-    try { result = await router.quoteExactInput.staticCall(tokenIn, tokenOut, inputUnits, venueData(venue)); }
-    catch { throw new MonadApiError("The selected testnet pool is not initialized or cannot quote this pair.", 409, "pool_unavailable"); }
+    let adapter: string | null | undefined;
+    if (pool) result = [await quoteMockPool(provider, pool, inputUnits), true];
+    else {
+      adapter = configuredAdapter(venue as MonadVenue);
+      if (!adapter) throw new MonadApiError("Selected Monad Testnet venue is not configured.", 503, "venue_disabled");
+      await requireContractCode(provider, adapter, "Monad swap adapter");
+      if (scope === "vault") await assertVaultQuoteScope(provider, auth.token, auth.ownerAddress, tokenIn, tokenOut, adapter);
+      try { result = await new Contract(adapter, ADAPTER_ABI, provider).quoteExactInput.staticCall(tokenIn, tokenOut, inputUnits, venueData(venue as MonadVenue)); }
+      catch { throw new MonadApiError("The selected testnet pool is not initialized or cannot quote this pair.", 409, "pool_unavailable"); }
+    }
     const amountOut = BigInt(result[0]);
     if (!result[1] || amountOut <= 0n) throw new MonadApiError("The selected testnet pool has no executable quote.", 409, "pool_unavailable");
     const minOut = amountOut * BigInt(10_000 - slippageBps) / 10_000n;
     if (minOut <= 0n) throw new MonadApiError("Minimum output rounds to zero.");
     const expiresAt = Date.now() + 30_000;
     const quoteId = monadQuoteId({ ownerAddress: auth.ownerAddress, scope, venue, tokenIn, tokenOut,
-      amountIn: inputUnits.toString(), amountOut: amountOut.toString(), minimumOut: minOut.toString(), slippageBps, expiresAt });
+      amountIn: inputUnits.toString(), amountOut: amountOut.toString(), minimumOut: minOut.toString(), slippageBps, expiresAt,
+      ...(pool ? { poolAddress: pool.poolAddress } : {}) });
     const response = { quoteId, accountScope: scope, venue, tokenIn, tokenOut,
       amountInUnits: inputUnits.toString(), amountOutUnits: amountOut.toString(),
       minimumAmountOutUnits: minOut.toString(), expiresAt: new Date(expiresAt).toISOString(),
-      feeProvenance: `${venue} adapter quote; output amount includes venue pricing`,
-      outputDecimals, ...(scope === "wallet" ? await estimateWalletSwapGas(provider, auth.ownerAddress,
+      feeProvenance: pool ? `${venue} finalized pool quote at block ${pool.checkpoint}; output includes pool fee`
+        : `${venue} adapter quote; output amount includes venue pricing`, outputDecimals,
+      ...(pool ? { poolAddress: pool.poolAddress, inputDecimals, tokenSymbol: pool.symbol } : {}),
+      ...(scope === "wallet" && adapter ? await estimateWalletSwapGas(provider, auth.ownerAddress,
         adapter, tokenIn, tokenOut, inputUnits, minOut) : {}) };
     const gas = (response as any).gas;
     await operatorMutation("monadQuotes", "recordQuote", { subject: auth.subject, ownerAddress: auth.ownerAddress,
       quoteId, accountScope: scope, venue, tokenIn, tokenOut, amountInUnits: inputUnits.toString(),
       amountOutUnits: amountOut.toString(), minimumAmountOutUnits: minOut.toString(), slippageBps,
-      feeProvenance: response.feeProvenance, expiresAt, ...(gas ? { gasJson: JSON.stringify(gas) } : {}) });
+      feeProvenance: response.feeProvenance, expiresAt, ...(pool ? { poolAddress: pool.poolAddress } : {}),
+      ...(gas ? { gasJson: JSON.stringify(gas) } : {}) });
     return context.json(response);
   } finally { await provider.destroy(); }
 }

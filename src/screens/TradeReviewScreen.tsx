@@ -27,7 +27,8 @@ export function TradeReviewScreen() {
   const scope = accountScope as MonadAccountScope | undefined;
   const scopeLabel = scope === 'vault' ? 'Managed vault' : 'Mera wallet';
   const venueLabel = venue === 'uniswap_v4_testnet' ? 'Uniswap v4 Testnet'
-    : venue === 'moeazi_test_amm' ? 'Moeazi Test AMM' : String(venue ?? 'Unavailable venue');
+    : venue === 'moeazi_test_amm' ? 'Moeazi Test AMM'
+      : venue === 'moeazi_mock_pools_testnet' ? 'Moeazi mock pool · Testnet' : String(venue ?? 'Unavailable venue');
   const quoteFresh = quote ? monadTimestampMillis(quote.expiresAt) > Date.now() : false;
   const quoteMatches = Boolean(quote && tokenIn && tokenOut && quote.accountScope === scope
     && quote.venue === venue && quote.tokenIn.toLowerCase() === tokenIn.address.toLowerCase()

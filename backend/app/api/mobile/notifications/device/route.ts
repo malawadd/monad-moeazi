@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
-import { mobileApi, mobileClient, mobileError, requireMobileBearer } from "@/lib/mobileAuth";
+import { mobileNotificationApi, mobileClient, mobileError, requireMobileBearer } from "@/lib/mobileAuth";
 
 export const runtime = "nodejs";
-const categories = ["ai", "trades", "money", "credits", "venues", "safety"] as const;
-
 export async function POST(request: Request) {
   try {
-    if (process.env.MOBILE_PUSH_ENABLED !== "true") return NextResponse.json({ error: "Push notifications are not configured.", code: "PUSH_NOT_CONFIGURED" }, { status: 503 });
-    const body = await request.json().catch(() => ({})) as { deviceId?: string; pushToken?: string; preferences?: Record<string, boolean> };
-    if (!body.deviceId || !body.pushToken) return NextResponse.json({ error: "Device and push token are required." }, { status: 400 });
-    const preferences = Object.fromEntries(categories.map(category => [category, body.preferences?.[category] !== false]));
-    const { token } = await requireMobileBearer(request);
-    await mobileClient(token).mutation(mobileApi.registerNotificationDevice, { deviceId: body.deviceId, pushToken: body.pushToken, preferencesJson: JSON.stringify(preferences) });
-    return NextResponse.json({ registered: true, preferences });
+    if (process.env.MOBILE_PUSH_ENABLED !== "true" || process.env.PUSH_TRANSPORT !== "fcm") return NextResponse.json({ error: "Push notifications are disabled.", code: "push_disabled" }, { status: 503 });
+    const body = await request.json().catch(() => ({})) as { pushToken?: string };
+    if (!body.pushToken || body.pushToken.length < 20 || body.pushToken.length > 4096) return NextResponse.json({ error: "A valid push token is required." }, { status: 400 });
+    const { token, payload } = await requireMobileBearer(request);
+    const result = await mobileClient(token).mutation(mobileNotificationApi.registerDevice, {
+      deviceId: payload.deviceId!, provider: "fcm", platform: "android", pushToken: body.pushToken,
+    });
+    return NextResponse.json(result);
   } catch (error) { return mobileError(error); }
 }

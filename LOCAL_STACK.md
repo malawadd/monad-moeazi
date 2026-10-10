@@ -67,6 +67,10 @@ refresh local values, run `backend/scripts/setup-monad-local.ps1`. The app uses
 `API_BASE_URL`; no Magic key is needed. Never copy provider, wallet, JWT, worker,
 or database secrets from the Arbitrum deployment.
 
+Android push is opt-in and defaults to disabled. See
+[Android push setup and provider switching](docs/ANDROID_PUSH.md) for local
+Firebase file placement, adapter behavior, and physical-phone validation.
+
 ### Monad Testnet operations
 
 The [verified deployment manifest](backend/contracts/monad-testnet/deployments/manifest.testnet.json)

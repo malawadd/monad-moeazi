@@ -1,6 +1,9 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { requireMonadOperator, reserveAutonomyOperatorLease, updateAutonomyOperatorLease } from "./monadHelpers";
+
+const internalApi: any = internal;
 
 export const getOrder = query({ args: { orderId: v.string() }, handler: async (ctx, args) => {
   await requireMonadOperator(ctx);
@@ -121,21 +124,62 @@ export const recordRejected = mutation({
 export const recordReceipt = mutation({
   args: { orderId: v.string(), txHash: v.string(), receiptStatus: v.number(), blockNumber: v.number(),
     blockHash: v.string(), canonicalBlockHash: v.string(), finalized: v.boolean(),
-    amountOutUnits: v.optional(v.string()), gasUsed: v.string(), effectiveGasPrice: v.string() },
+    finalizedAt: v.number(), amountOutUnits: v.optional(v.string()),
+    realizedProfitLossUnits: v.optional(v.string()), settlementStatus: v.optional(v.number()),
+    gasUsed: v.string(), effectiveGasPrice: v.string() },
   handler: async (ctx, args) => {
     await requireMonadOperator(ctx);
     const row = await ctx.db.query("monadAutonomyOrders")
       .withIndex("by_orderId", (q: any) => q.eq("orderId", args.orderId)).first();
     if (!row || row.txHash !== args.txHash || ![0, 1].includes(args.receiptStatus)
-        || args.blockHash.toLowerCase() !== args.canonicalBlockHash.toLowerCase()) {
+        || !Number.isSafeInteger(args.blockNumber) || args.blockNumber <= 0
+        || !/^0x[a-f0-9]{64}$/i.test(args.blockHash)
+        || args.blockHash.toLowerCase() !== args.canonicalBlockHash.toLowerCase()
+        || !Number.isSafeInteger(args.finalizedAt) || args.finalizedAt <= 0 || args.finalizedAt > Date.now() + 60_000
+        || args.amountOutUnits !== undefined && !/^\d+$/.test(args.amountOutUnits)
+        || args.realizedProfitLossUnits !== undefined && !/^-?\d+$/.test(args.realizedProfitLossUnits)
+        || args.settlementStatus !== undefined && ![0, 1, 2, 3, 4].includes(args.settlementStatus)) {
       throw new Error("Autonomy receipt is noncanonical or does not match its order.");
+    }
+    const hasOutput = Boolean(args.amountOutUnits && BigInt(args.amountOutUnits) > 0n);
+    const hasVerifiedClose = hasOutput && args.realizedProfitLossUnits !== undefined;
+    const incompleteSettlement = args.settlementStatus === 3;
+    if (args.finalized && args.receiptStatus === 1 && row.kind === "buy" && !hasOutput
+        || args.finalized && args.receiptStatus === 1 && row.kind === "sell" && !hasVerifiedClose && !incompleteSettlement
+        || args.finalized && args.receiptStatus === 1 && row.kind === "settle"
+          && ![2, 3].includes(args.settlementStatus ?? -1)) {
+      throw new Error("Finalized Spot trade receipt is missing its exact vault fill evidence.");
     }
     const status = args.finalized ? args.receiptStatus === 1 ? "finalized" : "failed" : "submitted";
     await ctx.db.patch(row._id, { status, receiptStatus: args.receiptStatus, blockNumber: args.blockNumber,
       blockHash: args.blockHash, ...(args.amountOutUnits ? { amountOutUnits: args.amountOutUnits } : {}),
+      ...(args.finalized ? { finalizedAt: args.finalizedAt } : {}),
+      ...(args.realizedProfitLossUnits ? { realizedProfitLossUnits: args.realizedProfitLossUnits } : {}),
+      ...(args.settlementStatus !== undefined ? { settlementStatus: args.settlementStatus } : {}),
       gasUsed: args.gasUsed, effectiveGasPrice: args.effectiveGasPrice, updatedAt: Date.now() });
     await updateAutonomyOperatorLease(ctx, row.orderId, status);
+    if (status === "finalized" && args.receiptStatus === 1
+        && (row.kind === "buy" && hasOutput || ["sell", "settle"].includes(row.kind) && hasVerifiedClose
+          || ["sell", "settle"].includes(row.kind) && incompleteSettlement)) {
+      const settlementProblem = ["sell", "settle"].includes(row.kind) && incompleteSettlement;
+      const closing = ["sell", "settle"].includes(row.kind) && hasVerifiedClose;
+      const summary = closing
+        ? `Spot position closed; net realized PnL ${args.realizedProfitLossUnits} USDC base units.`
+        : settlementProblem ? "Spot settlement finalized as incomplete; account recovery needs review."
+          : `Spot autonomous entry finalized; ${args.amountOutUnits} token base units received.`;
+      await ctx.scheduler.runAfter(0, internalApi.mobileNotifications.enqueueFinalizedEvent, {
+        ownerAddress: row.ownerAddress, eventId: `${row.orderId}:receipt`,
+        eventKind: settlementProblem ? "settlement_problem" : closing ? "autonomous_close" : "autonomous_entry",
+        title: settlementProblem ? "Spot settlement needs attention"
+          : closing ? "Spot autonomous close finalized" : "Spot autonomous entry finalized",
+        summary, redactedSummary: settlementProblem ? "A Spot settlement needs attention."
+          : closing ? "A Spot position closed." : "A Spot position opened.",
+        finalityRef: `${row.txHash}:${args.blockHash}:${args.blockNumber}`, finalizedAt: args.finalizedAt,
+      });
+    }
     return { ...row, status, receiptStatus: args.receiptStatus, blockNumber: args.blockNumber,
-      amountOutUnits: args.amountOutUnits, gasUsed: args.gasUsed, effectiveGasPrice: args.effectiveGasPrice };
+      amountOutUnits: args.amountOutUnits, realizedProfitLossUnits: args.realizedProfitLossUnits,
+      settlementStatus: args.settlementStatus,
+      finalizedAt: args.finalizedAt, gasUsed: args.gasUsed, effectiveGasPrice: args.effectiveGasPrice };
   },
 });

@@ -49,6 +49,7 @@ export const monadVenueTables = {
     dispatchStartedAt: v.optional(v.number()),
     orderIdAtVenue: v.optional(v.string()), txHash: v.optional(v.string()), rawTransaction: v.optional(v.string()),
     operatorNonce: v.optional(v.number()), blockNumber: v.optional(v.number()),
+    blockHash: v.optional(v.string()), finalizedAt: v.optional(v.number()),
     fillsJson: v.optional(v.string()), errorCode: v.optional(v.string()), createdAt: v.number(), updatedAt: v.number(),
   }).index("by_orderId", ["orderId"])
     .index("by_runId_createdAt", ["runId", "createdAt"])
@@ -58,7 +59,8 @@ export const monadVenueTables = {
   monadVenueEvents: defineTable({
     eventId: v.string(), runId: v.string(), venueId: v.string(), userId: v.id("users"), ownerAddress: v.string(),
     kind: v.string(), status: v.string(), summary: v.string(), timestamp: v.number(), orderId: v.optional(v.string()),
-    txHash: v.optional(v.string()), blockNumber: v.optional(v.number()), dataJson: v.optional(v.string()),
+    txHash: v.optional(v.string()), blockNumber: v.optional(v.number()), blockHash: v.optional(v.string()),
+    finalizedAt: v.optional(v.number()), dataJson: v.optional(v.string()),
   }).index("by_eventId", ["eventId"])
     .index("by_run_timestamp", ["runId", "timestamp"])
     .index("by_run_kind_timestamp", ["runId", "kind", "timestamp"])

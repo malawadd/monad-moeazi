@@ -6,6 +6,7 @@ import { verifyParticleSessionToken, type ParticleSessionPayload } from "./parti
 
 export const MOBILE_SCHEMA_VERSION = "2026-09-01" as const;
 export const mobileApi = anyApi.mobile;
+export const mobileNotificationApi = anyApi.mobileNotifications;
 export const mobileSigningApi = anyApi.mobileSigning;
 export const mobileAccountApi = anyApi.mobileAccount;
 

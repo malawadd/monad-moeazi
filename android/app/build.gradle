@@ -1,6 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
 
 def moeaziLocalProperties = new Properties()
 def moeaziLocalFile = rootProject.file("local.properties")
@@ -100,8 +103,8 @@ android {
         applicationId "com.moeazi.monad.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.2"
+        versionCode 4
+        versionName "1.3"
         buildConfigField "String", "MOEAZI_API_BASE_URL", "\"${moeaziConfig('moeazi.apiBaseUrl', 'MOEAZI_API_BASE_URL', 'http://10.0.2.2:3102')}\""
         if (System.getProperty('os.name').toLowerCase().contains('windows')) {
             externalNativeBuild {

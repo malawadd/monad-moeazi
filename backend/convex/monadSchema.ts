@@ -5,7 +5,7 @@ export const monadTables = {
   monadQuotes: defineTable({
     userId: v.id("users"), subject: v.string(), ownerAddress: v.string(), chainId: v.number(), quoteId: v.string(),
     accountScope: v.union(v.literal("wallet"), v.literal("vault")), venue: v.string(),
-    tokenIn: v.string(), tokenOut: v.string(), amountInUnits: v.string(), amountOutUnits: v.string(),
+    tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()), amountInUnits: v.string(), amountOutUnits: v.string(),
     minimumAmountOutUnits: v.string(), slippageBps: v.number(), feeProvenance: v.string(),
     expiresAt: v.number(), gasJson: v.optional(v.string()), createdAt: v.number(),
   }).index("by_userId_quoteId", ["userId", "quoteId"])

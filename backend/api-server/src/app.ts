@@ -23,6 +23,10 @@ import { registerPerplRecoveryRoutes } from "./monad/perplRecoveryRoutes.js";
 import { registerPerplScenarioRoutes } from "./monad/perplOperatorScenarios.js";
 import { registerPerplWorkerRoutes } from "./monad/perplWorker.js";
 import { registerPerpVenues } from "./monad/registerPerpVenues.js";
+import { registerPushNotificationRoutes } from "./notifications/routes.js";
+import { registerMarketRoutes } from "./monad/markets.js";
+import { registerManualPerplAccountRoutes } from "./monad/manualPerplAccount.js";
+import { registerManualPerplOrderRoutes } from "./monad/manualPerplOrders.js";
 
 export const OPERATOR_SUBJECT = LOCAL_OPERATOR_SUBJECT;
 
@@ -74,6 +78,10 @@ export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
   registerPerplRecoveryRoutes(app);
   registerPerplScenarioRoutes(app);
   registerPerplWorkerRoutes(app);
+  registerMarketRoutes(app);
+  registerManualPerplAccountRoutes(app);
+  registerManualPerplOrderRoutes(app);
+  registerPushNotificationRoutes(app);
   const count = await registerLegacyRoutes(app, `${apiRoot}/app/api`);
 
   app.notFound((context) => context.json({ error: "Route not found." }, 404));

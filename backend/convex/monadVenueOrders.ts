@@ -1,6 +1,9 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { appendMonadActivity, requireMonadOperator } from "./monadHelpers";
+
+const internalApi: any = internal;
 
 async function run(ctx: any, runId: string) {
   return await ctx.db.query("monadVenueRuns").withIndex("by_runId", (q: any) => q.eq("runId", runId)).first();
@@ -77,14 +80,21 @@ export const getOrders = query({ args: { runId: v.string() }, handler: async (ct
 
 export const updateOrder = mutation({ args: { orderId: v.string(), status: v.string(), rawResponseJson: v.optional(v.string()),
   orderIdAtVenue: v.optional(v.string()), txHash: v.optional(v.string()), blockNumber: v.optional(v.number()),
+  blockHash: v.optional(v.string()), finalizedAt: v.optional(v.number()),
   fillsJson: v.optional(v.string()), errorCode: v.optional(v.string()) }, handler: async (ctx, args) => {
   await requireMonadOperator(ctx); const row = await order(ctx, args.orderId); if (!row) throw new Error("Perpl order was not found.");
   const phases = ["prepared", "accepted_for_forwarding", "submitted", "executed", "partially_filled", "filled", "finalized", "no_fill", "canceled", "failed", "uncertain"];
   if (!phases.includes(args.status) || ["finalized", "no_fill", "failed", "canceled"].includes(row.status) && row.status !== args.status
-    || (args.rawResponseJson?.length ?? 0) > 40_000 || (args.fillsJson?.length ?? 0) > 40_000) throw new Error("Perpl order state transition is invalid.");
+    || (args.rawResponseJson?.length ?? 0) > 40_000 || (args.fillsJson?.length ?? 0) > 40_000
+    || args.blockHash !== undefined && !/^0x[a-f0-9]{64}$/i.test(args.blockHash)
+    || args.finalizedAt !== undefined && (!Number.isSafeInteger(args.finalizedAt) || args.finalizedAt <= 0 || args.finalizedAt > Date.now() + 60_000)
+    || args.status === "finalized" && row.venueId === "perpl-direct-testnet-v1"
+      && (!args.blockHash || !Number.isSafeInteger(args.blockNumber) || !args.txHash || args.txHash !== row.txHash
+        || !args.finalizedAt)) throw new Error("Perpl order state transition is invalid.");
   await ctx.db.patch(row._id, { status: args.status, rawResponseJson: args.rawResponseJson ?? row.rawResponseJson,
     orderIdAtVenue: args.orderIdAtVenue ?? row.orderIdAtVenue, txHash: args.txHash ?? row.txHash,
-    blockNumber: args.blockNumber ?? row.blockNumber, fillsJson: args.fillsJson ?? row.fillsJson,
+    blockNumber: args.blockNumber ?? row.blockNumber, blockHash: args.blockHash ?? row.blockHash,
+    finalizedAt: args.finalizedAt ?? row.finalizedAt, fillsJson: args.fillsJson ?? row.fillsJson,
     errorCode: args.errorCode ?? (args.status === "finalized" ? undefined : row.errorCode), updatedAt: Date.now() });
   if (args.status !== row.status) await persistOrderEvent(ctx, row, args);
   return { orderId: row.orderId, requestId: row.requestId, status: args.status };
@@ -117,8 +127,35 @@ async function persistOrderEvent(ctx: any, orderRow: any, args: any) {
   await ctx.db.insert("monadVenueEvents", { eventId, runId: runRow.runId, venueId: orderRow.venueId,
     userId: runRow.userId, ownerAddress: runRow.ownerAddress, kind: `perpl_order_${args.status}`, status: args.status,
     summary, timestamp, orderId: String(details.orderId ?? orderRow.orderId), ...(args.txHash ? { txHash: args.txHash } : {}),
-    ...(args.blockNumber !== undefined ? { blockNumber: args.blockNumber } : {}), dataJson });
+    ...(args.blockNumber !== undefined ? { blockNumber: args.blockNumber } : {}),
+    ...(args.blockHash ? { blockHash: args.blockHash } : {}), ...(args.finalizedAt ? { finalizedAt: args.finalizedAt } : {}), dataJson });
   await appendMonadActivity(ctx, { userId: runRow.userId, ownerAddress: runRow.ownerAddress, activityId: eventId,
     kind: `perpl_order_${args.status}`, status: args.status, summary, venueId: orderRow.venueId,
     txHash: args.txHash, dataJson });
+  if (args.status === "finalized" && orderRow.venueId === "perpl-direct-testnet-v1"
+      && args.blockHash && args.finalizedAt && args.txHash && args.blockNumber !== undefined) {
+    const action = JSON.parse(orderRow.actionJson);
+    const response = args.rawResponseJson ? JSON.parse(args.rawResponseJson) : {};
+    const fills = args.fillsJson ? JSON.parse(args.fillsJson) : [];
+    const before = BigInt(response.beforePositionSize ?? "0");
+    const after = BigInt(response.afterPositionSize ?? "0");
+      const entry = ["market_entry", "limit_entry"].includes(String(action.kind));
+      const closing = ["close_position", "reduce_size"].includes(String(action.kind));
+      const verified = response.transport === "direct" && response.receiptStatus === 1
+        && Number(response.finalizedAccountBlock) >= args.blockNumber && fills.length > 0
+        && Number(response.exchangeRequest?.perpId) === Number(action.marketId)
+        && (entry && after > before || closing && after < before);
+    if (verified) {
+      const kind = entry ? "autonomous_entry" : "autonomous_close";
+      const symbol = String(action.symbol ?? `Perpl ${action.marketId}`).slice(0, 48);
+      const detail = entry ? `${symbol} ${action.side ?? "position"} opened with ${fills.length} finalized fill(s).`
+        : `${symbol} ${action.side ?? "position"} closed; finalized exchange position state verified.`;
+      await ctx.scheduler.runAfter(0, internalApi.mobileNotifications.enqueueFinalizedEvent, {
+        ownerAddress: runRow.ownerAddress, eventId, eventKind: kind,
+        title: entry ? `Autonomous ${symbol} entry finalized` : `Autonomous ${symbol} close finalized`,
+        summary: detail, redactedSummary: entry ? "A Perpl position opened." : "A Perpl position closed.",
+        finalityRef: `${args.txHash}:${args.blockHash}:${args.blockNumber}`, finalizedAt: args.finalizedAt,
+      });
+    }
+  }
 }

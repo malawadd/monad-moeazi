@@ -9,6 +9,9 @@ import {useApp} from '../state/AppContext';
 import type {PerplEvent, PerplOrder, PerplRun, PerplRunHistoryPage} from '../types/perpl';
 import {screenStyles as s} from '../theme/screenStyles';
 import {PerplOptimizerCard} from '../components/PerplOptimizerCard';
+import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
+import {marketDirectoryApi} from '../services/marketDirectoryApi';
+import type {MarketTradeSummary} from '../types/marketDirectory';
 
 export function PerplHistoryScreen() {
   const navigation = useNavigation<any>();
@@ -16,6 +19,8 @@ export function PerplHistoryScreen() {
   const runId = route.params?.runId as string | undefined;
   const {ownerAddress} = useApp();
   const [page, setPage] = useState<PerplRunHistoryPage | null>(null);
+  const [summaries, setSummaries] = useState<MarketTradeSummary[]>([]);
+  const [summaryError, setSummaryError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -24,10 +29,19 @@ export function PerplHistoryScreen() {
     if (!runId) { setError('No Perpl run was selected.'); setLoading(false); return; }
     setLoading(true); setError('');
     try {
-      const next = await perplApi.runHistory(runId, 50);
+      const [historyResult, summariesResult] = await Promise.allSettled([
+        perplApi.runHistory(runId, 50), marketDirectoryApi.trades(undefined, undefined, runId),
+      ]);
+      if (historyResult.status === 'rejected') throw historyResult.reason;
+      const next = historyResult.value;
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
       validatePerplRunOwner(next.run, ownerAddress);
       setPage(next);
+      if (summariesResult.status === 'fulfilled') {
+        setSummaries(summariesResult.value.summaries.filter(item => item.runId === runId
+          && item.venueId.startsWith('perpl-') && item.source === 'autonomous'));
+        setSummaryError('');
+      } else setSummaryError('Verified summaries for this run are unavailable.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Perpl run history could not be loaded.'); }
     finally { setLoading(false); }
   }, [runId, ownerAddress]);
@@ -50,6 +64,11 @@ export function PerplHistoryScreen() {
     {error ? <Notice live tone="rose" title="Perpl history unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
     {loading && !page ? <LoadingBlock label="Loading Perpl run history" lines={3} /> : null}
     {page ? <>
+      <Card><Text style={s.strong}>Position summaries for this run</Text>
+        {summaryError ? <Text style={s.body}>{summaryError}</Text> : summaries.length ? summaries.map(summary => <MarketTradeSummaryCard key={summary.summaryId} summary={summary}
+          onOpen={() => navigation.navigate('MarketDetail', {venueId: summary.venueId, marketId: summary.marketId, summaryId: summary.summaryId})} />)
+          : <Text style={s.body}>No verified position summaries have been returned for this run yet. Uncertain orders remain separate in the detailed history below.</Text>}
+      </Card>
       <RunSummary run={page.run} />
       <PerplOptimizerCard run={{...page.run, cycles: page.cycles, journal: page.journal}} />
       {page.events.length ? <Card><Text style={s.strong}>Perpl cycle events</Text>{page.events.map((event, index) => <EventCard key={String(event.id ?? event.eventId ?? `${event.timestamp}:${index}`)} event={event} />)}</Card>

@@ -1,6 +1,8 @@
 import React, {createContext, PropsWithChildren, useContext, useEffect, useState} from 'react';
 import {previewActivity, previewHome, previewLimits, previewMarkets} from '../data/fixtures';
 import {AccountBootstrap, mobileApi, refreshSession} from '../services/apiClient';
+import {getNotificationPreferences, getPushRegistrationAdapter} from '../services/notifications/NotificationClient';
+import {publishNotificationActivityRefresh} from '../services/notifications/NotificationEvents';
 import {clearSession} from '../services/sessionStore';
 import {getDeviceIdentity} from '../services/deviceIdentity';
 import {openMeraSigningSession, type PasskeyAction} from '../services/wallet/meraAuth';
@@ -17,6 +19,15 @@ type AppState = {
 
 const Context = createContext<AppState | null>(null);
 const validAddress = (value: unknown): value is string => typeof value === 'string' && /^0x[0-9a-f]{40}$/i.test(value);
+
+async function restorePushRegistration() {
+  try {
+    const preferences = await getNotificationPreferences();
+    if (preferences.enabled) await getPushRegistrationAdapter().registerDevice();
+  } catch {
+    // Push is optional; offline and Google-services-free devices remain usable.
+  }
+}
 
 export function AppProvider({children}: PropsWithChildren) {
   const [mode, setMode] = useState<Mode>('loading');
@@ -44,6 +55,15 @@ export function AppProvider({children}: PropsWithChildren) {
     }).catch(() => { if (active) setMode('signed-out'); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (mode !== 'authenticated') return;
+    void restorePushRegistration();
+    return getPushRegistrationAdapter().subscribeForeground(() => {
+      // The finalized event remains in Activity; refresh its Mera timeline in foreground.
+      publishNotificationActivityRefresh();
+    });
+  }, [mode]);
 
   async function signIn(action: PasskeyAction) {
     setBusy(true);
@@ -77,6 +97,7 @@ export function AppProvider({children}: PropsWithChildren) {
   async function stopAutopilot(_idempotencyKeys: string[] = []): Promise<MobileStopResult> { throw new Error('Trading actions are paused during the Mera sign-in rollout.'); }
 
   async function signOut() {
+    if (mode === 'authenticated') await getPushRegistrationAdapter().unregisterDevice().catch(() => undefined);
     if (mode === 'authenticated') await mobileApi.logout().catch(() => undefined);
     await clearSession(); setMode('signed-out'); setOwnerAddress(null); setAccount(null);
     setLimits(null); setActivityRows([]); setHome(previewHome);

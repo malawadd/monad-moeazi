@@ -136,6 +136,8 @@ const webEnv = {
   MOBILE_WALLET_WITHDRAWALS_ENABLED: preserved("MOBILE_WALLET_WITHDRAWALS_ENABLED", "false", previous, convexPrevious),
   MOBILE_MANAGED_PROGRAM_ENROLLMENT_SUBJECTS: preserved("MOBILE_MANAGED_PROGRAM_ENROLLMENT_SUBJECTS", "", previous, convexPrevious),
   MOBILE_PUSH_ENABLED: preserved("MOBILE_PUSH_ENABLED", "false", previous),
+  PUSH_TRANSPORT: preserved("PUSH_TRANSPORT", "disabled", previous),
+  FIREBASE_SERVICE_ACCOUNT_PATH: preserved("FIREBASE_SERVICE_ACCOUNT_PATH", ".data/firebase-service-account.json", previous),
   MANAGED_VAULT_PROVISION_ENABLED: preserved("MANAGED_VAULT_PROVISION_ENABLED", "false", previous, agentPrevious),
   MANAGED_VAULT_EXECUTION_ENABLED: preserved("MANAGED_VAULT_EXECUTION_ENABLED", "false", previous, agentPrevious),
   MANAGED_VAULT_STOP_ENABLED: preserved("MANAGED_VAULT_STOP_ENABLED", "false", previous, agentPrevious),

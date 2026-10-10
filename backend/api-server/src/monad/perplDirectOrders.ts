@@ -63,9 +63,12 @@ export async function submitDirectPolicyAction(input: { provider: any; run: any;
     throw new MonadApiError("Direct Perpl orders require Monad Testnet.", 409, "perpl_direct_wrong_chain");
   }
   validatePerplAction({ ...action, requestId: Math.max(1, account.lastRequestId + 1) }, market, account);
+  const priorPosition: any = account.positions.find((item: any) => Number(item.mkt) === action.marketId);
   const actionWithState = { ...action, accountId: account.accountId,
     prePositionSize: positionSize(account, action.marketId).toString(), preOrderLockCount: account.orders.length,
-    preAccountBalanceUnits: account.balanceUnits };
+    preAccountBalanceUnits: account.balanceUnits, prePositionEntryPrice: String(priorPosition?.ep ?? "0"),
+    prePositionFundingUnits: String(priorPosition?.fundingPnlUnits ?? "0"), symbol: market.symbol,
+    priceDecimals: market.priceDecimals, sizeDecimals: market.sizeDecimals };
   const reserved: any = await operatorMutation("monadVenueOrders", "reserveRequestId", { runId: run.runId,
     idempotencyKey: input.idempotencyKey, accountId: account.accountId,
     accountLastRequestId: account.lastRequestId, kind: action.kind,
@@ -136,8 +139,13 @@ export async function reconcileDirectOrder(provider: any, run: any, order: any) 
   const account = await readDirectAccount(provider, order.accountId, JSON.parse(run.marketIdsJson),
     run.delegatedAccountAddress, order.requestId);
   const decoded = decodeDirectReceipt(state.receipt!, order.accountId, order.requestId);
+  const finalizedBlock = await provider.getBlock(state.receipt!.blockNumber);
+  if (!finalizedBlock || finalizedBlock.hash?.toLowerCase() !== state.receipt!.blockHash.toLowerCase()) {
+    throw new MonadApiError("Direct Perpl receipt block changed before persistence.", 409, "perpl_direct_receipt_reorged");
+  }
   const request = decoded.requests.find((item) => item.perpId === action.marketId);
   const before = BigInt(action.prePositionSize ?? "0"); const after = positionSize(account, action.marketId);
+  const afterPosition: any = account.positions.find((item: any) => Number(item.mkt) === action.marketId);
   const filled = decoded.fills.length > 0;
   const changed = action.kind === "market_entry" ? filled && after > before
     : action.kind === "limit_entry" ? filled && after > before || account.orders.length > Number(action.preOrderLockCount ?? 0)
@@ -147,9 +155,15 @@ export async function reconcileDirectOrder(provider: any, run: any, order: any) 
   const phase = classifyDirectOrderOutcome({ requestFound: Boolean(request), changed, fillCount: decoded.fills.length, kind: action.kind });
   const verifiedNoFill = phase === "no_fill";
   await operatorMutation("monadVenueOrders", "updateOrder", { orderId: order.orderId, status: phase,
-    txHash: order.txHash, blockNumber: state.receipt?.blockNumber,
+    txHash: order.txHash, blockNumber: state.receipt?.blockNumber, blockHash: state.receipt?.blockHash,
+    finalizedAt: Number(finalizedBlock.timestamp) * 1000,
     rawResponseJson: JSON.stringify({ transport: "direct", receiptStatus: state.receipt?.status,
       beforePositionSize: before.toString(), afterPositionSize: after.toString(), finalizedAccountBlock: account.blockNumber,
+      beforePositionEntryPrice: String(action.prePositionEntryPrice ?? "0"),
+      afterPositionEntryPrice: String(afterPosition?.ep ?? "0"),
+      beforePositionFundingUnits: String(action.prePositionFundingUnits ?? "0"),
+      afterPositionFundingUnits: String(afterPosition?.fundingPnlUnits ?? "0"),
+      symbol: action.symbol, priceDecimals: action.priceDecimals, sizeDecimals: action.sizeDecimals,
       exchangeRequest: request ?? null, feeUnits: decoded.feeUnits, noFill: verifiedNoFill,
       operatorGasWei: (BigInt(state.receipt?.gasUsed ?? 0) * BigInt(state.receipt?.gasPrice ?? 0)).toString() }),
     fillsJson: JSON.stringify(decoded.fills),

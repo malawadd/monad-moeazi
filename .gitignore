@@ -36,6 +36,10 @@ local.properties
 
 # Local per-checkout Android signing material.
 /android/app/debug.keystore
+/google-services.json
+/android/app/google-services.json
+/com-moeazi-monad-mobile-firebase-adminsdk-fbsvc-cd6bb060fc.json
+/backend/.data/firebase-service-account.json
 
 # node.js
 #

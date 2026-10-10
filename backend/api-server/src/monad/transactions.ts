@@ -5,6 +5,8 @@ import { ADAPTER_ABI, AUSD_ADDRESS, AUSD_DECIMALS, AUSD_FAUCET_ABI, AUSD_FAUCET_
   VAULT_ABI, WMON_ABI, WMON_ADDRESS } from "./constants.js";
 import { configuredAdapter, configuredVault, MonadApiError, type MonadVenue, venueData } from "./config.js";
 import { requireContractCode } from "./provider.js";
+import { AUTONOMY_POOL_ABI } from "./autonomyChain.js";
+import { MOCK_SPOT_VENUE, quoteMockPool, resolveMockPool, resolveMockPoolApproval } from "./mockSpot.js";
 
 export type Eip1559Transaction = {
   to: string; data: string; value: string; chainId: number; nonce: number;
@@ -88,13 +90,13 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
   } else if (kind === "approve_token") {
     const token = getAddress(body.tokenAddress); const spender = getAddress(body.spender);
     const allowedSpenders = [configuredVault(), configuredAdapter("uniswap_v4_testnet"), configuredAdapter("moeazi_test_amm")].filter(Boolean);
-    if (!allowedSpenders.some((address) => address!.toLowerCase() === spender.toLowerCase())) {
-      throw new MonadApiError("Approval spender is not a configured Monad Testnet contract.", 403, "spender_rejected");
-    }
-    if (![USDC_ADDRESS, WMON_ADDRESS].some((asset) => asset.toLowerCase() === token.toLowerCase())) {
-      throw new MonadApiError("Only Circle USDC and WMON approvals are supported.", 400, "asset_unsupported");
-    }
-    const decimals = token.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+    const configured = allowedSpenders.some((address) => address!.toLowerCase() === spender.toLowerCase());
+    let mockDecimals: number | undefined;
+    if (!configured) mockDecimals = (await resolveMockPoolApproval(provider, token, spender)).tokenDecimals;
+    if (!configured && mockDecimals === undefined) throw new MonadApiError("Approval spender is not a configured Monad Testnet contract.", 403, "spender_rejected");
+    const standardAsset = [USDC_ADDRESS, WMON_ADDRESS].some((asset) => asset.toLowerCase() === token.toLowerCase());
+    if (!standardAsset && mockDecimals === undefined) throw new MonadApiError("Only verified Monad Testnet assets are supported.", 400, "asset_unsupported");
+    const decimals = mockDecimals ?? (token.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18);
     const units = typeof body.amountUnits === "string" && /^\d+$/.test(body.amountUnits)
       ? BigInt(body.amountUnits) : amountUnits(body.amount, decimals);
     if (units <= 0n) throw new MonadApiError("Approval amount must be positive.");
@@ -130,28 +132,47 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
     to = vault; data = new Interface(VAULT_ABI).encodeFunctionData(kind === "vault_deposit" ? "deposit" : "withdraw", [asset, units]);
     intent = { kind, asset: body.asset, amount: body.amount, amountUnits: units.toString(), vaultAddress: vault };
   } else if (kind === "swap") {
-    const venue = body.venue as MonadVenue;
-    const adapter = configuredAdapter(venue);
-    if (!adapter) throw new MonadApiError("The selected Monad Testnet venue is not configured.", 503, "venue_disabled");
-    await requireContractCode(provider, adapter, "Monad swap adapter");
     const tokenIn = getAddress(body.tokenIn); const tokenOut = getAddress(body.tokenOut);
-    const inputDecimals = tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
-    const outputDecimals = tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
-    const input = typeof body.amountInUnits === "string" && /^\d+$/.test(body.amountInUnits)
-      ? BigInt(body.amountInUnits) : amountUnits(body.amountIn, inputDecimals);
-    const minOut = typeof body.minAmountOutUnits === "string" && /^\d+$/.test(body.minAmountOutUnits)
-      ? BigInt(body.minAmountOutUnits) : 0n;
-    if (input <= 0n || minOut <= 0n || tokenIn.toLowerCase() === tokenOut.toLowerCase()
-        || ![USDC_ADDRESS, WMON_ADDRESS].every((asset) => [tokenIn, tokenOut].some((token) => token.toLowerCase() === asset.toLowerCase()))) {
-      throw new MonadApiError("Swap pair or minimum output is invalid.");
+    if (body.venue === MOCK_SPOT_VENUE) {
+      if (body.accountScope !== "wallet") throw new MonadApiError("Mock pool swaps are Mera-wallet only.", 403, "operator_only");
+      const pair = await resolveMockPool(provider, tokenIn, tokenOut);
+      if (String(body.poolAddress ?? "").toLowerCase() !== pair.poolAddress.toLowerCase()) {
+        throw new MonadApiError("Mock pool differs from the quote-bound verified deployment.", 409, "quote_mismatch");
+      }
+      const input = typeof body.amountInUnits === "string" && /^\d+$/.test(body.amountInUnits) ? BigInt(body.amountInUnits) : 0n;
+      const minOut = typeof body.minAmountOutUnits === "string" && /^\d+$/.test(body.minAmountOutUnits) ? BigInt(body.minAmountOutUnits) : 0n;
+      if (input <= 0n || minOut <= 0n) throw new MonadApiError("Swap input or minimum output is invalid.", 400, "swap_amount_invalid");
+      const currentOut = await quoteMockPool(provider, pair, input);
+      if (minOut > currentOut) throw new MonadApiError("The finalized pool quote moved below the reviewed minimum; request a fresh quote.", 409, "quote_stale");
+      const token = new Contract(tokenIn, ERC20_ABI, provider);
+      if (await token.allowance(owner, pair.poolAddress) < input) throw new MonadApiError("Approve the exact swap input before trading.", 409,
+        "approval_required", { kind: "approve_token", tokenAddress: tokenIn, spender: pair.poolAddress, amountUnits: input.toString() });
+      to = pair.poolAddress; data = new Interface(AUTONOMY_POOL_ABI).encodeFunctionData("swap", [tokenIn, tokenOut, input, minOut]);
+      intent = { kind, accountScope: "wallet", venue: MOCK_SPOT_VENUE, poolAddress: pair.poolAddress, tokenIn, tokenOut,
+        amountInUnits: input.toString(), minAmountOutUnits: minOut.toString(), inputDecimals: pair.tokenInDecimals,
+        outputDecimals: pair.tokenOutDecimals, marketId: `${pair.symbol}_USDC` };
+    } else {
+      const venue = body.venue as MonadVenue; const adapter = configuredAdapter(venue);
+      if (!adapter) throw new MonadApiError("The selected Monad Testnet venue is not configured.", 503, "venue_disabled");
+      await requireContractCode(provider, adapter, "Monad swap adapter");
+      const inputDecimals = tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+      const outputDecimals = tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+      const input = typeof body.amountInUnits === "string" && /^\d+$/.test(body.amountInUnits)
+        ? BigInt(body.amountInUnits) : amountUnits(body.amountIn, inputDecimals);
+      const minOut = typeof body.minAmountOutUnits === "string" && /^\d+$/.test(body.minAmountOutUnits)
+        ? BigInt(body.minAmountOutUnits) : 0n;
+      if (input <= 0n || minOut <= 0n || tokenIn.toLowerCase() === tokenOut.toLowerCase()
+          || ![USDC_ADDRESS, WMON_ADDRESS].every((asset) => [tokenIn, tokenOut].some((token) => token.toLowerCase() === asset.toLowerCase()))) {
+        throw new MonadApiError("Swap pair or minimum output is invalid.");
+      }
+      const token = new Contract(tokenIn, ERC20_ABI, provider);
+      if (await token.allowance(owner, adapter) < input) throw new MonadApiError("Approve the exact swap input before trading.", 409,
+        "approval_required", { kind: "approve_token", tokenAddress: tokenIn, spender: adapter, amountUnits: input.toString() });
+      to = adapter;
+      data = new Interface(ADAPTER_ABI).encodeFunctionData("swap", [tokenIn, tokenOut, input, minOut, venueData(venue)]);
+      intent = { kind, accountScope: "wallet", venue, tokenIn, tokenOut, amountInUnits: input.toString(),
+        minAmountOutUnits: minOut.toString(), inputDecimals, outputDecimals };
     }
-    const token = new Contract(tokenIn, ERC20_ABI, provider);
-    if (await token.allowance(owner, adapter) < input) throw new MonadApiError("Approve the exact swap input before trading.", 409,
-      "approval_required", { kind: "approve_token", tokenAddress: tokenIn, spender: adapter, amountUnits: input.toString() });
-    to = adapter;
-    data = new Interface(ADAPTER_ABI).encodeFunctionData("swap", [tokenIn, tokenOut, input, minOut, venueData(venue)]);
-    intent = { kind, accountScope: "wallet", venue, tokenIn, tokenOut, amountInUnits: input.toString(),
-      minAmountOutUnits: minOut.toString(), inputDecimals, outputDecimals };
   } else {
     throw new MonadApiError("Unsupported Monad wallet operation.", 400, "operation_unsupported");
   }

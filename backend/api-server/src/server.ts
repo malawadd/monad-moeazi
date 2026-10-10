@@ -3,7 +3,9 @@ import { loadMonadEnvironment } from "./environment.js";
 
 await loadMonadEnvironment();
 const { createApiApp } = await import("./app.js");
+const { startPushOutboxDispatcher } = await import("./notifications/dispatcher.js");
 const app = await createApiApp();
+const stopPushDispatcher = startPushOutboxDispatcher();
 const port = Number(process.env.MOEAZI_API_PORT ?? 3102);
 if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("MOEAZI_API_PORT is invalid.");
 
@@ -12,6 +14,7 @@ const server = serve({ fetch: app.fetch, hostname: "127.0.0.1", port }, (info) =
 });
 
 function stop(): void {
+  stopPushDispatcher();
   server.close(() => process.exit(0));
 }
 

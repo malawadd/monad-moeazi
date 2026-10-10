@@ -115,7 +115,7 @@ async function prepare(context: any) {
     }
     normalized = { ...normalized, amountInUnits: quote.amountInUnits,
       minAmountOutUnits: quote.minimumAmountOutUnits, amountIn: body.amountIn,
-      accountScope: "wallet" };
+      accountScope: "wallet", ...(quote.poolAddress ? { poolAddress: quote.poolAddress } : {}) };
   }
   const provider = await monadProvider();
   let built: Awaited<ReturnType<typeof buildWalletTransaction>>;
@@ -123,7 +123,9 @@ async function prepare(context: any) {
   finally { await provider.destroy(); }
   const { transaction, gas, intent: builtIntent } = built;
   const intent = kind === "swap" ? { ...builtIntent, quoteId: body.quoteId,
-    amount: body.amount, asset: body.asset, pair: "WMON_USDC", accountScope: "wallet" } : builtIntent;
+    amount: body.amount, asset: body.asset, pair: body.venue === "moeazi_mock_pools_testnet"
+      ? String(builtIntent.marketId) : "WMON_USDC",
+    accountScope: "wallet" } : builtIntent;
   const operationId = randomUUID();
   const now = Date.now();
   const row: any = await operatorMutation("monad", "prepareOperation", {

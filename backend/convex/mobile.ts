@@ -735,10 +735,3 @@ export const stopAutopilot = mutation({ args: {}, handler: async (ctx) => {
       ? "All new trading activity is stopped. Temporal schedule cleanup was requested; position closure is not confirmed."
       : "New entries are blocked. Temporal schedule cleanup was requested; position closure is not confirmed." };
 } });
-
-export const registerNotificationDevice = mutation({ args: { deviceId: v.string(), pushToken: v.string(), preferencesJson: v.string() }, handler: async (ctx, args) => {
-  assertMobileChainActionsPaused();
-  const { user } = await viewer(ctx); const now = Date.now(); const existing = await ctx.db.query("mobileNotificationDevices").withIndex("by_userId_deviceId", (q: any) => q.eq("userId", user._id).eq("deviceId", args.deviceId)).first();
-  const values = { ...args, userId: user._id, platform: "android" as const, status: "active" as const, createdAt: existing?.createdAt ?? now, updatedAt: now };
-  if (existing) { await ctx.db.patch(existing._id, values); return existing._id; } return await ctx.db.insert("mobileNotificationDevices", values);
-} });

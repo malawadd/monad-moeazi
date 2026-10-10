@@ -1,11 +1,13 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {Button, DataRow, Kicker, Panel, Screen} from '../components/Ui';
 import {useApp} from '../state/AppContext';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
 export function AccountScreen() {
+  const navigation = useNavigation();
   const {ownerAddress, signOut, busy} = useApp();
   return <Screen>
     <View style={styles.header}>
@@ -21,6 +23,7 @@ export function AccountScreen() {
       <Text style={s.subheading}>This release</Text>
       <Text style={s.body}>This Mera address is used on Monad Testnet (chain 10143). Signing requests open short-lived sessions; private keys are not stored by Moeazi.</Text>
     </Panel>
+    <Button label="Trade notification settings" variant="secondary" onPress={() => navigation.navigate('NotificationSettings' as never)} />
     <Button label="Sign out on this device" variant="secondary" loading={busy} onPress={() => {void signOut();}} />
   </Screen>;
 }

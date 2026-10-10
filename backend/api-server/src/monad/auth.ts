@@ -11,7 +11,7 @@ export async function requireMera(context: any) {
     const address = String(payload.walletAddress ?? "").toLowerCase();
     if (payload.tokenUse !== "mobile_access" || payload.authProvider !== "mera" || !payload.deviceId
         || !/^0x[a-f0-9]{40}$/.test(address) || payload.sub !== `mera:${address}`) throw new Error("Invalid Mera session.");
-    return { token, ownerAddress: getAddress(address), subject: payload.sub };
+    return { token, ownerAddress: getAddress(address), subject: payload.sub, deviceId: payload.deviceId };
   } catch {
     throw new MonadApiError("Mera session is invalid or expired.", 401, "unauthorized");
   }

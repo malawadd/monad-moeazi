@@ -4,12 +4,14 @@ import { agentTables } from "./agentSchema";
 import { dependencySafetyTables } from "./dependencySafetySchema";
 import { evidenceLifecycleTables } from "./evidenceLifecycleSchema";
 import { mobileConnectorTables } from "./mobileConnectorSchema";
+import { mobileNotificationTables } from "./mobileNotificationsSchema";
 import { programTables } from "./programSchema";
 import { financeProjectionTables } from "./financeProjectionSchema";
 import { monadTables } from "./monadSchema";
 import { monadAutonomyTables } from "./monadAutonomySchema";
 import { monadPerpTables } from "./monadPerpSchema";
 import { monadVenueTables } from "./monadVenueSchema";
+import { monadManualTables } from "./monadManualSchema";
 import { managedTradingVenue, managedVenueRole } from "./agentValidators";
 
 export default defineSchema({
@@ -19,6 +21,7 @@ export default defineSchema({
   ...monadAutonomyTables,
   ...monadPerpTables,
   ...monadVenueTables,
+  ...monadManualTables,
   devCreditControls: defineTable({
     key: v.string(), chargingEnabled: v.boolean(), version: v.number(),
     updatedAt: v.number(), updatedBy: v.string(),
@@ -914,21 +917,9 @@ export default defineSchema({
     .index("by_txHash", ["txHash"])
     .index("by_status", ["status"]),
 
-  mobileNotificationDevices: defineTable({
-    userId: v.id("users"),
-    deviceId: v.string(),
-    platform: v.literal("android"),
-    pushToken: v.string(),
-    preferencesJson: v.string(),
-    status: v.union(v.literal("active"), v.literal("disabled")),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId_deviceId", ["userId", "deviceId"])
-    .index("by_status", ["status"]),
-
   ...agentTables,
   ...dependencySafetyTables,
   ...evidenceLifecycleTables,
   ...mobileConnectorTables,
+  ...mobileNotificationTables,
 });

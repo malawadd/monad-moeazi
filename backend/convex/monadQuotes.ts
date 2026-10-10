@@ -25,13 +25,15 @@ export const getOperatorQuote = query({
 
 export const recordQuote = mutation({
   args: { subject: v.string(), ownerAddress: v.string(), quoteId: v.string(), accountScope: v.union(v.literal("wallet"), v.literal("vault")),
-    venue: v.string(), tokenIn: v.string(), tokenOut: v.string(), amountInUnits: v.string(), amountOutUnits: v.string(),
+    venue: v.string(), tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()), amountInUnits: v.string(), amountOutUnits: v.string(),
     minimumAmountOutUnits: v.string(), slippageBps: v.number(), feeProvenance: v.string(), expiresAt: v.number(), gasJson: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireMonadOperator(ctx);
     const { user, owner } = await requireStoredMeraOwner(ctx, args.subject, args.ownerAddress);
     if (!/^0x[a-f0-9]{64}$/.test(args.quoteId) || args.expiresAt <= Date.now()
         || args.expiresAt > Date.now() + 2 * 60_000 || args.slippageBps < 1 || args.slippageBps > 500
+        || (args.venue === "moeazi_mock_pools_testnet" && !/^0x[a-f0-9]{40}$/i.test(args.poolAddress ?? ""))
+        || (args.venue !== "moeazi_mock_pools_testnet" && args.poolAddress !== undefined)
         || !/^\d+$/.test(args.amountInUnits) || !/^\d+$/.test(args.amountOutUnits)
         || !/^\d+$/.test(args.minimumAmountOutUnits) || BigInt(args.amountInUnits) <= 0n
         || BigInt(args.minimumAmountOutUnits) <= 0n || args.tokenIn.toLowerCase() === args.tokenOut.toLowerCase()) {

@@ -1,9 +1,13 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Button, Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {monadApi} from '../services/monadApi';
+import {marketDirectoryApi} from '../services/marketDirectoryApi';
+import {subscribeNotificationActivityRefresh} from '../services/notifications/NotificationEvents';
+import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
 import type {MonadActivityEvent} from '../types/monad';
+import type {MarketTradeSummary} from '../types/marketDirectory';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -15,6 +19,8 @@ function eventTime(value: string) {
 export function ActivityScreen() {
   const navigation = useNavigation<any>();
   const [events, setEvents] = useState<MonadActivityEvent[]>([]);
+  const [tradeSummaries, setTradeSummaries] = useState<MarketTradeSummary[]>([]);
+  const [summaryError, setSummaryError] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
@@ -26,14 +32,15 @@ export function ActivityScreen() {
   const refresh = useCallback(async () => {
     const generation = ++pageGeneration.current;
     setRefreshing(true); setError('');
-    try {
-      const page = await monadApi.activity(60);
-      if (generation === pageGeneration.current) {
-        setEvents(page.events); setNextCursor(page.nextCursor); setHasMore(page.hasMore);
-      }
+    const [activityResult, summaryResult] = await Promise.allSettled([monadApi.activity(60), marketDirectoryApi.trades()]);
+    if (generation === pageGeneration.current) {
+      if (activityResult.status === 'fulfilled') {
+        setEvents(activityResult.value.events); setNextCursor(activityResult.value.nextCursor); setHasMore(activityResult.value.hasMore);
+      } else setError(activityResult.reason instanceof Error ? activityResult.reason.message : 'Activity could not be loaded.');
+      if (summaryResult.status === 'fulfilled') { setTradeSummaries(summaryResult.value.summaries); setSummaryError(''); }
+      else setSummaryError('Trade summaries are unavailable.');
     }
-    catch (reason) { if (generation === pageGeneration.current) setError(reason instanceof Error ? reason.message : 'Activity could not be loaded.'); }
-    finally { if (generation === pageGeneration.current) setRefreshing(false); }
+    if (generation === pageGeneration.current) setRefreshing(false);
   }, []);
   const loadMore = useCallback(async () => {
     if (!hasMore || !nextCursor || loadingMore) return;
@@ -52,11 +59,19 @@ export function ActivityScreen() {
     finally { setLoadingMore(false); }
   }, [hasMore, nextCursor, loadingMore]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  useEffect(() => subscribeNotificationActivityRefresh(() => { void refresh(); }), [refresh]);
   const visibleEvents = scope === 'perp' ? events.filter(isPerpVenueEvent) : events;
+  const visibleSummaries = scope === 'perp' ? tradeSummaries.filter(item => item.venueId.startsWith('perpl-')) : tradeSummaries;
 
   return <Screen refreshing={refreshing} onRefresh={() => { void refresh(); }}>
     <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />
     {error ? <Notice live tone="rose" title="Activity unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    <Card><Text style={s.strong}>Recent trade summaries</Text>
+      {summaryError ? <Text style={s.body}>{summaryError}</Text> : visibleSummaries.length ? visibleSummaries.slice(0, 8).map(summary =>
+        <MarketTradeSummaryCard key={summary.summaryId} summary={summary} onOpen={() => navigation.navigate('MarketDetail', {
+          venueId: summary.venueId, marketId: summary.marketId, summaryId: summary.summaryId,
+        })} />) : <Text style={s.body}>No verified trade summaries have been returned yet. Uncertain and open orders remain visible in the event timeline below.</Text>}
+    </Card>
     <View style={styles.filters}>
       <Button label="All activity" variant={scope === 'all' ? 'primary' : 'secondary'} onPress={() => setScope('all')} />
       <Button label="Perp venues" variant={scope === 'perp' ? 'primary' : 'secondary'} onPress={() => setScope('perp')} />

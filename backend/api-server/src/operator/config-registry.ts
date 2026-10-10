@@ -54,6 +54,7 @@ export const CONFIG_REGISTRY: ConfigEntry[] = [
   locked("MOBILE_GAS_ACCOUNT_LIMIT_WEI", "Mobile gas limit per account", "not configured", "Covered-fee account budget is managed by the separately reviewed mobile integration setup.", "agents", sidecarServices, "text"),
   locked("MOBILE_GAS_GLOBAL_LIMIT_WEI", "Mobile gas global budget", "not configured", "Covered-fee global budget is managed by the separately reviewed mobile integration setup.", "agents", sidecarServices, "text"),
   locked("MOBILE_PUSH_ENABLED", "Mobile push notifications", "false", "Push delivery credentials and provider setup are not managed by this local console.", "both", ["api"], "boolean"),
+  locked("PUSH_TRANSPORT", "Push delivery provider", "disabled", "Provider changes require local service configuration and a registered device; this value is not edited by the operator console.", "both", ["api"], "text"),
   locked("MOBILE_MANAGED_PROGRAM_ENROLLMENT_SUBJECTS", "Mobile enrollment subject allowlist", "", "Mobile subject allowlists are fixed by deployment setup and cannot be edited here.", "convex"),
   locked("LEGACY_OPTIMISM_EXECUTION_ENABLED", "Legacy Optimism execution", "false", "Legacy chain execution stays controlled by the existing migration and authority path.", "convex", ["convex"], "boolean"),
   locked("CERTIFIED_VENUES", "Certified venue evidence", "", "Certification evidence is read-only.", "agents"),

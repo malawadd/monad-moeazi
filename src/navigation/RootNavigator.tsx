@@ -12,8 +12,10 @@ import {AutonomyStatusScreen} from '../screens/AutonomyStatusScreen';
 import {AutonomyChoiceScreen} from '../screens/AutonomyChoiceScreen';
 import {ManagedVaultScreen} from '../screens/ManagedVaultScreen';
 import {MarketsScreen} from '../screens/MarketsScreen';
+import {MarketDetailScreen} from '../screens/MarketDetailScreen';
 import {MonadFundingScreen} from '../screens/MonadFundingScreen';
 import {MonadHomeScreen} from '../screens/MonadHomeScreen';
+import {NotificationSettingsScreen} from '../screens/NotificationSettingsScreen';
 import {OperationReviewScreen} from '../screens/OperationReviewScreen';
 import {PerpSetupScreen} from '../screens/PerpSetupScreen';
 import {PerpStatusScreen} from '../screens/PerpStatusScreen';
@@ -22,6 +24,9 @@ import {PerplHistoryScreen} from '../screens/PerplHistoryScreen';
 import {PerplMarketsScreen} from '../screens/PerplMarketsScreen';
 import {PerplSetupScreen} from '../screens/PerplSetupScreen';
 import {PerplStatusScreen} from '../screens/PerplStatusScreen';
+import {PerplManualAccountScreen} from '../screens/PerplManualAccountScreen';
+import {PerplTradeScreen} from '../screens/PerplTradeScreen';
+import {ManualPerplReviewScreen} from '../screens/ManualPerplReviewScreen';
 import {SendScreen} from '../screens/SendScreen';
 import {TradeReviewScreen} from '../screens/TradeReviewScreen';
 import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
@@ -53,6 +58,10 @@ export function RootNavigator() {
       <Stack.Screen name="Funding" component={MonadFundingScreen} />
       <Stack.Screen name="Send" component={SendScreen} />
       <Stack.Screen name="OperationReview" component={OperationReviewScreen} />
+      <Stack.Screen name="MarketDetail" component={MarketDetailScreen} />
+      <Stack.Screen name="PerplManualAccount" component={PerplManualAccountScreen} />
+      <Stack.Screen name="PerplTrade" component={PerplTradeScreen} />
+      <Stack.Screen name="ManualPerplReview" component={ManualPerplReviewScreen} />
       <Stack.Screen name="Wrap" component={WrapScreen} />
       <Stack.Screen name="ManagedVault" component={ManagedVaultScreen} />
       <Stack.Screen name="AutonomySetup" component={AutonomySetupScreen} />
@@ -68,6 +77,7 @@ export function RootNavigator() {
       <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="AgentSettings" component={AgentSettingsScreen} />
     </> : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
   </Stack.Navigator>;

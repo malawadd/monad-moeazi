@@ -1,6 +1,6 @@
 export type MonadAsset = 'MON' | 'AUSD' | 'USDC' | 'WMON';
 export type MonadAccountScope = 'wallet' | 'vault';
-export type MonadVenueId = 'uniswap_v4_testnet' | 'moeazi_test_amm';
+export type MonadVenueId = 'uniswap_v4_testnet' | 'moeazi_test_amm' | 'moeazi_mock_pools_testnet';
 export type PerpVenueId = 'monad-mock-clearinghouse-v1' | 'perpl-testnet-v1' | 'perpl-direct-testnet-v1';
 
 export type MonadBalance = {

@@ -41,6 +41,8 @@ export const monadAutonomyTables = {
     minimumOutUnits: v.optional(v.string()), expectedAmountOutUnits: v.optional(v.string()), amountOutUnits: v.optional(v.string()),
     rejectionCode: v.optional(v.string()),
     blockNumber: v.optional(v.number()), blockHash: v.optional(v.string()), receiptStatus: v.optional(v.number()),
+    finalizedAt: v.optional(v.number()), realizedProfitLossUnits: v.optional(v.string()),
+    settlementStatus: v.optional(v.number()),
     gasUsed: v.optional(v.string()), effectiveGasPrice: v.optional(v.string()),
     createdAt: v.number(), updatedAt: v.number(),
   }).index("by_orderId", ["orderId"])

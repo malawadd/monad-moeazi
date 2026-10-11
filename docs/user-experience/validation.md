@@ -1,11 +1,45 @@
 # Preview validation log
 
-Updated 11 October 2026. **Static checks, Chrome prototype flows and sampled
-small-screen checks passed.** Human usability, full accessibility and native
-Android handoff checks remain pending. These are local design artifacts and
-fictional fixture outcomes, not production transactions.
+Updated 11 October 2026. The Historical V1 section preserves earlier
+prototype/browser samples; they do not validate the current revision. Four V1
+feedback screenshots expose a context-free fixture chart, off-brand duration
+slider, glossary-heavy Activity and missing detail/signing coverage. Three V2
+images expose market-name wrapping and dense review/provider screens. Four V3
+images add alarm-copy and funding/manual-entry concerns. Four V4 images
+supersede the earlier top-up-everywhere and strategy-cart decisions: initial
+top-up only on Home while needed, repeat top-ups at the bottom of Settings by
+Receive/Send, and no marketplace cart.
 
-## Build and browser checks
+All nine current Node checks pass, including reducer/view/journey/guard fixtures,
+controller, consent, layout assertions, the updated funding/required-base
+marketplace suite and hub structure. They exercise local sources and simulated
+state; they do not establish visual quality, native behavior, accessibility
+conformance or novice comprehension. No production funding, signing or trading
+occurred.
+
+**No visual pass is recorded for the current revision.** Browser access to the
+local preview was blocked by the CUA URL policy, so there is no browser or
+native screenshot/interaction result for the latest Home, Settings and Strategies
+changes. Human usability, native wallet/provider handoff and full accessibility
+checks remain pending. Fixture outcomes are simulated and do not represent
+production transactions.
+
+## Current source and simulated-state checks
+
+| Check | Result | Scope and limitation |
+|---|---|---|
+| `prototype-test.mjs` | Pass · 9 reducer fixtures | Local state transitions and guards; no service calls. |
+| `verify-prototype-views.mjs` | Pass · 16 view checks | Route output and app handlers; source rendering, not visual QA. |
+| `verify-v2-journeys.mjs` | Pass · 11 journey checks | Auth, market, Spot, duration, Activity, settlement, recovery and registered controls. Actual browser/native history events were not exercised. |
+| `verify-v2-guards.mjs` | Pass · 7 guard checks | Confirmation and balance-change guards for uncertain/rejected states. |
+| `verify-v2-controller.mjs` | Pass | Node stubs exercised clicks, timers, auth, logout, input focus and Settings routes. |
+| `prototype-consent-test.mjs` | Pass | Strategy consent review and provider handoff checks. |
+| `verify-v2-layout-consent.mjs` | Pass | Compact-market and consent HTML/CSS source assertions; not browser or pixel QA. |
+| `verify-v3-funding-workflow.mjs` | Pass | Initial Home and repeat Settings entrypoints, receipt progress/idempotency, required non-toggleable base and disabled optional modules; reducer/render checks only. |
+| `verify-hub.mjs` | Pass · 57 text files ≤300 lines | 35 routes, local links/assets/imports/fonts and no live service/network hooks. Structural only. |
+
+
+## Historical V1 build and browser checks
 
 | Check | Result | Evidence |
 |---|---|---|
@@ -51,10 +85,10 @@ sources**, not directly observed in installed apps. Pages were reviewed on
 
 | Product / publisher | Official source | Evidence type | App version |
 |---|---|---|---|
-| Coinbase | [Coinbase Help · Coinbase vs. Advanced](https://help.coinbase.com/en/getting-started/other/coinbase-vs-coinbase-advanced) | Help page; emulator Play intent did not resolve. | Not observed |
-| Phantom | [Swap](https://help.phantom.com/articles/swap-crypto-in-phantom-5985106844435), [Perps](https://help.phantom.com/articles/trade-perps-in-phantom-42292249388307) | Help pages; [download page](https://phantom.com/download) separately browser-observed with QR/Search Google Play prompt, no direct APK. | Not observed |
-| Kraken | [Support · Recurring buys](https://support.kraken.com/articles/6906240918804-recurring-buys-on-the-kraken-app) | Official help page; no app walkthrough. | Not observed |
-| Revolut | [Help · Robo-advisor setup](https://help.revolut.com/en-US/help/wealth/robo-advisor/how-do-i-get-started/) | Official help page; no app walkthrough. | Not observed |
+| Coinbase | [Coinbase Design · Earn Center](https://www.coinbase.com/blog/designing-the-earn-center-one-home-for-everything-your-crypto-can-earn) (20 Aug 2026); [CDP spend permissions](https://docs.cdp.coinbase.com/api-reference/v2/rest-api/evm-smart-accounts/create-a-spend-permission) | Product design case study and technical API schema reviewed; not direct app evidence. | Not observed |
+| Phantom | [More Perps updates](https://phantom.com/learn/blog/more-perps-updates-have-arrived) (28 May 2026); [Explore help](https://help.phantom.com/articles/41523165147667) (publisher listing 13 Apr 2026) | Product announcement and support documentation reviewed; no current screen walkthrough. | Not observed |
+| Kraken | [Platform comparison](https://support.kraken.com/in/articles/14984895395092-which-kraken-platform-is-best-for-me-) (updated 1 Oct 2026); [Recurring Orders](https://support.kraken.com/articles/6906240918804-recurring-buys-on-the-kraken-app) (updated 30 Jul 2026) | Official product/support documentation reviewed; no APK walkthrough. Recurring schedules are not active leveraged-run controls. | Not observed |
+| Revolut | [AIR assistant announcement](https://www.revolut.com/news/revolut_enters_new_era_of_money_intelligence_with_launch_of_ai_assistant/) (9 Apr 2026); [US Robo-Advisor help](https://help.revolut.com/en-US/help/wealth/robo-advisor/how-do-i-get-started/) (date not shown) | First-party announcement and regional help page reviewed; neither establishes wallet-delegation scope or direct app UI. | Not observed |
 
 No competitor apps were installed. Do not infer their tap counts, keyboard,
 motion, authentication or recovery from help pages; see the

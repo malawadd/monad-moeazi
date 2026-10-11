@@ -1,0 +1,62 @@
+// Offline design fixtures based on the production strategy catalog.
+// Community entries below are clearly labeled concepts, not real submissions.
+export const STRATEGY_MODULES = Object.freeze([
+  {
+    id: 'perpl-deterministic',
+    name: 'Perpl deterministic',
+    version: 'perpl-deterministic-v3-soak',
+    kind: 'deterministic',
+    status: 'available',
+    requiredBase: true,
+    benefit: 'Rule-based Perpl trading',
+    role: 'Execution strategy',
+    creator: 'Moeazi Team',
+    attribution: 'Production strategy catalog · Monad Testnet',
+    purpose: 'A fixed-rule Perpl Testnet strategy that checks price movement, short and medium trend, executable book depth, fees and funding before bounded entries.',
+    methodology: 'Deterministic rules; it does not use an AI model to choose trades. Current policy scans eligible markets, checks fresh book/fee/depth conditions and applies backend-enforced position sizing and the signed run expiry.',
+    fee: '0% Moeazi performance fee. Perpl trading and funding fees are separate venue charges.',
+    runtime: 'Available through the existing guarded Perpl setup. It is the required base strategy.',
+    metricMethod: 'Production metrics count unique activated wallets across retained verified records; that is not a people count. Net realized PnL is from finalized AUSD cycles; open-position PnL and unsigned/failed setup attempts are excluded. Operator gas is paid in MON and is not included in AUSD PnL. The API exposes no reporting-period start, so a lifetime period cannot be confirmed.',
+    metrics: null,
+  },
+  {
+    id: 'moeazi-agentic',
+    name: 'Agentic strategy',
+    version: 'planned-v1',
+    kind: 'agentic',
+    status: 'planned',
+    requiredBase: false,
+    benefit: 'Planned market analysis',
+    role: 'Analysis module · concept',
+    creator: 'Moeazi Team',
+    attribution: 'Planned concept in the production strategy catalog',
+    purpose: 'A possible future analysis module that could combine market and contextual signals with a replaceable decision provider.',
+    methodology: 'Concept only. Model, data, risk-policy integration and decision methodology are not announced. This module cannot act, sign or trade.',
+    fee: 'Planned: 2% of positive net realized profit; no current charge and no fee on losses or unrealized gains.',
+    runtime: 'Coming later · no live model, trading authority or agentic execution path.',
+    metricMethod: 'No verified production activations or result history are available for this planned concept. An unavailable metric is not a zero.',
+    metrics: null,
+  },
+  {
+    id: 'community-market-context',
+    name: 'Community market context',
+    version: 'illustrative-concept',
+    kind: 'community-concept',
+    status: 'concept',
+    requiredBase: false,
+    benefit: 'Illustrative research input',
+    role: 'Research input · concept',
+    creator: 'Community concept · illustrative',
+    attribution: 'Example contribution format only · no named creator, real submission or endorsement',
+    purpose: 'An illustrative idea for a community-authored market-context module alongside an execution strategy.',
+    methodology: 'Illustrative idea only. No data source, rules, author identity, review process or runtime connection is defined.',
+    fee: 'Not announced.',
+    runtime: 'Design draft only · this example cannot analyze live markets, sign or trade.',
+    metricMethod: 'No real creator profile, verified activations or performance records exist for this illustrative concept. An unavailable metric is not a zero.',
+    metrics: null,
+  },
+]);
+
+export function strategyById(id) {
+  return STRATEGY_MODULES.find(item => item.id === id) ?? STRATEGY_MODULES[0];
+}

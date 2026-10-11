@@ -1,90 +1,107 @@
-# Research notes and evidence ledger
+# Moeazi UX research notes
 
-Research date: 11 October 2026. Use this file to trace a design decision to
-either app evidence, a published source, or an untested hypothesis.
+Research and source review checked 11 October 2026. The expanded primary-source
+ledger, exact source methods and application rationale are in
+[contemporary-patterns.md](contemporary-patterns.md). End-to-end interaction
+coverage and open questions are in [interaction-coverage.md](interaction-coverage.md).
 
-## Evidence labels
+## Evidence labels and scope
 
-- **Observed in Moeazi:** repository source and/or dated emulator screenshot.
-- **Documented competitor pattern:** official help page reviewed on the date
-  above. No claim is made about an installed app version or direct UI inspection.
-- **Hypothesis:** proposed transfer to Moeazi. Needs novice testing.
-- **Pending:** work that has not been performed.
+- **Observed in Moeazi:** repository source or an identified emulator capture.
+- **User-supplied V1 feedback:** four screenshots of prototype version 1; their
+  original capture date, device and viewport are unknown. Received 11 October
+  2026. They record feedback, not production behavior or participant results.
+- **Documented product pattern:** official publisher article/help page. This
+  does not establish the installed app's actual UI or interaction.
+- **Platform guidance:** first-party Android or Apple design guidance. The
+  publication/change date is recorded separately where visible.
+- **Hypothesis:** proposed transfer to Moeazi. It needs novice testing.
+- **Pending:** interaction, visual state or participant outcome not checked.
 
 ## Moeazi baseline
 
-The route inventory and UI descriptions are source-based. Seven screenshots in
-`evidence/` cover Home, Markets, Strategies, Strategy Detail, Perpl Setup,
-Activity and Account. Strategy and detail captures are mid-scroll; Perpl Setup
-has a React Native debugger overlay. This is not full screen or flow coverage.
-The [evidence manifest](evidence/README.md) captures device, timing and limits.
+The route inventory comes from repository source. Seven read-only Android
+screenshots cover Home, Markets, Strategies, Strategy Detail, Perpl Setup,
+Activity and Account. Strategy and detail are mid-scroll; Perpl Setup has a
+debugger overlay. They do not show complete navigation, all nested pages,
+signing, error/loading states or all keyboard and Back behavior. See the
+[emulator evidence manifest](evidence/README.md).
 
-Current app tokens define paper `#FFFDF5`, ink `#111111`, bright yellow/pink/sky/
-mint accents, Syne display type, Plus Jakarta Sans body type, 5 px strong borders,
-solid shadows, and 120/180/220 ms motion values. The tab bar supports a 48 px
-minimum item, expands for large font scaling, exposes tab role/selected state,
-and uses haptic selection. These are valuable identity and accessibility assets
-to preserve. See `src/theme/tokens.ts` and `src/navigation/TypographicTabBar.tsx`.
+Four V1 prototype feedback captures add targeted critique: a generic fixture
+chart without visible asset/time context; a blue duration slider; an oversized
+four-state glossary; and a gray demo-run Activity card above that glossary.
+The review also raised incomplete subpage and final signing coverage. This
+V1 feedback supersedes broader V1 completeness language in the historical
+[validation log](reader.html?doc=validation.md). It does not claim a V2 result.
 
-## Competitor documentation review
+The current palette uses cream, ink, yellow/pink/sky/mint accents, Syne and
+Plus Jakarta Sans, heavy borders/shadows and 120/180/220 ms motion tokens. The
+tab bar has a 48 dp minimum item, supports larger text and uses haptics. Keep
+these identity/accessibility assets while giving each screen a clear task and
+status hierarchy. Sources: `src/theme/tokens.ts` and
+`src/navigation/TypographicTabBar.tsx`.
 
-Competitor Android installation was attempted through the emulator’s Google
-Play package, but the Coinbase market link could not resolve and no competitor
-apps were installed. Therefore, all rows below are **documented** patterns from
-official help pages, not observed APK behavior. App versions are not known.
+## Contemporary primary-source review
 
-| ID | Official source | Documented pattern | Moeazi question |
-|---|---|---|---|
-| C1 | [Coinbase: Coinbase vs. Coinbase Advanced](https://help.coinbase.com/en/getting-started/other/coinbase-vs-coinbase-advanced) | Simple and Advanced experiences are distinct while sharing balances and history. | Can User/Developer Mode retain one wallet/history and keep switching predictable? |
-| C2 | [Phantom: swap help](https://help.phantom.com/articles/swap-crypto-in-phantom-5985106844435) and [Perps](https://help.phantom.com/articles/trade-perps-in-phantom-42292249388307) | Compact pay/receive framing, optional swap settings and fee review; check submitted state before retry. Perps is explained separately. | Can Moeazi show From → To and a safe uncertain-submission recovery? |
-| C3 | [Kraken: recurring buys](https://support.kraken.com/articles/6906240918804-recurring-buys-on-the-kraken-app) | A recurring purchase schedule has documented management actions to pause or cancel. | Which controls can a Moeazi run actually support? A recurring schedule pause is not evidence that an open position can pause instantly. |
-| C4 | [Revolut: robo-advisor setup](https://help.revolut.com/en-US/help/wealth/robo-advisor/how-do-i-get-started/) | Managed investing has a dedicated setup/funding path; reviewed documentation separates robo-advisor and trading balances. | Can Home distinguish wallet available, strategy allocation and manual Perpl collateral? |
+Current 2026 references are specific and date-labeled:
 
-These help pages were reopened/reviewed for this research on 11 Oct 2026. Their
-current page content can change. Direct in-app behavior, regional availability,
-authentication gates, APK versions, tap count, keyboard handling, transition
-timings and error details remain unobserved. Do not infer them from a help page.
+- Coinbase Design's 20 Aug 2026 Earn Center case study describes customer
+  confusion over one balance label and separates discovery from monitoring.
+- Phantom's 28 May 2026 Perps update and its current Explore help describe
+  category/news discovery; Explore sections can vary dynamically. These sources
+  do not show a current app build.
+- Kraken's 1 Oct 2026 platform comparison describes separate beginner and
+  Pro experiences. Its Aug 2026 navigation page lists Home, Portfolio, Explore
+  and Activity. Its Jul 2026 recurring-order page documents visible fees,
+  management controls and failure reasons for a scheduled purchase.
+- Revolut US Robo-Advisor help describes an application, suitability
+  questionnaire and terms review. The document is regional and has no visible
+  publication date; it is not a description of Moeazi's product or scope.
+- Coinbase Developer and Safe docs give concrete technical examples of
+  time-, token- and amount-scoped agent permissions. These are not consumer UX
+  research and do not imply Moeazi has those capabilities.
 
-## Other references
+Platform foundations are identified by their dates: Google Material 3
+Expressive research is from May 2025; Apple's chart HIG page was introduced in
+2022; Apple's design-principles page was updated June 2026. Current keyboard,
+passkey, motion, chart and alert guidance is linked and dated or labeled “not
+shown” in the [source ledger](contemporary-patterns.md#source-ledger). Do not
+call every current-page update a 2026 design trend.
 
-| ID | Source | Relevance |
-|---|---|---|
-| R1 | [Apple Human Interface Guidelines: Onboarding](https://developer.apple.com/design/human-interface-guidelines/onboarding) | Learn by doing and introduce help in the product context. |
-| R2 | [Nielsen Norman Group: Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/) | Show essential information first and reveal advanced detail when useful. |
-| A1 | [Android Accessibility Help](https://support.google.com/accessibility/android/answer/7101858) | Validate readable text, accessible controls and assistive-technology use. |
-| A2 | [WCAG 2.2: Contrast Minimum](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) | Minimum contrast ratio is 4.5:1 for normal text and 3:1 for large text. |
-| A3 | [WCAG 2.2: Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html) | Text must resize to 200% without loss of content or function. |
+## Authorization and market display constraints
 
-## Research-to-design cautions
+1. Test AUSD, fee MON, USDC and WMON are separate testnet assets. Do not convert
+   them to fiat, combine them into an unverified portfolio total, or hide
+   freshness. A test token amount is not a dollar value.
+2. A faucet page opening or copied address does not prove receipt. The AUSD
+   `requestFunds(address)` call has no amount input; report the credited amount
+   only after the existing transfer/receipt or balance check verifies it.
+3. The direct deterministic Perpl optimizer uses fixed 100 AUSD funding and
+   service-bounded duration (current setup UI: 10–720 minutes). Do not make the
+   amount look flexible. Its 0.15 AUSD planned-loss target is not a guaranteed
+   cap; the current optimizer also sets up to 4× leverage, 30 AUSD notional and
+   25 AUSD margin. The prepared service review stays authoritative.
+4. The Perpl setup source says one Mera passkey session signs the exact funding
+   transaction and Perpl mandate. Keep amount, duration, owner/venue scope,
+   permissions, fees and risk visible before invoking that existing signer.
+   The Android passkey page is guidance for sign-in/credential UX, not a
+   replacement architecture for Mera's current WebAuthn PRF session.
+5. Show only limits returned by current service/mandate data. Unknown is not
+   zero, available, filled, success or a guaranteed loss ceiling.
+6. A stop request is not proof of canceled orders, closed exposure, completed
+   settlement or returned funds. Preserve the run/operation identity through
+   uncertain states and offer reconciliation before a duplicate retry.
+7. A chart in a discovery surface must identify the selected asset/market, pair
+   type, interval, units, price source, freshness and whether the values are
+   live or fixture data. Keep technical market fields available on demand.
 
-1. A test token amount is not a USD portfolio value. Keep AUSD and MON units and
-   testnet labels explicit; avoid a combined “total” until a reliable conversion
-   and meaning are approved.
-2. A visit to an external faucet does not prove receipt. AUSD request status
-   should be based on the existing prepared operation and verified transfer log;
-   MON arrival needs a fresh wallet balance check.
-3. Strategy availability, limits, fees and quote freshness must come from
-   current service data. Unknown is not zero, success, or availability.
-4. The current Perpl direct deterministic optimizer has fixed 100 AUSD funding;
-   the service supplies duration/venue bounds. Do not make the 100 AUSD run look
-   like flexible amount input. The strategy’s planned-loss amount is a target,
-   not a guaranteed maximum-loss cap.
-5. A visible stop request does not mean orders are cancelled, positions closed,
-   settlement is complete, or funds are back in the wallet.
+## Source and validation limits
 
-## Distribution check (browser observed)
-
-On 11 Oct 2026, the official [Phantom download page](https://phantom.com/download)
-was opened in Chrome. Its Android action displayed a QR modal directing the
-viewer to search Phantom in Google Play; it did not offer a direct APK. This is
-a publisher-site distribution observation, not app UX evidence, and no app
-version was observed.
-
-## Pending evidence
-
-- Full emulator capture/walkthrough of the app beyond seven selected screens.
-- Direct competitor APK walkthroughs; current emulator could not install/resolve
-  Coinbase and has no competitor apps installed.
-- Novice interviews or moderated tests. No participants, outcomes or timings are
-  recorded in this work.
-- Product/legal review of trading-risk and test-token copy.
+No Coinbase, Phantom, Kraken or Revolut app was installed or directly
+observed. No app version, tap count, authentication details, regional app
+availability or transition timing is inferred from help pages. The local
+Android capture and V1 feedback screenshots are not novice sessions. V1
+simulation checks do not establish visual completeness or native signing.
+V2 visual review is pending; no V2 pass is claimed. No novice interviews have
+been conducted. See the [moderator plan](reader.html?doc=study-plan.md) and
+[V1/V2 validation status](reader.html?doc=validation.md).

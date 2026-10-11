@@ -1,7 +1,7 @@
 export const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
 export const money = value => value === null || value === undefined || String(value).trim() === '' || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-export const button = (label, action, variant = '', disabled = false, value = '') =>
-  `<button type="button" class="button ${variant}" data-action="${esc(action)}" ${value ? `data-value="${esc(value)}"` : ''} ${disabled ? 'disabled aria-disabled="true"' : ''}>${label}</button>`;
+export const button = (label, action, variant = '', disabled = false, value = '', attributes = '') =>
+  `<button type="button" class="button ${variant}" data-action="${esc(action)}" ${value ? `data-value="${esc(value)}"` : ''} ${attributes} ${disabled ? 'disabled aria-disabled="true"' : ''}>${label}</button>`;
 export const link = (label, action, value = '') =>
   `<button type="button" class="button-link" data-action="${esc(action)}" ${value ? `data-value="${esc(value)}"` : ''}>${label}</button>`;
 export const tag = (label, color = '') => `<span class="tag ${color}">${esc(label)}</span>`;

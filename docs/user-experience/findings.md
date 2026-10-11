@@ -1,7 +1,25 @@
 # Findings and validation status
 
 Updated 11 October 2026. This report separates repository/emulator findings,
-simulated prototype verification, design hypotheses and future human validation.
+historical fixture checks, design hypotheses and future human validation.
+Four V1 review images identify a context-free chart, off-brand duration slider,
+oversized status glossary, gray demo run card and missing subpage/signing
+coverage. Three V2 images then identify market-name wrapping and dense
+review/provider surfaces. Four V3 images call out alarm wording, funding
+visibility/action placement and a zero-balance manual deposit prompt. Four V4
+images supersede the earlier persistent top-up and marketplace-cart decisions:
+Home top-up only for the initial prerequisite, repeat top-ups beside
+Receive/Send at the bottom of Settings, and no cart. All are user feedback
+captures with unknown original viewport/date, not study results.
+
+All nine current Node/source/reducer checks pass. Earlier validation claims do
+not establish the visual success of these changes. No visual pass is recorded;
+the supervisor's local browser review attempt was blocked by the CUA URL policy.
+
+The current required-base/module-availability and funding-placement revision
+passes its documented fixture, source, controller, consent and structural
+checks. Browser visual, native handoff, full accessibility and human
+comprehension remain pending; source assertions do not resolve those questions.
 
 ## Source and emulator findings
 
@@ -23,6 +41,12 @@ simulated prototype verification, design hypotheses and future human validation.
   some are mid-scroll and Perpl Setup has a debugger overlay.
 - Competitor apps were not installed. Official product help pages were reviewed
   and are labeled documented, not directly observed.
+- The production catalog distinguishes an available Perpl deterministic
+  strategy from a planned agentic concept. The community module in the prototype
+  is illustrative, not a real creator submission. Production metrics count
+  unique activated wallets (not people) and finalized realized AUSD cycles; the
+  API exposes no start date for an all-time label. See the
+  [marketplace decision note](reader.html?doc=marketplace-revision.md).
 
 ## Design hypotheses
 
@@ -36,14 +60,18 @@ simulated prototype verification, design hypotheses and future human validation.
    comprehension without removing proof or validation.
 5. Separate stop, settlement and returned-balance labels will prevent false
    expectations during an active run.
+6. Showing Perpl deterministic as the required base and keeping each optional
+   module's availability beside its own Enable control can make current and
+   planned capability easier to compare. The current Agentic/community controls
+   stay disabled until service-backed runtimes are available.
 
 These are proposals, not measured outcomes. Source mapping is in
   [research notes](reader.html?doc=research-notes.md); decisions and validation
   questions appear in the [hub](index.html#decisions).
 
-## Prototype verification findings
+## Historical V1 fixture checks
 
-- Chrome walkthroughs exercised simulated funding, autonomy start/settlement,
+- The prior V1 Chrome walkthrough exercised simulated funding, autonomy start/settlement,
   Spot swap, manual Perpl, recovery and mode switching. The exact fixture paths
   and values are recorded in the [validation log](reader.html?doc=validation.md).
 - The faucet handoff alone leaves MON at zero; a separate simulated arrival is
@@ -54,8 +82,10 @@ These are proposals, not measured outcomes. Source mapping is in
 - Small-phone checks sampled 320 × 740 at normal and 200% text, ≥48 px Home
   controls, reduced motion, visible keyboard focus and two contrast pairs.
   These checks do not establish full WCAG conformance or native accessibility.
-- The reducer and view verifier suites passed. These prove fixture transitions
-  and route/handler coverage, not that beginners understand the screens.
+- The historical reducer and view verifier suites passed. These prove fixture
+  transitions and registered route handlers at that version; the supplied
+  screenshots show that they did not establish clear screen hierarchy, complete
+  subpage/signing coverage or beginner comprehension.
 - Live manual quotes and liquidation data remain unavailable placeholders;
   simulated trading results are not evidence of executable quotes or returns.
 

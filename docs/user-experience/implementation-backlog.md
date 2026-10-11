@@ -45,15 +45,22 @@ Agora AUSD preparation, operation validation, Mera signing and receipt checks.
   destination/network/maximum fee before the existing validation/signature path;
   show exact credited amount only after a verified receipt because
   `requestFunds(address)` has no amount input.
+- Repeat claims, cooldowns and eligibility remain service/contract-derived;
+  the prototype's repeated 100 AUSD receipts are simulated and do not promise
+  unlimited live top-ups. Count transferred units only after a verified final
+  receipt, not from transaction status alone.
 - Duplicate claim preparation is prevented/reconciled for uncertain submission.
 - Home shows one next action from verified state and handles empty, funded,
   stale, disconnected and unavailable state.
+- Show a Home top-up prompt only while it is the initial prerequisite; once
+  funded, remove that repeated action from Home. Put repeat test-token actions at
+  the bottom of Settings beside Receive and Send.
 
 **Data dependency:** there is no observed unified “beginner readiness” response.
 Compose next-step visibility from current wallet/faucet/run services with
 explicit unknown states; do not infer a completed external MON faucet transfer.
 
-## P2 · Strategy choice and Perpl autonomy
+## P2 · Strategy choice and Perpl deterministic autonomy
 
 Make the available strategy understandable and connect to existing Perpl setup,
 validation, status, stop, history and recovery screens.
@@ -78,6 +85,54 @@ and without open positions/live orders. Current optimizer configuration uses
 planned-loss target; that is not a guaranteed loss cap. See
 `backend/api-server/src/monad/perplOptimizerConfig.ts` and
 `src/screens/PerplRecoveryPanel.tsx`.
+
+### P2a · Required strategy base and optional module availability
+
+The offline prototype distinguishes the required Perpl deterministic base, a
+planned Moeazi agentic concept and an explicitly illustrative community
+research-input concept. Perpl is always included, cannot be disabled and opens
+the existing guarded setup after its prerequisites are met. Optional modules
+show their own Enable control only when a compatible runtime is available; the
+current Agentic and illustrative community controls remain disabled and say
+Coming soon. The marketplace has no cart, local draft or composed-execution
+claim.
+
+**Required before any optional module can be enabled:**
+
+- Define a versioned module manifest and service-owned compatibility rules,
+  typed inputs/outputs, failure behavior and which module can influence an
+  execution decision.
+- Bind module versions and any execution influence to the existing owner,
+  asset/venue, amount, duration, limits, fee source, stop/revoke and recovery
+  boundaries. Review and enforce authority server-side.
+- Provide a prepared-operation and reconciliation contract for any module
+  action, including idempotency and honest pending/uncertain/final states.
+- Define community creator verification, authorship/license, submissions,
+  moderation, version history and removal. Do not use an illustrative slot as a
+  creator endorsement or real submission.
+- Return metric units, start/end period, inclusion rules and verification
+  status. Current production fields count unique activated wallets (not people)
+  and finalized realized AUSD cycles; open-position PnL and unsigned/failed
+  setup attempts are excluded. Operator gas is paid in MON. The API exposes no
+  period start, so the current data cannot prove “lifetime” or total profit
+  after every fee. Render unavailable as unknown, not zero.
+
+**Acceptance criteria:**
+
+- Browse and details are separate from setup. Perpl is visibly “Included ·
+  required” and has no disable control.
+- Each optional module has its own Enable/Disable control once service state
+  reports a reviewed, compatible runtime. Unavailable Agentic/community entries
+  have disabled controls and clear “Coming soon” or illustrative status.
+- Only the Perpl deterministic strategy can reach its existing guarded setup;
+  its required-base control cannot be disabled.
+- A planned/illustrative module cannot execute, sign or alter Perpl while its
+  runtime and authority are unavailable.
+- Metric cards label period/source/units and unavailable values; do not present
+  unique wallets as people or realized AUSD as net all-fees return.
+
+See [marketplace revision and source boundary](reader.html?doc=marketplace-revision.md)
+and the [dated contemporary-pattern evidence](reader.html?doc=contemporary-patterns.md).
 
 ## P3 · Markets and manual Spot/Perpl
 

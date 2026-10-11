@@ -17,23 +17,44 @@ Run the local structural and fixture checks from the repository root:
 node docs/user-experience/verify-hub.mjs
 node docs/user-experience/prototype-test.mjs
 node docs/user-experience/verify-prototype-views.mjs
+node docs/user-experience/verify-v2-journeys.mjs
+node docs/user-experience/verify-v2-controller.mjs
+node docs/user-experience/verify-v2-guards.mjs
+node docs/user-experience/prototype-consent-test.mjs
+node docs/user-experience/verify-v2-layout-consent.mjs
+node docs/user-experience/verify-v3-funding-workflow.mjs
 ```
 
-These checks cover source/link integrity and simulated state transitions; they
-do not launch the native Android app or replace human usability testing. See the
-[validation log](reader.html?doc=validation.md) for tested Chrome viewports,
-flows, limits and current results.
+Current offline verification passes all nine Node commands listed above:
+9 reducer fixtures, 16 view checks, 11 journey checks, 7 guard checks, consent,
+layout/consent, controller, the funding-and-required-strategy suite, and hub
+structure (57 text files ≤300 lines; 35 routes). These inspect local sources,
+simulated state and minimal DOM wiring; they do not launch a browser or native
+Android app and do not establish visual quality or human comprehension. See the
+[versioned validation log](reader.html?doc=validation.md) and
+[required-base/module-availability decision note](reader.html?doc=marketplace-revision.md).
 
 Start with [index.html](index.html). The [prototype](prototype.html) is a design
 artifact. The local [document reader](reader.html?doc=research-notes.md) renders
-the route audit, research notes, screen specs, implementation backlog, moderated
-study script, findings report, validation report and evidence manifest inside
-the hub.
+the route audit, research notes, contemporary-source ledger, interaction
+coverage matrix, screen specs, implementation backlog, moderated study script,
+findings report, validation report, marketplace revision and evidence manifest
+inside the hub.
 
-All research status is current to 11 October 2026. Competitor behavior is based
-on official help pages; no competitor app was installed or directly observed.
-No novice sessions have been conducted. The research makes recommendations and
-records hypotheses for later validation.
+Research was checked 11 October 2026. Competitor patterns come from first-party
+product announcements, official support pages, developer docs and platform
+guidance; no competitor app was installed or directly observed. Dates separate
+2026 releases from older platform foundations and undated current pages. Four
+V1 feedback screenshots supersede prior broad V1 completeness wording. Three
+V2 feedback screenshots show unresolved market wrapping and dense authorization
+surfaces. Four V3 feedback screenshots add alarm-copy, funding-visibility and
+zero-balance deposit-entry concerns. Four V4 screenshots supersede the earlier
+top-up-everywhere and marketplace-cart recommendations: initial top-up belongs
+on Home only while required; repeat top-ups belong beside Receive/Send at the
+bottom of Settings; Perpl is the required base and optional module controls are
+disabled until available. The latest revision has not been visually verified.
+No novice session has been conducted. Recommendations remain hypotheses for
+later validation.
 
 ## Future production implementation
 

@@ -1,5 +1,7 @@
-import {createState, reduceState, SCENARIOS, STORAGE_KEY} from './prototype-model.mjs';
+import {createState, reduceState, SCENARIOS, STATE_VERSION, STORAGE_KEY} from './prototype-model.mjs';
 import {renderScreen, renderTabs} from './prototype-view.js';
+import {loadPreviewPreferences, togglePreviewPreference} from './prototype-app-preferences.js';
+import {createActionTable} from './prototype-app-actions.js';
 
 const appView = document.querySelector('#app-view');
 const tabbar = document.querySelector('#tabbar');
@@ -8,17 +10,46 @@ const toast = document.querySelector('#toast');
 const live = document.querySelector('#sr-live');
 const settingsShortcut = document.querySelector('#settings-shortcut');
 const scenarioSelect = document.querySelector('#scenario-select');
+const outcomeSelect = document.querySelector('#simulation-outcome');
+const reviewerResolve = document.querySelector('#reviewer-resolve');
 const reviewerPanel = document.querySelector('.reviewer-panel');
-const STATE_KEY = 'moeazi.monad.prototype-state.v1';
+const STATE_KEY = 'moeazi.monad.prototype-state.v2';
+const LEGACY_STATE_KEY = 'moeazi.monad.prototype-state.v1';
 let state = readState();
 let toastTimer;
+let simulationEpoch = 0;
+let browserRoutes = [];
+let renderedRoute = '';
 
 function readState() {
   const fallback = createState('empty', readMode());
   try {
-    const saved = JSON.parse(localStorage.getItem(STATE_KEY) ?? 'null');
+    const saved = JSON.parse(localStorage.getItem(STATE_KEY) ?? localStorage.getItem(LEGACY_STATE_KEY) ?? 'null');
     if (!saved || !SCENARIOS.some(([key]) => key === saved.scenario) || !saved.balances) return fallback;
-    return {...fallback, ...saved, presentationMode: readMode(), signingPending: false, toast: '',
+    const route = saved.route === 'workflow-review' ? 'strategies' : saved.route === 'auth-pending' ? 'auth-provider' : ['provider-handoff', 'provider-pending'].includes(saved.route) ? saved.signingOperation?.returnRoute ?? 'home' : saved.route;
+    const monPending = Boolean(saved.faucetRequested && !saved.faucetReceived);
+    const manualTopUpPending = Boolean(saved.manualTopUpPending || saved.manualTopUpAllowancePending);
+    const runPending = ['activation_pending', 'stopping', 'settling'].includes(saved.run?.status);
+    const requestPending = Boolean(saved.pendingOrder || saved.claimPending || manualTopUpPending || saved.manualAllowancePending || saved.manual?.status === 'opening' ||
+      saved.manualWithdrawalPending || saved.recoveryPending || saved.run?.status === 'activation_pending' || saved.run?.status === 'stopping' ||
+      saved.run?.status === 'settling' || saved.faucetCheckPending || monPending);
+    const operationId = monPending ? (saved.faucetOperationId || saved.activeOperationId) :
+      saved.claimPending ? saved.activeOperationId :
+        saved.manualTopUpPending ? (saved.manualTopUpRequest?.operationId || saved.activeOperationId) :
+          saved.manualTopUpAllowancePending ? (saved.manualTopUpAllowanceOperationId || saved.activeOperationId) :
+            saved.pendingOrder ? (saved.pendingOrder.operationId || saved.activeOperationId) :
+              saved.manualWithdrawalPending ? (saved.withdrawalRequest?.operationId || saved.activeOperationId) :
+                runPending ? (saved.activeOperationId || saved.run?.operationId) :
+                  saved.manualAllowancePending || saved.manual?.status === 'opening' || saved.recoveryPending ? saved.activeOperationId : '';
+    const historicalAUsd = (saved.events ?? []).some(event => /ausd/i.test(event.title ?? '') && event.status === 'Confirmed');
+    const initialFundingComplete = saved.initialFundingComplete ?? (Number(saved.balances.ausd) > 0 || Boolean(saved.run) || historicalAUsd);
+    delete saved.workflowDraftIds;
+    return {...fallback, ...saved, route, initialFundingComplete, routeHistory: [], presentationMode: readMode(), signingPending: false,
+      signingApproved: false, signingOperation: null, activeOperationId: operationId ?? '', operationOpen: Boolean(requestPending && operationId), authPending: false, toast: '',
+      durationDraft: saved.durationDraft ?? String(saved.durationMinutes ?? fallback.durationMinutes),
+      simulationOutcome: ['confirmed', 'rejected', 'uncertain', 'pending'].includes(saved.simulationOutcome) ? saved.simulationOutcome : fallback.simulationOutcome,
+      marketFilter: ['All', 'Spot', 'Perpl', 'Watchlist'].includes(saved.marketFilter) ? saved.marketFilter : 'All',
+      selectedMarket: ['BTC-PERP', 'ETH-PERP', 'USDC/WMON'].includes(saved.selectedMarket) ? saved.selectedMarket : 'BTC-PERP',
       strategyAvailable: saved.scenario !== 'unavailable' && saved.connectivity === 'online'};
   } catch { return fallback; }
 }
@@ -40,15 +71,34 @@ function showToast(message) {
   toast.hidden = false;
   toastTimer = setTimeout(() => { toast.hidden = true; }, 3600);
 }
+function pendingForReviewer() {
+  return state.authPending || state.signingPending || state.route === 'ausd-pending' || state.route === 'manual-deposit-approval-pending' || state.route === 'manual-deposit-pending' || state.route === 'manual-approval-pending' ||
+    state.route === 'manual-account-pending' || state.route === 'manual-withdraw-pending' || state.route === 'recovery-pending' || state.route === 'order-submitted' ||
+    state.route === 'uncertain' || state.route === 'order-pending' || state.route === 'stopping' || state.route === 'settlement' ||
+    state.faucetCheckPending || state.route === 'mon-receipt' && state.faucetReturned && state.faucetRequested && !state.faucetReceived ||
+    state.route === 'faucet-failure' || state.route === 'offline-block' || state.route === 'stale-block' || state.run?.status === 'activation_pending';
+}
+function syncReviewerControls() {
+  scenarioSelect.value = state.scenario;
+  outcomeSelect.value = state.simulationOutcome;
+  reviewerResolve.hidden = !pendingForReviewer();
+  reviewerResolve.textContent = state.simulationOutcome === 'pending' ? 'Resume this request with a new result' : 'Apply result to this request';
+}
 function render({preserveFocus = false, focusScreen = false} = {}) {
   const active = document.activeElement;
+  const sameRoute = renderedRoute === state.route;
+  const openDetails = sameRoute ? [...appView.querySelectorAll('details[data-preserve-open][id]')].filter(item => item.open).map(item => item.id) : [];
   const activeId = preserveFocus && active?.id ? active.id : '';
-  const selection = preserveFocus && typeof active?.selectionStart === 'number' ? active.selectionStart : null;
+  let selection = null;
+  if (preserveFocus && active) { try { selection = typeof active.selectionStart === 'number' ? active.selectionStart : null; } catch { selection = null; } }
   const scroll = appView.scrollTop;
+  appView.classList.toggle('same-route-render', sameRoute);
   appView.innerHTML = renderScreen(state);
+  for (const id of openDetails) { const replacement = document.getElementById(id); if (replacement) replacement.open = true; }
   tabbar.innerHTML = renderTabs(state);
-  tabbar.hidden = !state.signedIn;
-  settingsShortcut.hidden = !state.signedIn;
+  const providerActive = ['provider-handoff', 'provider-pending'].includes(state.route);
+  tabbar.hidden = !state.signedIn || providerActive;
+  settingsShortcut.hidden = !state.signedIn || providerActive;
   if (state.connectivity === 'offline') {
     status.hidden = false; status.textContent = 'Offline · showing a saved snapshot. New actions are blocked.';
   } else if (state.connectivity === 'stale') {
@@ -61,66 +111,105 @@ function render({preserveFocus = false, focusScreen = false} = {}) {
   if (activeId) {
     const replacement = document.getElementById(activeId);
     replacement?.focus({preventScroll: true});
-    if (selection !== null && replacement?.setSelectionRange) replacement.setSelectionRange(selection, selection);
+    if (selection !== null && replacement?.setSelectionRange) { try { replacement.setSelectionRange(selection, selection); } catch { /* Number inputs do not expose selection ranges. */ } }
   } else if (focusScreen) appView.focus({preventScroll: true});
   appView.scrollTop = preserveFocus ? scroll : 0;
+  renderedRoute = state.route;
+  syncReviewerControls();
 }
 
 for (const [value, label] of SCENARIOS) {
   const option = document.createElement('option'); option.value = value; option.textContent = label; scenarioSelect.append(option);
 }
 scenarioSelect.value = state.scenario;
-loadPreviewPreferences();
+outcomeSelect.value = state.simulationOutcome;
+try { history.replaceState({moeaziRoute: state.route}, ''); browserRoutes = [state.route]; } catch { browserRoutes = [state.route]; }
+loadPreviewPreferences(reviewerPanel);
 render();
-
-const actionTable = {
-  'sign-in': () => ({type: 'SIGN_IN'}), 'nav-funding': () => ({type: 'NAV', value: 'funding'}),
-  'nav-run': () => ({type: 'NAV', value: 'run'}), 'nav-recovery': () => ({type: 'NAV', value: 'recovery'}),
-  'nav-settings': () => ({type: 'NAV', value: 'settings'}), 'nav-receive': () => ({type: 'NAV', value: 'receive'}),
-  'nav-send': () => ({type: 'NAV', value: 'send'}), 'nav-chart-settings': () => ({type: 'NAV', value: 'chart-settings'}),
-  'nav-notifications': () => ({type: 'NAV', value: 'notifications'}), 'nav-manual-account': () => ({type: 'NAV', value: 'manual-account'}),
-  'nav-spot-setup': () => ({type: 'NAV', value: 'spot-setup'}), 'nav-faucet': () => ({type: 'NAV', value: 'funding'}),
-  'nav-strategies': () => ({type: 'TAB', value: 'Strategies'}),
-  'nav-home': () => ({type: 'TAB', value: 'Home'}), 'nav-activity': () => ({type: 'TAB', value: 'Activity'}),
-  'nav-markets': () => ({type: 'TAB', value: 'Markets'}),
-  'faucet-open': () => ({type: 'FAUCET_OPEN'}), 'simulate-mon': () => ({type: 'MON_SIMULATE_RECEIVE'}), 'check-mon': () => ({type: 'CHECK_MON'}),
-  'claim-ausd': () => ({type: 'CLAIM_AUSD'}), 'ausd-submit': () => ({type: 'AUSD_SUBMIT'}), 'ausd-check': () => ({type: 'AUSD_CHECK'}),
-  'start-strategy': () => ({type: 'START_STRATEGY'}), 'strategy-review': () => ({type: 'STRATEGY_REVIEW'}),
-  'run-start': () => ({type: 'RUN_START'}), 'run-check': () => ({type: 'RUN_CHECK'}), 'stop-review': () => ({type: 'STOP_REVIEW'}),
-  'stop-submit': () => ({type: 'STOP_SUBMIT'}), 'settlement-check': () => ({type: 'SETTLEMENT_CHECK'}),
-  'recovery-review': () => ({type: 'RECOVERY_REVIEW'}), 'recovery-submit': () => ({type: 'RECOVERY_SUBMIT'}), 'recovery-check': () => ({type: 'RECOVERY_CHECK'}),
-  'manual-account': () => ({type: 'NAV', value: 'manual-account'}),
-  'manual-approval': () => ({type: 'MANUAL_APPROVAL'}), 'manual-approve-submit': () => ({type: 'MANUAL_APPROVE_SUBMIT'}),
-  'manual-approval-check': () => ({type: 'MANUAL_APPROVAL_CHECK'}), 'manual-account-open': () => ({type: 'NAV', value: 'manual-account-open'}),
-  'manual-open-submit': () => ({type: 'MANUAL_OPEN_SUBMIT'}), 'manual-open-check': () => ({type: 'MANUAL_OPEN_CHECK'}),
-  'manual-trade': () => ({type: 'MANUAL_TRADE'}), 'manual-order-review': () => ({type: 'MANUAL_ORDER_REVIEW'}),
-  'manual-order-submit': () => ({type: 'MANUAL_ORDER_SUBMIT'}), 'manual-fill': () => ({type: 'MANUAL_FILL'}),
-  'close-perpl': () => ({type: 'CLOSE_PERPL'}), 'close-submit': () => ({type: 'CLOSE_SUBMIT'}), 'close-fill': () => ({type: 'CLOSE_FILL'}),
-  'spot-setup': () => ({type: 'NAV', value: 'spot-setup'}), 'spot-review': () => ({type: 'SPOT_REVIEW'}), 'spot-submit': () => ({type: 'SPOT_SUBMIT'}),
-  'spot-fill': () => ({type: 'SPOT_FILL'}), 'watch': value => ({type: 'WATCHLIST', value}),
-  'send-review': () => ({type: 'SEND_REVIEW'}), 'send-submit': () => ({type: 'SEND_SUBMIT'}),
-  'receipt': value => ({type: 'RECEIPT', value}), 'receipt-toggle': () => ({type: 'RECEIPT_TOGGLE'}),
-  'check-order': () => ({type: 'CHECK_ORDER'}), 'order-pending': () => ({type: 'ORDER_PENDING'}),
-  'chart': value => ({type: 'CHART', value}), 'notifications': () => ({type: 'NOTIFICATIONS'}),
-  'mode': value => ({type: 'MODE', value}), 'ack': () => ({type: 'ACK'}), 'side': value => ({type: 'SIDE', value}),
-  'tab': value => ({type: 'TAB', value}), 'back': value => ({type: 'BACK', value}),
-  'activity': () => ({type: 'NAV', value: 'activity'}), 'logout': () => ({type: 'LOGOUT'}),
-  'toast': value => ({type: 'TOAST', value}), 'copy-address': () => null,
-};
+const actionTable = createActionTable(resolveReviewerPending);
 
 function navigateSettings() {
   if (state.presentationMode === 'developer') dispatch({type: 'TAB', value: 'Account'});
   else dispatch({type: 'NAV', value: 'settings'});
 }
 function dispatch(action, options = {}) {
+  if (action.type === 'BACK') {
+    const target = action.value ?? state.routeHistory?.at(-1) ?? (state.signedIn ? 'home' : 'welcome');
+    if (browserRoutes.length > 1 && browserRoutes.at(-2) === target) { history.back(); return; }
+  }
   const previousRoute = state.route;
+  if (['SCENARIO', 'LOGOUT', 'AUTH_BEGIN', 'AUTH_CANCEL', 'AUTH_RETRY', 'SIGNING_CANCEL', 'SIGNING_REJECT'].includes(action.type) ||
+      action.type === 'POPSTATE' && ['auth-pending', 'provider-pending'].includes(previousRoute)) simulationEpoch += 1;
   state = reduceState(state, action);
+  if (action.type === 'POPSTATE') browserRoutes = browserRoutes.slice(0, -1);
+  else if (previousRoute !== state.route && action.type !== 'BACK') {
+    try { history.pushState({moeaziRoute: state.route}, ''); browserRoutes.push(state.route); } catch { browserRoutes = [...browserRoutes, state.route]; }
+  } else if (action.type === 'BACK' && previousRoute !== state.route && browserRoutes.length) {
+    browserRoutes[browserRoutes.length - 1] = state.route;
+    try { history.replaceState({moeaziRoute: state.route}, ''); } catch { /* The in-app route still changes. */ }
+  }
   if (action.type === 'MODE') saveMode(state.presentationMode);
   if (action.type === 'SCENARIO') scenarioSelect.value = state.scenario;
   saveState();
   render({preserveFocus: options.preserveFocus, focusScreen: previousRoute !== state.route});
   if (state.toast) announce(state.toast);
   else if (previousRoute !== state.route) announce(appView.querySelector('h1')?.textContent ?? 'Screen updated');
+  queueAutomaticProgress(action.type);
+}
+
+function delayed(type, delay = 650) {
+  const epoch = simulationEpoch;
+  const operationId = type === 'SIGNING_COMPLETE' ? state.signingOperation?.id : '';
+  const requestId = type === 'AUTH_COMPLETE' ? state.authRequestId : undefined;
+  const guardedReceipts = ['AUSD_CHECK', 'RUN_CHECK', 'SETTLEMENT_CHECK', 'RECOVERY_CHECK', 'MANUAL_APPROVAL_CHECK', 'MANUAL_OPEN_CHECK', 'WITHDRAW_CHECK', 'CHECK_ORDER', 'SPOT_FILL', 'MANUAL_FILL', 'CLOSE_FILL', 'SEND_FINALIZE', 'MANUAL_TOPUP_APPROVAL_CHECK', 'MANUAL_TOPUP_CHECK'];
+  const activeOperationId = guardedReceipts.includes(type) ? state.activeOperationId : undefined;
+  const faucetId = ['MON_SIMULATE_RECEIVE', 'CHECK_MON'].includes(type) ? state.faucetOperationId : undefined;
+  const faucetGeneration = faucetId ? state.faucetRequestGeneration : undefined;
+  setTimeout(() => { if (epoch === simulationEpoch && (!operationId || operationId === state.signingOperation?.id) &&
+    (requestId === undefined || requestId === state.authRequestId) &&
+    (activeOperationId === undefined || Boolean(activeOperationId) && activeOperationId === state.activeOperationId) &&
+    (faucetId === undefined || faucetId === state.faucetOperationId && faucetGeneration === state.faucetRequestGeneration)) {
+      dispatch({type, ...(requestId === undefined ? {} : {requestId}), ...(faucetId === undefined ? {} : {requestId: faucetId, generation: faucetGeneration})});
+    } }, delay);
+}
+function queueAutomaticProgress(trigger) {
+  if (trigger === 'AUTH_APPROVE' && state.route === 'auth-pending' && state.simulationOutcome === 'confirmed') return delayed('AUTH_COMPLETE', 720);
+  if (trigger === 'SIGNING_APPROVE' && state.route === 'provider-pending') return delayed('SIGNING_COMPLETE', 620);
+  if (trigger === 'FAUCET_RETURN' && state.route === 'mon-receipt' && state.simulationOutcome === 'confirmed') return delayed('MON_SIMULATE_RECEIVE', 780);
+  if (trigger === 'MON_SIMULATE_RECEIVE' && state.faucetCheckPending && state.simulationOutcome === 'confirmed') return delayed('CHECK_MON', 650);
+  if (state.simulationOutcome !== 'confirmed') return;
+  const routeActions = {
+    'ausd-pending': 'AUSD_CHECK', 'manual-deposit-approval-pending': 'MANUAL_TOPUP_APPROVAL_CHECK',
+    'manual-deposit-pending': 'MANUAL_TOPUP_CHECK', 'manual-approval-pending': 'MANUAL_APPROVAL_CHECK',
+    'manual-account-pending': 'MANUAL_OPEN_CHECK', 'manual-withdraw-pending': 'WITHDRAW_CHECK', 'recovery-pending': 'RECOVERY_CHECK', 'stopping': 'SETTLEMENT_CHECK',
+  };
+  if (state.route === 'run' && state.run?.status === 'activation_pending') return delayed('RUN_CHECK');
+  if (state.route === 'order-submitted' && state.pendingOrder) {
+    const action = {'perpl-open': 'MANUAL_FILL', 'perpl-close': 'CLOSE_FILL', spot: 'SPOT_FILL', send: 'SEND_FINALIZE'}[state.pendingOrder.kind];
+    if (action) return delayed(action);
+  }
+  if (state.route === 'settlement' && state.run?.status === 'settling') return delayed('SETTLEMENT_CHECK');
+  const action = routeActions[state.route];
+  if (action) delayed(action);
+}
+function resolveReviewerPending() {
+  if (state.route === 'auth-pending') return {type: 'AUTH_COMPLETE', requestId: state.authRequestId};
+  if (state.route === 'faucet-failure') return {type: 'FAUCET_RETRY'};
+  if (state.route === 'offline-block' || state.route === 'stale-block') return {type: 'RECONNECT'};
+  if (state.route === 'provider-pending') return {type: 'SIGNING_COMPLETE'};
+  if (state.route === 'ausd-pending') return {type: 'AUSD_CHECK'};
+  if (state.route === 'manual-deposit-approval-pending') return {type: 'MANUAL_TOPUP_APPROVAL_CHECK'};
+  if (state.route === 'manual-deposit-pending') return {type: 'MANUAL_TOPUP_CHECK'};
+  if (state.run?.status === 'activation_pending') return {type: 'RUN_CHECK'};
+  if (state.route === 'manual-approval-pending') return {type: 'MANUAL_APPROVAL_CHECK'};
+  if (state.route === 'manual-account-pending') return {type: 'MANUAL_OPEN_CHECK'};
+  if (state.route === 'manual-withdraw-pending') return {type: 'WITHDRAW_CHECK'};
+  if (state.route === 'recovery-pending') return {type: 'RECOVERY_CHECK'};
+  if (state.pendingOrder) return {type: 'CHECK_ORDER'};
+  if (state.route === 'stopping' || state.route === 'settlement') return {type: 'SETTLEMENT_CHECK'};
+  if (state.faucetCheckPending) return {type: 'CHECK_MON'};
+  if (state.faucetReturned && state.faucetRequested && !state.faucetReceived) return {type: 'MON_SIMULATE_RECEIVE'};
+  return {type: 'CHECK_MON'};
 }
 
 document.querySelector('.device-shell').addEventListener('click', async event => {
@@ -129,6 +218,13 @@ document.querySelector('.device-shell').addEventListener('click', async event =>
   const actionName = target.dataset.action;
   if (actionName === 'settings') return navigateSettings();
   if (actionName === 'duration-preset') return dispatch({type: 'DURATION', value: target.dataset.value}, {preserveFocus: true});
+  if (actionName === 'amount-preset') {
+    const value = Number(target.dataset.value), cap = Number(target.dataset.available), min = Number(target.dataset.min);
+    if (!Number.isFinite(value) || !Number.isFinite(cap) || !Number.isFinite(min) || value < min || value > cap) return;
+    const action = fieldAction(target.dataset.field, target.dataset.value);
+    if (action) dispatch(action, {preserveFocus: true});
+    return;
+  }
   const factory = actionTable[actionName];
   if (!factory) return;
   event.preventDefault();
@@ -137,17 +233,19 @@ document.querySelector('.device-shell').addEventListener('click', async event =>
     catch { showToast('Copy is unavailable here. Use the demo address shown above.'); }
     return;
   }
-  const action = factory(target.dataset.value);
+  const action = factory(target.dataset.value, target.dataset.field);
   if (action) dispatch(action);
 });
 
 scenarioSelect.addEventListener('change', () => dispatch({type: 'SCENARIO', value: scenarioSelect.value}, {focusScreen: true}));
+outcomeSelect.addEventListener('change', () => dispatch({type: 'SIMULATION_OUTCOME', value: outcomeSelect.value}, {preserveFocus: true}));
 reviewerPanel.addEventListener('click', event => {
   const target = event.target.closest('[data-action]');
   if (!target) return;
   if (target.dataset.action === 'reviewer-reset') dispatch({type: 'SCENARIO', value: state.scenario}, {focusScreen: true});
-  if (target.dataset.action === 'large-text') togglePreviewPreference('large-text', target);
-  if (target.dataset.action === 'reduced-motion') togglePreviewPreference('reduced-motion', target);
+  if (target.dataset.action === 'large-text') togglePreviewPreference(reviewerPanel, 'large-text', target);
+  if (target.dataset.action === 'reduced-motion') togglePreviewPreference(reviewerPanel, 'reduced-motion', target);
+  if (target.dataset.action === 'reviewer-resolve') dispatch(resolveReviewerPending(), {focusScreen: true});
 });
 appView.addEventListener('input', event => {
   const control = event.target.closest('[data-field]');
@@ -159,10 +257,11 @@ appView.addEventListener('input', event => {
   saveState();
   if (control.dataset.field === 'duration') {
     const label = appView.querySelector('#duration-readout');
-    if (label) label.textContent = formatMinutes(state.durationMinutes);
+    if (label) label.textContent = durationReadout(state.durationDraft);
+    render({preserveFocus: true});
     return;
   }
-  if (control.dataset.field === 'search') render({preserveFocus: true});
+  if (control.type === 'number' || control.dataset.field === 'search') render({preserveFocus: true});
 });
 appView.addEventListener('change', event => {
   const control = event.target.closest('[data-field]');
@@ -170,31 +269,15 @@ appView.addEventListener('change', event => {
   const action = fieldAction(control.dataset.field, control.value);
   if (action) dispatch(action, {preserveFocus: true});
 });
+window.addEventListener('popstate', event => {
+  const route = event.state?.moeaziRoute;
+  if (route) dispatch({type: 'POPSTATE', value: route}, {focusScreen: true});
+});
 function fieldAction(field, value) {
-  const types = {duration: 'DURATION', leverage: 'LEVERAGE', 'manual-deposit': 'AMOUNT',
+  const types = {duration: 'DURATION_DRAFT', leverage: 'LEVERAGE', 'manual-deposit': 'AMOUNT', 'withdraw-amount': 'WITHDRAW_AMOUNT',
     'manual-order-amount': 'MANUAL_ORDER_AMOUNT', 'spot-amount': 'SPOT_AMOUNT',
-    'send-amount': 'SEND_AMOUNT', recipient: 'RECIPIENT', search: 'SEARCH'};
+    'send-amount': 'SEND_AMOUNT', 'manual-topup-amount': 'MANUAL_TOPUP_AMOUNT', recipient: 'RECIPIENT', search: 'SEARCH'};
   return types[field] ? {type: types[field], value} : null;
 }
 function formatMinutes(value) { return value >= 60 ? `${Math.floor(value / 60)} hr${value % 60 ? ` ${value % 60} min` : ''}` : `${value} min`; }
-
-function loadPreviewPreferences() {
-  let large = false; let reduced = false;
-  try { large = localStorage.getItem('moeazi.monad.prototype.large-text.v1') === 'on'; reduced = localStorage.getItem('moeazi.monad.prototype.reduced-motion.v1') === 'on'; } catch { /* Defaults stay off. */ }
-  applyPreviewPreference('large-text', large);
-  applyPreviewPreference('reduced-motion', reduced);
-}
-function togglePreviewPreference(name, target) {
-  const active = !document.documentElement.classList.contains(name);
-  applyPreviewPreference(name, active);
-  try { localStorage.setItem(`moeazi.monad.prototype.${name}.v1`, active ? 'on' : 'off'); } catch { /* Preference is temporary. */ }
-  target.setAttribute(name === 'large-text' ? 'aria-pressed' : 'aria-checked', String(active));
-  target.textContent = name === 'large-text' ? `Large text preview · ${active ? 'on' : 'off'}` : `Reduce motion · ${active ? 'on' : 'off'}`;
-}
-function applyPreviewPreference(name, active) {
-  document.documentElement.classList.toggle(name, active);
-  const target = reviewerPanel.querySelector(`[data-action="${name}"]`);
-  if (!target) return;
-  target.setAttribute(name === 'large-text' ? 'aria-pressed' : 'aria-checked', String(active));
-  target.textContent = name === 'large-text' ? `Large text preview · ${active ? 'on' : 'off'}` : `Reduce motion · ${active ? 'on' : 'off'}`;
-}
+function durationReadout(value) { return /^\d+$/.test(String(value)) && Number(value) >= 10 && Number(value) <= 720 ? formatMinutes(Number(value)) : 'Choose 10–720 whole minutes'; }

@@ -1,5 +1,6 @@
 const allowed = new Set(['README.md','route-audit.md','research-notes.md','screen-specs.md',
-  'implementation-backlog.md','study-plan.md','findings.md','validation.md','evidence/README.md']);
+  'implementation-backlog.md','study-plan.md','findings.md','validation.md','evidence/README.md',
+  'contemporary-patterns.md','interaction-coverage.md','marketplace-revision.md']);
 const documentName = new URLSearchParams(location.search).get('doc') || '';
 const host = document.getElementById('document');
 

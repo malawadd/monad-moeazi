@@ -39,6 +39,19 @@ async function requireTarget(from, raw, kind) {
   try { await stat(target); }
   catch { errors.push(`${relative(from)} has a broken ${kind}: ${raw}`); }
 }
+async function importHubDataModule(name) {
+  const path = resolve(hubDir, name);
+  const source = await readFile(path, 'utf8');
+  const url = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
+  try { return await import(url); }
+  catch (error) {
+    const frame = String(error?.stack ?? '').match(/data:text\/javascript;base64,[^:\r\n]*:(\d+):(\d+)/);
+    const location = frame ? ` at line ${frame[1]}, column ${frame[2]}` : '';
+    const message = String(error?.message ?? error).split(/\r?\n/, 1)[0];
+    errors.push(`${name} fails standalone ESM import${location}: ${message}`);
+    return null;
+  }
+}
 
 for (const [path, source] of texts) {
   if (extname(path) === '.md') {
@@ -69,18 +82,22 @@ for (const [path, source] of texts) {
 
 const rootNavigator = await readFile(resolve(rootDir, 'src/navigation/RootNavigator.tsx'), 'utf8');
 const declaredRoutes = new Set([...rootNavigator.matchAll(/<(?:Stack|Tabs)\.Screen\s+name="([^"]+)"/g)].map(match => match[1]));
-const audit = await import(new URL('./audit-data.js', import.meta.url));
-const auditedRoutes = new Set(audit.routeRows.map(row => row[0] === 'Main · shell' ? 'Main' : row[0]));
-for (const route of declaredRoutes) if (!auditedRoutes.has(route)) errors.push(`Route audit is missing RootNavigator destination “${route}”.`);
-for (const route of auditedRoutes) if (!declaredRoutes.has(route)) errors.push(`Route audit contains unregistered destination “${route}”.`);
-if (declaredRoutes.size !== auditedRoutes.size) {
-  errors.push(`Route inventory has ${declaredRoutes.size} destinations, but audit-data.js maps ${auditedRoutes.size}.`);
+const audit = await importHubDataModule('audit-data.js');
+const research = await importHubDataModule('research-data.js');
+if (audit && Array.isArray(audit.routeRows) && Array.isArray(audit.legacyRows) && Array.isArray(audit.frictionRows) && Array.isArray(audit.deepLinkRows)) {
+  const auditedRoutes = new Set(audit.routeRows.map(row => row[0] === 'Main · shell' ? 'Main' : row[0]));
+  for (const route of declaredRoutes) if (!auditedRoutes.has(route)) errors.push(`Route audit is missing RootNavigator destination “${route}”.`);
+  for (const route of auditedRoutes) if (!declaredRoutes.has(route)) errors.push(`Route audit contains unregistered destination “${route}”.`);
+  if (declaredRoutes.size !== auditedRoutes.size) errors.push(`Route inventory has ${declaredRoutes.size} destinations, but audit-data.js maps ${auditedRoutes.size}.`);
+} else if (audit) errors.push('audit-data.js is missing one or more expected route/legacy/friction/deep-link data arrays.');
+if (research && (!Array.isArray(research.sources) || !Array.isArray(research.patterns) || !Array.isArray(research.decisions))) {
+  errors.push('research-data.js is missing one or more expected sources/patterns/decisions data arrays.');
 }
 
 const screenNames = (await readdir(resolve(rootDir, 'src/screens'))).filter(name => name.endsWith('Screen.tsx'));
 const mappedScreens = new Set([
-  ...audit.routeRows.map(row => row[1]).filter(name => name.endsWith('Screen.tsx')),
-  ...audit.legacyRows.map(row => row[0]),
+  ...(audit?.routeRows ?? []).map(row => row[1]).filter(name => name.endsWith('Screen.tsx')),
+  ...(audit?.legacyRows ?? []).map(row => row[0]),
 ]);
 for (const name of screenNames) if (!mappedScreens.has(name)) errors.push(`Screen audit omits src/screens/${name} from both routes and legacy inventory.`);
 for (const name of mappedScreens) if (name.endsWith('Screen.tsx') && !screenNames.includes(name)) errors.push(`Screen audit maps missing source file src/screens/${name}.`);

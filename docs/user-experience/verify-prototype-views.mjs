@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import {verifyPrototypeControls} from './verify-prototype-controls.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const moduleCache = new Map();
@@ -27,7 +28,11 @@ const {module: view} = await importAsEsm(resolve(here, 'prototype-view.js'));
 const {createState, reduceState} = model;
 const {renderScreen} = view;
 const act = (state, type, value) => reduceState(state, {type, value});
+const approveSigning = state => act(act(state, 'SIGNING_APPROVE'), 'SIGNING_COMPLETE');
 const show = state => renderScreen(state);
+const viewSource = await readFile(resolve(here, 'prototype-view.js'), 'utf8');
+const appSource = await readFile(resolve(here, 'prototype-app.js'), 'utf8');
+const actionSource = await readFile(resolve(here, 'prototype-app-actions.js'), 'utf8');
 
 function settledRun() {
   let state = createState('funded');
@@ -35,9 +40,11 @@ function settledRun() {
   state = act(state, 'STRATEGY_REVIEW');
   state = act(state, 'ACK');
   state = act(state, 'RUN_START');
+  state = approveSigning(state);
   state = act(state, 'RUN_CHECK');
   state = act(state, 'STOP_REVIEW');
   state = act(state, 'STOP_SUBMIT');
+  state = approveSigning(state);
   state = act(state, 'SETTLEMENT_CHECK');
   assert.equal(state.run.status, 'settling', 'first settlement check must remain pending');
   assert.match(show(state), /Settlement pending/);
@@ -57,22 +64,24 @@ check('settled recovery opens a real amount-and-fee review', () => {
   const html = show(state);
   assert.equal(state.route, 'recovery-review');
   assert.match(html, /From vault/);
-  assert.match(html, /100 test AUSD · fixture/);
+  assert.match(html, /100 test AUSD/);
   assert.match(html, /Network fee/);
-  assert.match(html, /Simulate passkey recovery/);
+  assert.match(html, /Continue to passkey review/);
 });
 
 check('pending recovery keeps pending copy and same-operation check', () => {
   let state = act(settledRun(), 'RECOVERY_SUBMIT');
+  state = approveSigning(state);
   const html = show(state);
   assert.equal(state.route, 'recovery-pending');
-  assert.match(html, /Checking your recovery/);
-  assert.match(html, /Simulate receipt check/);
+  assert.match(html, /Checking your recovery|Submitted/);
+  assert.match(html, /Check recovery/);
   assert.match(html, /Wallet balance/);
 });
 
 check('only confirmed recovery moves funds and the completed view clears vault balance', () => {
   let state = act(settledRun(), 'RECOVERY_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.balances.ausd, 150);
   state = act(state, 'RECOVERY_CHECK');
   assert.equal(state.balances.ausd, 250);
@@ -86,12 +95,20 @@ check('faucet handoff is not receipt; confirmed AUSD credits exactly once', () =
   let state = act(createState('empty'), 'SIGN_IN');
   state = act(state, 'FAUCET_OPEN');
   assert.equal(state.balances.mon, 0, 'leaving for a faucet is not a deposit');
+  state = act(state, 'FAUCET_REQUEST');
+  state = act(state, 'FAUCET_RETURN');
+  assert.equal(state.balances.mon, 0, 'requesting and returning alone do not credit MON');
   state = act(state, 'MON_SIMULATE_RECEIVE');
+  state = act(state, 'CHECK_MON');
   assert.equal(state.balances.mon, 0.02);
+  const monReceipt = state.events.find(event => event.title === 'Test MON faucet');
+  assert.equal(monReceipt?.status, 'Confirmed');
+  assert.equal(monReceipt?.amount, '0.020 MON');
   state = act(state, 'MON_SIMULATE_RECEIVE');
   assert.equal(state.balances.mon, 0.02, 'repeat arrival check cannot credit twice');
   state = act(state, 'CLAIM_AUSD');
   state = act(state, 'AUSD_SUBMIT');
+  state = approveSigning(state);
   state = act(state, 'AUSD_SUBMIT');
   assert.equal(state.claimPending, true);
   assert.equal(state.balances.ausd, 0);
@@ -104,9 +121,11 @@ check('manual collateral moves only after account receipt and only once', () => 
   let state = createState('funded');
   state = act(state, 'MANUAL_APPROVAL');
   state = act(state, 'MANUAL_APPROVE_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.balances.ausd, 250);
   state = act(state, 'MANUAL_APPROVAL_CHECK');
   state = act(state, 'MANUAL_OPEN_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.balances.ausd, 250);
   state = act(state, 'MANUAL_OPEN_CHECK');
   assert.equal(state.balances.ausd, 200);
@@ -118,6 +137,7 @@ check('stopping run remains actionable after navigating home and back', () => {
   let state = createState('running');
   state = act(state, 'STOP_REVIEW');
   state = act(state, 'STOP_SUBMIT');
+  state = approveSigning(state);
   state = act(state, 'TAB', 'Home');
   assert.doesNotMatch(show(state), /Ready when you are/);
   state = act(state, 'NAV', 'run');
@@ -130,6 +150,7 @@ check('available and strategy balances stay distinct across activation and activ
   state = act(state, 'STRATEGY_REVIEW');
   state = act(state, 'ACK');
   state = act(state, 'RUN_START');
+  state = approveSigning(state);
   state = act(state, 'TAB', 'Home');
   let html = show(state);
   assert.match(html, /class="balance-value">250\.00/);
@@ -168,13 +189,18 @@ check('unavailable strategy never reads as ready on Home', () => {
   assert.match(html, /unavailable|status|connection/i);
 });
 
+check('chart preference controls expose the selected display accessibly', () => {
+  const html = show({...createState('funded'), route: 'chart-settings', chartStyle: 'line'});
+  assert.match(html, /data-action="chart"[^>]*aria-pressed="true"/);
+  assert.match(html, /data-action="chart"[^>]*aria-pressed="false"/);
+});
+
 check('unsupported ETH is visibly planned and cannot route to a BTC order', () => {
-  const state = {...createState('funded'), route: 'markets', tab: 'Markets'};
+  const state = {...createState('funded'), route: 'market-detail', selectedMarket: 'ETH-PERP', tab: 'Markets'};
   const html = show(state);
-  const eth = html.match(/<section class="card">(?:(?!<\/section>)[\s\S])*ETH Perpetual(?:(?!<\/section>)[\s\S])*<\/section>/)?.[0];
-  assert.ok(eth, 'the planned market can remain visible for discovery');
-  assert.match(eth, /Planned|Not available in this preview/);
-  assert.doesNotMatch(eth, /data-action="manual-account"/, 'an unavailable ETH card must not open the BTC flow');
+  assert.match(html, /Ethereum/);
+  assert.match(html, /ETH Perpl trading is not available in this preview/);
+  assert.doesNotMatch(html, /data-action="nav-manual-account"/, 'an unavailable ETH market must not open the BTC flow');
 });
 
 check('invalid Spot amount never becomes a submitted order', () => {
@@ -189,6 +215,7 @@ check('uncertain Perpl open and close requests cannot be forced into fills', () 
   let state = {...createState('uncertain-submission'), route: 'manual-perpl-review',
     manual: {status: 'open', balance: 50, locked: 0}, manualOrderAmount: '10'};
   state = act(state, 'MANUAL_ORDER_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.pendingOrder?.status, 'uncertain');
   assert.doesNotMatch(show(state), /data-action="manual-fill"/);
   const stillOpen = act(state, 'MANUAL_FILL');
@@ -198,6 +225,7 @@ check('uncertain Perpl open and close requests cannot be forced into fills', () 
   state = {...createState('uncertain-submission'), route: 'perpl-close-review',
     manualPosition: true, manualLocked: 10, manual: {status: 'open', balance: 50, locked: 10}};
   state = act(state, 'CLOSE_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.pendingOrder?.status, 'uncertain');
   assert.doesNotMatch(show(state), /data-action="close-fill"/);
   const stillPending = act(state, 'CLOSE_FILL');
@@ -205,79 +233,27 @@ check('uncertain Perpl open and close requests cannot be forced into fills', () 
   assert.equal(stillPending.manualPosition, true);
 });
 
-check('a known-submitted Spot order has a reachable fixture fill, while uncertain stays pending', () => {
+check('a submitted Spot order reconciles through its same-operation receipt check', () => {
   let state = {...createState('funded'), route: 'spot-review', spotAmount: '25'};
   state = act(state, 'SPOT_SUBMIT');
+  state = approveSigning(state);
   assert.equal(state.pendingOrder?.status, 'submitted');
-  assert.match(show(state), /data-action="spot-fill"/);
-  state = act(state, 'SPOT_FILL');
+  assert.match(show(state), /Check this operation/);
+  state = act(state, 'CHECK_ORDER');
   assert.equal(state.pendingOrder, null);
   assert.equal(state.balances.usdc, 19.925);
   assert.equal(state.balances.wmon, 100);
 
   let uncertain = {...createState('uncertain-submission'), route: 'spot-review', spotAmount: '25'};
   uncertain = act(uncertain, 'SPOT_SUBMIT');
+  uncertain = approveSigning(uncertain);
   assert.equal(uncertain.pendingOrder?.status, 'uncertain');
   assert.doesNotMatch(show(uncertain), /data-action="spot-fill"/);
   assert.equal(act(uncertain, 'SPOT_FILL').pendingOrder?.status, 'uncertain');
 });
 
-check('every rendered button and input has a registered app handler', async () => {
-  const viewSource = await readFile(resolve(here, 'prototype-view.js'), 'utf8');
-  const appSource = await readFile(resolve(here, 'prototype-app.js'), 'utf8');
-  const actionBlock = appSource.match(/const actionTable = \{([\s\S]*?)\n\};/);
-  assert.ok(actionBlock, 'could not locate delegated action table');
-  const actionKeys = new Set([...actionBlock[1].matchAll(/(?:'([^']+)'|([\w-]+))\s*:/g)]
-    .map(match => match[1] ?? match[2]));
-  const known = new Set(actionKeys);
-  for (const special of ['settings', 'duration-preset']) {
-    assert.ok(appSource.includes(`actionName === '${special}'`), `special action ${special} lacks a delegated handler`);
-    known.add(special);
-  }
-  const reviewerActions = [...appSource.matchAll(/target\.dataset\.action === '([^']+)'/g)].map(match => match[1]);
-  for (const action of reviewerActions) known.add(action);
-
-  const routeBlock = viewSource.match(/const renderers = \{([\s\S]*?)\n  \};/);
-  assert.ok(routeBlock, 'could not locate route renderers');
-  const routes = [...routeBlock[1].matchAll(/(?:'([^']+)'|([\w-]+))\s*:/g)]
-    .map(match => match[1] ?? match[2]);
-  assert.ok(routes.length >= 40, `expected exhaustive route rendering, found ${routes.length}`);
-
-  const fieldBlock = appSource.match(/const types = \{([^}]+)\}/);
-  assert.ok(fieldBlock, 'could not locate input field handler map');
-  const fields = new Set([...fieldBlock[1].matchAll(/(?:'([^']+)'|([\w-]+))\s*:/g)]
-    .map(match => match[1] ?? match[2]));
-  const fixtures = ['empty', 'funded', 'running', 'completed', 'offline', 'stale',
-    'faucet-failure', 'insufficient-mon', 'rejected-signing', 'expired-quote',
-    'uncertain-submission', 'unavailable', 'recovery'].map(name => createState(name));
-  const rendered = new Map();
-  for (const fixture of fixtures) {
-    for (const route of routes) {
-      const state = {...fixture, signedIn: true, route};
-      if (/manual-(?:perpl|position)|perpl-close/.test(route)) {
-        state.manual = {status: 'open', balance: 50, locked: 10};
-        state.manualAllowance = true;
-      }
-      if (route === 'manual-position') state.manualPosition = true;
-      if (route === 'order-pending' || route === 'uncertain') state.pendingOrder = {kind: 'spot', status: 'uncertain'};
-      if (route === 'order-submitted') state.pendingOrder = {kind: 'spot', status: 'submitted'};
-      const html = renderScreen(state);
-      for (const match of html.matchAll(/data-action=["']([^"']+)["']/g)) {
-        const action = match[1];
-        if (!known.has(action)) rendered.set(`${route}: ${action}`, action);
-      }
-      for (const match of html.matchAll(/data-field=["']([^"']+)["']/g)) {
-        if (!fields.has(match[1])) rendered.set(`${route}: field ${match[1]}`, `field ${match[1]}`);
-      }
-    }
-  }
-  for (const mode of ['user', 'developer']) {
-    const tabs = view.renderTabs({...createState('funded', mode), signedIn: true});
-    for (const match of tabs.matchAll(/data-action=["']([^"']+)["']/g)) {
-      if (!known.has(match[1])) rendered.set(`${mode} tabs: ${match[1]}`, match[1]);
-    }
-  }
-  assert.deepEqual([...rendered.keys()], [], `rendered controls have no handler: ${[...rendered.keys()].join(', ')}`);
+check('every rendered button and input has a registered app handler', () => {
+  verifyPrototypeControls({view, createState, viewSource, appSource, actionSource});
 });
 
 if (problems.length) process.exitCode = 1;

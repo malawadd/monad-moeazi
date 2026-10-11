@@ -5,6 +5,7 @@ import type {
   PreparedMonadMandate, PreparedMonadOperation,
 } from '../types/monad';
 import type {V4PoolKey} from '../types/marketDirectory';
+import type {StrategyCatalogResponse} from '../types/strategies';
 
 const base = '/api/mobile/monad';
 
@@ -59,6 +60,7 @@ export const monadApi = {
   wallet: () => apiRequest<MonadWalletSnapshot>(`${base}/wallet`),
   markets: () => apiRequest<MonadMarketsResponse>(`${base}/markets`),
   agent: () => apiRequest<MonadAgentSnapshot>(`${base}/agents`),
+  strategies: () => apiRequest<StrategyCatalogResponse>('/api/mobile/strategies'),
   activity: (limit = 60, cursor?: string) => apiRequest<MonadActivityPage>(
     `/api/mobile/monad/activity?${new URLSearchParams({limit: String(limit), ...(cursor ? {cursor} : {})}).toString()}`),
   quote: (input: MonadQuoteInput) => apiRequest<MonadQuote>(`${base}/quote`, {

@@ -33,6 +33,8 @@ import {TradeReviewScreen} from '../screens/TradeReviewScreen';
 import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
 import {WrapScreen} from '../screens/WrapScreen';
+import {StrategiesScreen} from '../screens/StrategiesScreen';
+import {StrategyDetailScreen} from '../screens/StrategyDetailScreen';
 import {useApp} from '../state/AppContext';
 import {colors, type} from '../theme/tokens';
 import {TypographicTabBar} from './TypographicTabBar';
@@ -44,7 +46,7 @@ function AuthenticatedTabs() {
   return <Tabs.Navigator initialRouteName="Home" screenOptions={{headerShown: false}} tabBar={props => <TypographicTabBar {...props} />}>
     <Tabs.Screen name="Home" component={MonadHomeScreen} />
     <Tabs.Screen name="Markets" component={MarketsScreen} />
-    <Tabs.Screen name="Agent" component={AgentScreen} />
+    <Tabs.Screen name="Strategies" component={StrategiesScreen} />
     <Tabs.Screen name="Activity" component={ActivityScreen} />
     <Tabs.Screen name="Account" component={AccountScreen} />
   </Tabs.Navigator>;
@@ -75,11 +77,14 @@ export function RootNavigator() {
       <Stack.Screen name="PerplSetup" component={PerplSetupScreen} />
       <Stack.Screen name="PerplStatus" component={PerplStatusScreen} />
       <Stack.Screen name="PerplHistory" component={PerplHistoryScreen} />
+      <Stack.Screen name="StrategyDetail" component={StrategyDetailScreen} />
       <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="ChartSettings" component={ChartSettingsScreen} />
+      <Stack.Screen name="Agent" component={AgentScreen} />
+      <Stack.Screen name="AgentStatus" component={AgentScreen} />
       <Stack.Screen name="AgentSettings" component={AgentSettingsScreen} />
     </> : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
   </Stack.Navigator>;

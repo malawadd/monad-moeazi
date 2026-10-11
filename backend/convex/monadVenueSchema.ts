@@ -7,6 +7,7 @@ export const monadVenueTables = {
     chainId: v.number(), factoryAddress: v.string(), vaultAddress: v.string(), delegatedAccountAddress: v.optional(v.string()),
     accountId: v.optional(v.number()), instanceId: v.optional(v.number()), nonce: v.string(), idempotencyKey: v.string(),
     amountUnits: v.string(), minFundingUnits: v.string(), durationSeconds: v.number(), setupDeadline: v.number(),
+    strategyId: v.optional(v.string()), strategyVersion: v.optional(v.string()),
     preparedExpiresAt: v.optional(v.number()), expiresAt: v.optional(v.number()),
     maxPositionExposureUnits: v.string(), maxLeverage: v.number(), marketIdsJson: v.string(), marketsJson: v.string(),
     policyVersion: v.number(), mandateJson: v.string(), mandateTypedDataJson: v.string(), mandateHash: v.optional(v.string()),
@@ -74,7 +75,11 @@ export const monadVenueTables = {
 
   monadVenueOptimizerCycles: defineTable({ runId: v.string(), venueId: v.string(), ownerAddress: v.string(),
     cycleId: v.string(), cycleNumber: v.number(), realizedPnlUnits: v.string(), cycleJson: v.string(), createdAt: v.number(),
-  }).index("by_cycleId", ["cycleId"]).index("by_run_createdAt", ["runId", "createdAt"]),
+  }).index("by_cycleId", ["cycleId"]).index("by_run_createdAt", ["runId", "createdAt"])
+    .index("by_venue_createdAt", ["venueId", "createdAt"]),
+
+  monadStrategyBackfillState: defineTable({ key: v.string(), cursor: v.optional(v.string()),
+    completed: v.boolean(), updatedAt: v.number() }).index("by_key", ["key"]),
 
   monadVenueOptimizerJournal: defineTable({ runId: v.string(), venueId: v.string(), ownerAddress: v.string(),
     journalId: v.string(), cycleNumber: v.number(), entryJson: v.string(), createdAt: v.number(),

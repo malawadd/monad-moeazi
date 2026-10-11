@@ -29,6 +29,7 @@ import { registerManualPerplAccountRoutes } from "./monad/manualPerplAccount.js"
 import { registerManualPerplOrderRoutes } from "./monad/manualPerplOrders.js";
 import { registerV4PoolOperatorRoutes } from "./monad/v4PoolOperatorRoutes.js";
 import { registerManualPerplOperatorRoutes } from "./monad/manualPerplOperator.js";
+import { registerStrategyRoutes } from "./monad/strategyRoutes.js";
 
 export const OPERATOR_SUBJECT = LOCAL_OPERATOR_SUBJECT;
 
@@ -85,6 +86,7 @@ export async function createApiApp(apiRoot = process.cwd()): Promise<ApiApp> {
   registerManualPerplOrderRoutes(app);
   registerV4PoolOperatorRoutes(app);
   registerManualPerplOperatorRoutes(app);
+  registerStrategyRoutes(app);
   registerPushNotificationRoutes(app);
   const count = await registerLegacyRoutes(app, `${apiRoot}/app/api`);
 

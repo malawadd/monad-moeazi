@@ -2,7 +2,7 @@ import {TAB_NAMES} from '../src/navigation/routes';
 import {safeMobileDeepLink} from '../src/navigation/linking';
 
 test('keeps the five beginner navigation tabs', () => {
-  expect(TAB_NAMES).toEqual(['Home', 'Markets', 'Agent', 'Activity', 'Account']);
+  expect(TAB_NAMES).toEqual(['Home', 'Markets', 'Strategies', 'Activity', 'Account']);
 });
 
 test('rejects malformed and unbounded notification links', () => {

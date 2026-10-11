@@ -1,1 +1,1 @@
-export const TAB_NAMES = ['Home', 'Markets', 'Agent', 'Activity', 'Account'] as const;
+export const TAB_NAMES = ['Home', 'Markets', 'Strategies', 'Activity', 'Account'] as const;

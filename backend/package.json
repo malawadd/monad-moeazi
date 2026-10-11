@@ -11,6 +11,7 @@
     "api:start": "node --import tsx api-server/src/server.ts",
     "api:parity": "node tests/api-route-parity-smoke.mjs",
     "mobile:magic-cleanup": "node scripts/cleanup-magic-mobile-users.mjs",
+    "strategies:backfill": "node --env-file=.env.local --import tsx scripts/backfill-strategy-identities.ts",
     "stack:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-monad-stack.ps1",
     "stack:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-monad-stack.ps1",
     "build": "tsc --noEmit",

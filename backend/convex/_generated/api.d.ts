@@ -119,6 +119,7 @@ import type * as monadPerpSchema from "../monadPerpSchema.js";
 import type * as monadPerpWorker from "../monadPerpWorker.js";
 import type * as monadQuotes from "../monadQuotes.js";
 import type * as monadSchema from "../monadSchema.js";
+import type * as monadStrategyCatalog from "../monadStrategyCatalog.js";
 import type * as monadTradeSummaryLifecycle from "../monadTradeSummaryLifecycle.js";
 import type * as monadV4PoolIndex from "../monadV4PoolIndex.js";
 import type * as monadVenueAccounting from "../monadVenueAccounting.js";
@@ -277,6 +278,7 @@ declare const fullApi: ApiFromModules<{
   monadPerpWorker: typeof monadPerpWorker;
   monadQuotes: typeof monadQuotes;
   monadSchema: typeof monadSchema;
+  monadStrategyCatalog: typeof monadStrategyCatalog;
   monadTradeSummaryLifecycle: typeof monadTradeSummaryLifecycle;
   monadV4PoolIndex: typeof monadV4PoolIndex;
   monadVenueAccounting: typeof monadVenueAccounting;

@@ -4,7 +4,7 @@ import {getInitialNotificationUrl, subscribeNotificationOpened} from '../service
 
 export function safeMobileDeepLink(url: string | null) {
   if (!url || url.length > 180) return null;
-  return /^moeazi-monad:\/\/(home|markets(?:\/[A-Za-z0-9_-]{1,60}\/[A-Za-z0-9_-]{1,100})?(?:\?summaryId=[A-Za-z0-9_-]{1,100})?|agent|activity(?:\/[A-Za-z0-9_-]{1,100})?|account|safety|funding(?:\/purchases\/[A-Za-z0-9_-]{16,100})?|credits)$/.test(url) ? url : null;
+  return /^moeazi-monad:\/\/(home|markets(?:\/[A-Za-z0-9_-]{1,60}\/[A-Za-z0-9_-]{1,100})?(?:\?summaryId=[A-Za-z0-9_-]{1,100})?|strategies|agent(?:\/status)?|activity(?:\/[A-Za-z0-9_-]{1,100})?|account|safety|funding(?:\/purchases\/[A-Za-z0-9_-]{16,100})?|credits)$/.test(url) ? url : null;
 }
 
 export const linking: LinkingOptions<any> = {
@@ -23,7 +23,8 @@ export const linking: LinkingOptions<any> = {
   },
   config: {
     screens: {
-      Main: {screens: {Home: 'home', Markets: 'markets', Agent: 'agent', Activity: 'activity', Account: 'account'}},
+      Main: {screens: {Home: 'home', Markets: 'markets', Strategies: 'strategies', Activity: 'activity', Account: 'account'}},
+      Agent: 'agent', AgentStatus: 'agent/status',
       MarketDetail: 'markets/:venueId/:marketId',
       ActivityDetail: 'activity/:itemId', Safety: 'safety', Funding: 'funding', Withdraw: 'withdraw', Credits: 'credits',
       PurchaseStatus: 'funding/purchases/:purchaseId',

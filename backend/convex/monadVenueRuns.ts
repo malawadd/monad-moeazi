@@ -116,7 +116,8 @@ export const prepareRun = mutation({ args: { runId: v.string(), venueId: v.strin
       await ctx.db.patch(row._id, { status: "expired", phase: "superseded_review", updatedAt: Date.now() });
     }
     const now = Date.now();
-    const data = { ...args, userId: user._id, subject: `mera:${owner}`, ownerAddress: owner, status: "prepared", phase: "review_ready",
+    const strategyIdentity = optimizerRun ? { strategyId: "perpl-deterministic", strategyVersion: optimizer.version as string } : {};
+    const data = { ...args, ...strategyIdentity, userId: user._id, subject: `mera:${owner}`, ownerAddress: owner, status: "prepared", phase: "review_ready",
       tickSequence: 0, createdAt: now, updatedAt: now };
     await ctx.db.insert("monadVenueRuns", data);
     const row = await findRun(ctx, args.runId);

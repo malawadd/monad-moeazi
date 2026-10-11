@@ -6,6 +6,8 @@ import {manualPerplApi, createManualPerplIdempotencyKey} from '../services/manua
 import {perplApi} from '../services/perplApi';
 import {formatMonadUnits, formatMonadTimestamp, parseMonadAmount, shortenAddress} from '../services/monadFormatting';
 import {validateManualPerplPreparation, type ManualReviewExpectation} from '../services/manualPerplValidation';
+import {manualPerplOpenDisabledReason} from '../services/manualPerplAccountSetup';
+import {useManualPerplAccountAmounts} from '../services/useManualPerplAccountAmounts';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useManualPerplAccountQuery, useMarketDirectoryQuery} from '../services/useMarketQueries';
@@ -33,11 +35,11 @@ export function PerplManualAccountScreen() {
     && ADDRESS.test(data.exchangeAddress) && ADDRESS.test(data.collateral.address) && data.collateral.symbol === 'AUSD' && data.collateral.decimals === 6
     ? data : null;
   const markets = (directoryQuery.data?.markets ?? []).filter(item => item.kind === 'perpl');
-  const [amount, setAmount] = useState('');
-  const [legacyAmount, setLegacyAmount] = useState('');
   const [minimumOpenUnits, setMinimumOpenUnits] = useState<string | null>(null);
   const [contextError, setContextError] = useState('');
   const [contextLoading, setContextLoading] = useState(true);
+  const {amount, setAmount, legacyAmount, setLegacyAmount} = useManualPerplAccountAmounts(
+    ownerAddress, account, minimumOpenUnits, contextLoading, contextError);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pullRefreshing, setPullRefreshing] = useState(false);
@@ -98,12 +100,16 @@ export function PerplManualAccountScreen() {
         }
         if (action === 'open' && account.status !== 'not_created') throw new Error('This Mera wallet already has a Perpl exchange account.');
         if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
-        if (action === 'open' && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)) throw new Error('Approve this exact AUSD amount first, then refresh the account.');
+        if (action === 'open' && BigInt(account.collateral.allowanceUnits) !== BigInt(directUnits)) {
+          throw new Error('Perpl requires the finalized AUSD allowance to equal the account creation amount exactly. Review an exact approval, then refresh.');
+        }
       }
       if (action === 'deposit') {
         if (account.status !== 'open') throw new Error('Create your direct Mera-owned Perpl account first.');
         if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
-        if (BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)) throw new Error('Approve this exact AUSD amount first, then refresh the account.');
+        if (BigInt(account.collateral.allowanceUnits) !== BigInt(directUnits)) {
+          throw new Error('Perpl requires the finalized AUSD allowance to equal the deposit amount exactly. Review an exact approval, then refresh.');
+        }
       }
       if (action === 'withdraw' && (account.status !== 'open'
           || BigInt(directUnits) > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits))) {
@@ -126,18 +132,20 @@ export function PerplManualAccountScreen() {
         ...(legacyAction ? {accountMode: 'legacy_delegated', accountAddress: legacy.accountAddress}
           : {accountMode: 'direct_wallet', accountAddress: ownerAddress})};
       validateManualPerplPreparation(prepared, expected);
-      navigation.navigate('ManualPerplReview', {prepared, expected, label: actionLabel(action), returnRoute: 'PerplManualAccount'});
+      navigation.navigate('ManualPerplReview', {prepared, expected, label: actionLabel(action), returnRoute: 'PerplManualAccount',
+        accountCreationSetup: account.status === 'not_created' && (action === 'approve' || action === 'open')});
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'A fresh account review could not be prepared.'); }
     finally { setBusy(false); }
   }
 
   const directUnits = account ? maybeAmount(amount, account.collateral.decimals) : null;
-  const directCanApprove = Boolean(account && directUnits && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)
+  const allowanceMatches = Boolean(account && directUnits && BigInt(account.collateral.allowanceUnits) === BigInt(directUnits));
+  const directCanApprove = Boolean(account && directUnits && !allowanceMatches
     && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits)
     && (account.status === 'open' || (minimumOpenUnits !== null && BigInt(directUnits) >= BigInt(minimumOpenUnits))));
-  const directCanOpen = Boolean(account && directUnits && account.status === 'not_created' && minimumOpenUnits
-    && BigInt(directUnits) >= BigInt(minimumOpenUnits) && BigInt(account.collateral.allowanceUnits) >= BigInt(directUnits)
-    && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits));
+  const openDisabledReason = account ? manualPerplOpenDisabledReason({account, amountUnits: directUnits, minimumUnits: minimumOpenUnits,
+    contextLoading, contextError, allowanceMatches}) : null;
+  const directCanOpen = openDisabledReason === null;
 
   return <Screen refreshing={pullRefreshing || accountQuery.isLoading || directoryQuery.isLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker="Manual Perpl · Mera owner" title="Your direct AUSD account" copy="Your Mera wallet owns this Perpl exchange account. Every approval, deposit, withdrawal, and order gets a fresh review and signature." />
@@ -166,12 +174,17 @@ export function PerplManualAccountScreen() {
           <Field label="AUSD amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter initial deposit" />
           {minimumOpenUnits ? <DataRow label="Live minimum account deposit" value={`${formatMonadUnits(minimumOpenUnits, account.collateral.decimals)} AUSD`} /> : <DataRow label="Live minimum account deposit" value={contextLoading ? 'Loading Perpl context…' : 'Unavailable'} />}
           {directCanApprove ? <Button label="Review exact AUSD approval" onPress={() => { void prepare('approve'); }} disabled={!account.capabilities.approve || contextLoading || Boolean(contextError)} loading={busy} /> : null}
-          <Button label="Review account creation and initial deposit" variant="secondary" onPress={() => { void prepare('open'); }} disabled={!directCanOpen || !account.capabilities.open || contextLoading || Boolean(contextError)} loading={busy} />
-          {directUnits && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits) ? <Text style={s.body}>Approve the selected amount first. Account creation stays disabled until the finalized allowance covers it.</Text> : null}
+          <Button label="Review account creation and initial deposit" variant="secondary" onPress={() => { void prepare('open'); }} disabled={!directCanOpen || contextLoading || Boolean(contextError)} loading={busy} />
+          <Text style={s.body}>{directCanOpen
+            ? 'The finalized AUSD allowance is ready. Your Perpl account is still not created; review a fresh account creation transaction and sign it with Mera.'
+            : openDisabledReason}</Text>
         </> : <>
           <Field label="AUSD amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter an amount" />
           {directCanApprove ? <Button label="Review exact AUSD approval" variant="secondary" onPress={() => { void prepare('approve'); }} disabled={!account.capabilities.approve} loading={busy} /> : null}
-          <Button label="Review AUSD deposit" onPress={() => { void prepare('deposit'); }} disabled={!directUnits || BigInt(account.collateral.allowanceUnits) < BigInt(directUnits) || BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits) || !account.capabilities.deposit} loading={busy} />
+          <Button label="Review AUSD deposit" onPress={() => { void prepare('deposit'); }} disabled={!directUnits || !allowanceMatches || BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits) || !account.capabilities.deposit} loading={busy} />
+          {directUnits && !allowanceMatches ? <Text style={s.body}>{BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)
+            ? 'Perpl needs an exact AUSD allowance for this deposit. Review approval, then refresh.'
+            : 'The current AUSD allowance is larger than this deposit. Match the amount to it or review a fresh exact approval.'}</Text> : null}
           <Button label="Review AUSD withdrawal" variant="secondary" onPress={() => { void prepare('withdraw'); }} disabled={!directUnits || BigInt(directUnits) > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits) || !account.capabilities.withdraw} loading={busy} />
         </>}
       </Card>

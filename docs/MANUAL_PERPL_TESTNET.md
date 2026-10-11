@@ -27,6 +27,22 @@ order forwarding, or new delegated account in this flow. Use current Perpl
 context for account and transaction minimums. An approval alone neither opens
 an account nor moves AUSD into it.
 
+### If the wallet is funded but the account says “Not created”
+
+Check **AUSD allowance to Perpl** separately from **AUSD in Perpl account**.
+An allowance is only the first owner-signed transaction. Return to **Direct
+account setup and collateral**, select the **same exact amount** as the
+allowance, tap **Review account creation and initial deposit**, then tap
+**Sign exact action with Mera** on the review page. Wait for a finalized
+`createAccount` receipt and a nonzero Exchange account ID before trading.
+The second signature is never requested automatically after approval.
+
+If a prepared review expires before signing, prepare it again. An expired,
+unsigned review has no transaction hash and has not moved funds. A different
+deposit amount needs a new exact approval; an allowance of 500 AUSD does not
+authorize Moeazi's reviewed 100 AUSD setup action. Keep the original operation
+ID and check its status before retrying if a signed submission is uncertain.
+
 ## Gates and limits
 
 The local global Manual Perpl gate is independent of autonomy gates. The
@@ -118,3 +134,25 @@ checks). Mobile, backend, and Convex typechecks passed; the ARM release build
 succeeded. The bounded submit/status UI change was typechecked and covered by
 the existing mobile suite, but no additional funded transaction was made solely
 to exercise that timeout path.
+
+## 2026-10-11 account-setup diagnosis
+
+For a second Mera owner (`0xcED2CE…96e848`), the finalized wallet snapshot
+showed 9,999.99845 AUSD and a 500 AUSD allowance to Perpl, but no direct
+exchange account. Local Convex recorded the 500 AUSD approval as finalized;
+its next `open_account` operation was only prepared, with no signed transaction
+or transaction hash, and expired. The wallet's onchain nonce was still 7,
+matching the prepared creation transaction. A read-only `createAccount(500
+AUSD)` simulation succeeded, so collateral and MON gas were sufficient. No
+Perpl account deposit or manual trade occurred for this owner.
+
+Mobile 1.6 makes the approval and account-creation signatures explicit, fills
+the amount from a finalized usable allowance, and explains exact-allowance
+mismatches. The backend now reports both the selected amount and finalized
+allowance when they differ. The x86 emulator build launched, the focused
+account-flow suite passed 11/11, mobile and backend typechecks passed, and the
+ARM build succeeded. The new phone APK is
+`android/app/build/outputs/apk/release/moeazi-monad-v1.6-arm.apk` (SHA-256
+`CD64A1173F5DB02EF6B3DDF179F757F7DE99C1D02F16CDE8D67AE80D967A2472`).
+The owner still needs to review and Mera-sign a fresh `createAccount(500
+AUSD)` on the phone; that transaction cannot be completed by a backend fix.

@@ -17,6 +17,7 @@ export function ManualPerplReviewScreen() {
   const {ownerAddress} = useApp();
   const prepared = route.params?.prepared as ManualPerplPreparedOperation | undefined;
   const expected = route.params?.expected as ManualReviewExpectation | undefined;
+  const accountCreationSetup = route.params?.accountCreationSetup === true;
   const label = String(route.params?.label ?? prepared?.action ?? 'Manual Perpl action');
   const returnRoute = String(route.params?.returnRoute ?? 'PerplManualAccount');
   const [result, setResult] = useState<ManualPerplOperationStatus | null>(null);
@@ -79,12 +80,19 @@ export function ManualPerplReviewScreen() {
   try { normalized = normalizeManualPerplTransaction(prepared.transaction); } catch { normalized = null; }
   const fee = normalized ? BigInt(normalized.gasLimit) * BigInt(normalized.maxFeePerGas) : null;
   const terminal = result && ['finalized', 'failed', 'no_fill'].includes(result.status);
+  const approvalFinalized = accountCreationSetup && prepared.action === 'approve' && result?.status === 'finalized';
+  const creationReview = accountCreationSetup && prepared.action === 'open';
   const tint = result?.status === 'failed' || result?.status === 'no_fill' ? 'rose' : result?.status === 'finalized' ? 'mint' : 'orange';
 
   return <FlowScreen>
-    <PageHeader kicker="Final review · Mera signing" title="Check every transaction detail" copy="This exact action will be signed by your Mera owner on Monad Testnet. Each manual account or order action needs a fresh review and signature." />
+    <PageHeader kicker={accountCreationSetup ? (creationReview ? 'Account setup · Step 2 of 2' : 'Account setup · Step 1 of 2') : 'Final review · Mera signing'}
+      title={creationReview ? 'Review account creation' : 'Check every transaction detail'}
+      copy={creationReview ? 'The finalized AUSD allowance is ready. This fresh createAccount transaction is separate and still needs your review and Mera signature.'
+        : 'This exact action will be signed by your Mera owner on Monad Testnet. Each manual account or order action needs a fresh review and signature.'} />
     {error ? <Notice live tone="rose" title={signed ? 'Action may still be processing' : 'Review needs attention'} message={error} actionLabel={signed ? 'Check original operation' : undefined} onAction={signed ? () => { void checkStatus(); } : undefined} /> : null}
     {result ? <Notice live tone={tint} title={`Status · ${humanize(result.status)}`} message={result.message ?? statusMessage(result)} /> : null}
+    {approvalFinalized ? <Notice live tone="mint" title="Step 1 of 2 complete · AUSD approval finalized"
+      message="Your Perpl account is still not created. Return to the manual account screen to explicitly review account creation; that separate transaction needs its own fresh Mera signature." /> : null}
     {result?.transactionHash ? <Card><DataRow label="Transaction hash" value={result.transactionHash} /></Card> : null}
     <Card>
       <DataRow label="Action" value={label} />
@@ -119,9 +127,10 @@ export function ManualPerplReviewScreen() {
     {result?.fill ? <Card><Text style={s.strong}>Finalized fill</Text><ScalarDetails record={result.fill} /></Card> : null}
     {result?.result ? <Card><Text style={s.strong}>Finalized exchange result</Text><ScalarDetails record={result.result} /></Card> : null}
     {result?.receipt ? <Card><Text style={s.strong}>Receipt and state evidence</Text><ScalarDetails record={result.receipt} /></Card> : null}
-    <Button label={signed ? 'Signature already submitted' : 'Sign exact action with Mera'} onPress={() => { void signAndSubmit(); }} loading={busy} disabled={signed || !normalized} />
+    <Button label={signed ? 'Signature already submitted' : creationReview ? 'Review and sign account creation with Mera' : 'Sign exact action with Mera'} onPress={() => { void signAndSubmit(); }} loading={busy} disabled={signed || !normalized} />
     {signed && !terminal ? <Button label="Check original operation status" variant="secondary" onPress={() => { void checkStatus(); }} loading={busy} /> : null}
-    <Button label="Return to manual account" variant="secondary" onPress={() => navigation.navigate(returnRoute)} />
+    {approvalFinalized ? <Button label="Return to account setup · review creation" onPress={() => navigation.navigate(returnRoute)} />
+      : <Button label="Return to manual account" variant="secondary" onPress={() => navigation.navigate(returnRoute)} />}
     <Text style={s.body}>A submitted or uncertain action remains locked to this operation ID. Moeazi records a fill only after the receipt and Perpl account state agree at finality.</Text>
   </FlowScreen>;
 }

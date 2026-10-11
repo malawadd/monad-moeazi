@@ -7,12 +7,15 @@ const mockOwner = '0x1111111111111111111111111111111111111111';
 const mockExchangeAddress = '0x3333333333333333333333333333333333333333';
 const mockTokenAddress = '0x4444444444444444444444444444444444444444';
 const mockLegacyAccountAddress = '0x5555555555555555555555555555555555555555';
+const secondOwner = '0x6666666666666666666666666666666666666666';
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 let mockAccountResult: any;
+let mockMinimumOpenUnits = '100000000';
+let mockCurrentOwner = mockOwner;
 const mockPrepareAccount = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({useNavigation: () => mockNavigation, useIsFocused: () => true}));
-jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
+jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockCurrentOwner})}));
 jest.mock('../src/services/useMarketQueries', () => ({
   useManualPerplAccountQuery: () => ({data: mockAccountResult, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
   useMarketDirectoryQuery: () => ({data: {markets: []}, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
@@ -22,7 +25,7 @@ jest.mock('../src/services/manualPerplApi', () => ({manualPerplApi: {
   prepareAccount: (input: unknown) => mockPrepareAccount(input),
 }, createManualPerplIdempotencyKey: () => 'manual-perpl-test-key'}));
 jest.mock('../src/services/perplApi', () => ({perplApi: {venues: async () => ({venues: [{venueId: 'perpl-direct-testnet-v1', chainId: 10143,
-  collateral: {symbol: 'AUSD', address: mockTokenAddress, decimals: 6}, limits: {minAccountOpenUnits: '100000000'}}]})}}));
+  collateral: {symbol: 'AUSD', address: mockTokenAddress, decimals: 6}, limits: {minAccountOpenUnits: mockMinimumOpenUnits}}]})}}));
 jest.mock('../src/components/Ui', () => {
   const ReactRuntime = require('react');
   const Native = require('react-native');
@@ -43,9 +46,9 @@ const APPROVE_ABI = [{type: 'function', name: 'approve', stateMutability: 'nonpa
 const CREATE_ABI = [{type: 'function', name: 'createAccount', stateMutability: 'nonpayable',
   inputs: [{name: 'amountCNS', type: 'uint256'}], outputs: [{type: 'uint256'}]}] as const;
 
-function account(status: 'not_created' | 'open', allowanceUnits = '0', withLegacy = false, lockedUnits = '0') {
+function account(status: 'not_created' | 'open', allowanceUnits = '0', withLegacy = false, lockedUnits = '0', ownerAddress = mockOwner) {
   const exists = status === 'open';
-  return {chainId: 10143, ownerAddress: mockOwner, exchangeAddress: mockExchangeAddress,
+  return {chainId: 10143, ownerAddress, exchangeAddress: mockExchangeAddress,
     accountMode: exists ? 'direct_wallet' : 'not_created', accountAddress: exists ? mockOwner : null,
     accountId: exists ? 71 : null, status, collateral: {symbol: 'AUSD', address: mockTokenAddress, decimals: 6,
       balanceUnits: '5000000', lockedUnits, walletBalanceUnits: '250000000', allowanceUnits}, positions: [], orders: [], observedAt: Date.now(), blockNumber: 10,
@@ -91,7 +94,7 @@ async function pressButton(renderer: ReactTestRenderer.ReactTestRenderer, label:
   await act(async () => control!.props.onPress());
 }
 
-beforeEach(() => { mockNavigation.navigate.mockClear(); mockPrepareAccount.mockReset(); });
+beforeEach(() => { mockNavigation.navigate.mockClear(); mockPrepareAccount.mockReset(); mockMinimumOpenUnits = '100000000'; mockCurrentOwner = mockOwner; });
 
 test('new direct account requires a separate exact AUSD approval before createAccount', async () => {
   mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
@@ -121,15 +124,63 @@ test('approved direct account creation reviews exact initial collateral with Per
   await act(async () => renderer.unmount());
 });
 
+test('prefills the covered finalized allowance and leaves account creation for a fresh Mera signature', async () => {
+  mockMinimumOpenUnits = '500';
+  mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
+  const renderer = await renderAccount('not_created', '500');
+  const field = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'AUSD amount');
+  expect(field?.props.value).toBe('0.0005');
+  expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('The finalized AUSD allowance is ready.'))).toBe(true);
+  await pressButton(renderer, 'Review account creation and initial deposit');
+  expect(mockPrepareAccount).toHaveBeenCalledWith({action: 'open', amountUnits: '500', idempotencyKey: 'manual-perpl-test-key'});
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('ManualPerplReview', expect.objectContaining({accountCreationSetup: true,
+    expected: expect.objectContaining({action: 'open', amountUnits: '500'})}));
+  await act(async () => renderer.unmount());
+});
+
+test('a larger allowance explains the exact mismatch and offers a fresh approval for the selected amount', async () => {
+  mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
+  const renderer = await renderAccount('not_created', '100000001');
+  await setAmount(renderer, '100');
+  const openButton = renderer.root.findAll(node => node.props.accessibilityLabel === 'Review account creation and initial deposit')[0];
+  expect(openButton.props.disabled).toBe(true);
+  expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('current allowance is larger than this amount'))).toBe(true);
+  await pressButton(renderer, 'Review exact AUSD approval');
+  expect(mockPrepareAccount).toHaveBeenCalledWith({action: 'approve', amountUnits: '100000000', idempotencyKey: 'manual-perpl-test-key'});
+  await act(async () => renderer.unmount());
+});
+
+test('switching Mera owners clears amounts from the previous account', async () => {
+  const renderer = await renderAccount('not_created');
+  await setAmount(renderer, '100');
+  mockCurrentOwner = secondOwner;
+  mockAccountResult = account('not_created', '0', false, '0', secondOwner);
+  await act(async () => { renderer.update(<PerplManualAccountScreen />); await Promise.resolve(); });
+  const field = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'AUSD amount');
+  expect(field?.props.value).toBe('');
+  await act(async () => renderer.unmount());
+});
+
 test('later direct deposits use the existing exchange account and its exact AUSD allowance', async () => {
   mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
-  const renderer = await renderAccount('open', '5000000');
+  const renderer = await renderAccount('open', '2000000');
   await setAmount(renderer, '2');
   await pressButton(renderer, 'Review AUSD deposit');
   expect(mockPrepareAccount).toHaveBeenCalledWith({action: 'deposit', amountUnits: '2000000', idempotencyKey: 'manual-perpl-test-key'});
   expect(mockNavigation.navigate).toHaveBeenCalledWith('ManualPerplReview', expect.objectContaining({
     expected: expect.objectContaining({action: 'deposit', amountUnits: '2000000', accountMode: 'direct_wallet', accountAddress: mockOwner}),
   }));
+  await act(async () => renderer.unmount());
+});
+
+test('direct deposits require exact allowance and offer approval when the allowance is larger', async () => {
+  mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
+  const renderer = await renderAccount('open', '5000000');
+  await setAmount(renderer, '2');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review AUSD deposit')[0].props.disabled).toBe(true);
+  expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('allowance is larger than this deposit'))).toBe(true);
+  await pressButton(renderer, 'Review exact AUSD approval');
+  expect(mockPrepareAccount).toHaveBeenCalledWith({action: 'approve', amountUnits: '2000000', idempotencyKey: 'manual-perpl-test-key'});
   await act(async () => renderer.unmount());
 });
 

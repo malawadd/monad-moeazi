@@ -126,7 +126,8 @@ async function prepareAccount(context: any) {
           `Perpl account creation requires at least ${formatUnits(live.limits.minAccountOpenUnits, AUSD_DECIMALS)} AUSD.`,
           400, "manual_perpl_open_minimum");
         if (walletUnits < amount) throw new MonadApiError("Mera wallet has insufficient AUSD for the reviewed account deposit.", 409, "manual_perpl_ausd_insufficient");
-        if (allowance !== amount) throw new MonadApiError("Approve the exact AUSD deposit to Perpl before opening the direct account.",
+        if (allowance !== amount) throw new MonadApiError(
+          `The selected deposit is ${formatUnits(amount, AUSD_DECIMALS)} AUSD, but the finalized Perpl allowance is ${formatUnits(allowance, AUSD_DECIMALS)} AUSD. Use the approved amount or sign a new exact approval.`,
           409, "approval_required", { action: "approve", amountUnits: amount.toString(), tokenAddress: PERPL_TESTNET_AUSD,
             spender: PERPL_TESTNET_EXCHANGE });
         operationAction = "open_account";
@@ -139,7 +140,8 @@ async function prepareAccount(context: any) {
         if (action === "deposit") {
           if (amount < BigInt(live.limits.minDepositUnits)) throw new MonadApiError("Deposit is below Perpl's live minimum.", 400, "manual_perpl_deposit_minimum");
           if (walletUnits < amount) throw new MonadApiError("Mera wallet has insufficient AUSD for this deposit.", 409, "manual_perpl_ausd_insufficient");
-          if (allowance !== amount) throw new MonadApiError("Approve the exact AUSD deposit to Perpl before depositing.",
+          if (allowance !== amount) throw new MonadApiError(
+            `The selected deposit is ${formatUnits(amount, AUSD_DECIMALS)} AUSD, but the finalized Perpl allowance is ${formatUnits(allowance, AUSD_DECIMALS)} AUSD. Use the approved amount or sign a new exact approval.`,
             409, "approval_required", { action: "approve", amountUnits: amount.toString(), tokenAddress: PERPL_TESTNET_AUSD,
               spender: PERPL_TESTNET_EXCHANGE });
           operationAction = "deposit_collateral";

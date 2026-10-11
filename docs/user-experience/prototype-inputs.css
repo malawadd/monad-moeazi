@@ -1,40 +1,40 @@
 .same-route-render .screen{animation:none}
-.amount-choice{margin:12px 0 14px;padding:10px;border:2px solid var(--ink);background:#fffaf0}
+.amount-choice{margin:12px 0 14px;padding:10px;border:2px solid var(--border);background:var(--surface-inset)}
 .amount-choice-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:.83rem;font-weight:850}
 .amount-choice-head small{font-size:.68rem;font-weight:700;color:var(--muted);text-align:right}
 .amount-chip-row,.leverage-choices{display:flex;flex-wrap:wrap;gap:8px}
-.amount-chip{min-width:56px;min-height:48px;padding:8px 11px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);font-size:.82rem;font-weight:850;box-shadow:2px 2px 0 var(--ink)}
-.amount-chip.is-selected{background:var(--butter);box-shadow:3px 3px 0 var(--ink)}
+.amount-chip{min-width:56px;min-height:48px;padding:8px 11px;border:2px solid var(--border);border-radius:10px;background:var(--paper);font-size:.82rem;font-weight:850;box-shadow:2px 2px 0 var(--shadow-color)}
+.amount-chip.is-selected{background:var(--butter);box-shadow:3px 3px 0 var(--shadow-color)}
 .amount-chip:disabled{opacity:.48;cursor:not-allowed;box-shadow:none}
-.amount-custom{margin-top:9px;border-top:1px solid #1113}
-.amount-custom summary{min-height:48px;display:flex;align-items:center;padding:5px 2px;color:#272727;font-size:.76rem;font-weight:800;cursor:pointer}
+.amount-custom{margin-top:9px;border-top:1px solid var(--border-light)}
+.amount-custom summary{min-height:48px;display:flex;align-items:center;padding:5px 2px;color:var(--ink);font-size:.76rem;font-weight:800;cursor:pointer}
 .amount-custom-field{display:grid;gap:5px;padding:2px 0 3px}
 .amount-custom-field label{font-size:.74rem;font-weight:800}
-.amount-custom-field input{width:100%;min-height:48px;padding:8px 10px;border:2px solid var(--ink);border-radius:8px;background:white;font-size:1rem;font-variant-numeric:tabular-nums}
-.amount-hint{margin:7px 0 0;color:#343434;font-size:.74rem;line-height:1.35}
-.funding-progress{display:grid;gap:4px;margin:8px 0 12px;padding:10px;border:2px solid var(--ink);background:#fffaf0}
+.amount-custom-field input{width:100%;min-height:48px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;background:var(--surface-white);font-size:1rem;font-variant-numeric:tabular-nums}
+.amount-hint{margin:7px 0 0;color:var(--text-strong);font-size:.74rem;line-height:1.35}
+.funding-progress{display:grid;gap:4px;margin:8px 0 12px;padding:10px;border:2px solid var(--border);background:var(--surface-inset)}
 .funding-progress ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0;padding:0;list-style:none}
-.funding-progress li{min-width:0;padding:7px 5px;border:1px solid #1115;background:#fff;font-size:.68rem;font-weight:800;line-height:1.25;text-align:center;overflow-wrap:anywhere}
-.funding-progress li[aria-current="step"]{border:2px solid var(--ink);background:var(--butter)}
-.funding-action{margin:0 0 12px;padding:12px;border:3px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink)}
+.funding-progress li{min-width:0;padding:7px 5px;border:1px solid var(--border-medium);background:var(--surface-white);font-size:.68rem;font-weight:800;line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.funding-progress li[aria-current="step"]{border:2px solid var(--border);background:var(--butter)}
+.funding-action{margin:0 0 12px;padding:12px;border:3px solid var(--border);background:var(--surface-white);box-shadow:3px 3px 0 var(--shadow-color)}
 .funding-action h2{margin:0 0 4px;font:800 1.02rem/1.2 var(--display)}
 .funding-action p{margin:0 0 10px;font-size:.8rem;line-height:1.4}
 .funding-asset-switch{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 10px}
-.funding-asset-switch button{min-height:48px;border:2px solid var(--ink);border-radius:10px;background:var(--paper);font-size:.82rem;font-weight:850}
-.funding-asset-switch button[aria-pressed="true"]{background:var(--butter);box-shadow:3px 3px 0 var(--ink)}
+.funding-asset-switch button{min-height:48px;border:2px solid var(--border);border-radius:10px;background:var(--paper);font-size:.82rem;font-weight:850}
+.funding-asset-switch button[aria-pressed="true"]{background:var(--butter);box-shadow:3px 3px 0 var(--shadow-color)}
 .funding-address{margin-top:10px}
 .funding-address summary{min-height:48px;display:flex;align-items:center;font-size:.78rem;font-weight:800;cursor:pointer}
-.funding-address code{display:block;padding:9px;border:1px solid #1115;background:#fff;font:.7rem/1.4 var(--mono);overflow-wrap:anywhere;user-select:text}
-.funding-receipt{margin:0 0 12px;padding:12px;border:2px solid var(--ink);background:#fff}
-.strategy-review-consent{display:grid;grid-template-columns:minmax(0,1fr) 48px;align-items:center;gap:9px;margin:10px 0;padding:10px 0;border-block:1px solid #1114;font-size:.82rem}
+.funding-address code{display:block;padding:9px;border:1px solid var(--border-medium);background:var(--surface-white);font:.7rem/1.4 var(--mono);overflow-wrap:anywhere;user-select:text}
+.funding-receipt{margin:0 0 12px;padding:12px;border:2px solid var(--border);background:var(--surface-white)}
+.strategy-review-consent{display:grid;grid-template-columns:minmax(0,1fr) 48px;align-items:center;gap:9px;margin:10px 0;padding:10px 0;border-block:1px solid var(--border-soft);font-size:.82rem}
 .strategy-review-consent strong{display:block;font-weight:850}
-.strategy-review-consent small{display:block;margin-top:3px;color:#444;font-size:.75rem;line-height:1.4}
-.practice-risk-note{margin:7px 1px;padding:8px 10px;border-left:3px solid var(--ink);background:#fffaf0;font-size:.78rem;line-height:1.4}
+.strategy-review-consent small{display:block;margin-top:3px;color:var(--text-secondary);font-size:.75rem;line-height:1.4}
+.practice-risk-note{margin:7px 1px;padding:8px 10px;border-left:3px solid var(--border);background:var(--surface-inset);font-size:.78rem;line-height:1.4}
 .strategy-review-details{margin:10px 0}
 .manual-risk-details{margin:8px 0;font-size:.76rem}
 .manual-risk-details summary{min-height:48px;display:flex;align-items:center;font-weight:800;cursor:pointer}
 .manual-risk-details p{margin:5px 0 9px;line-height:1.42}
-.manual-help-action{margin:0 0 10px;padding:10px;border:2px solid var(--ink);background:#fffaf0}
+.manual-help-action{margin:0 0 10px;padding:10px;border:2px solid var(--border);background:var(--surface-inset)}
 .manual-help-action p{margin:0 0 8px;font-size:.78rem}
 .settings-wallet-actions{display:grid;gap:8px;margin:10px 0}
 .demo-address{font:.72rem/1.5 var(--mono);overflow-wrap:anywhere;user-select:text}

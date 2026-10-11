@@ -1,13 +1,24 @@
 import {button, card, demoNote, esc, field, head, layout, link, money, row, tag} from './prototype-helpers.js';
 import {amountPresets} from './prototype-inputs.js';
 import {fundingBalances, fundingProgress, fundingWalletDetails} from './prototype-funding-ui.js';
+import {THEME_OPTIONS} from './prototype-theme-preferences.js';
 
-export function renderSettings(state) {
+function renderThemePicker(themeId) {
+  const options = THEME_OPTIONS.map(theme => `<label class="theme-choice theme-choice-${theme.id}">
+      <input type="radio" name="moeazi-theme" value="${theme.id}" data-theme-select ${themeId === theme.id ? 'checked' : ''}>
+      <span class="theme-choice-preview" data-preview="${theme.id}" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="theme-choice-copy"><strong>${theme.label}</strong><small>${theme.note}</small></span>
+    </label>`).join('');
+  return `<fieldset class="theme-picker"><legend>Appearance</legend><p class="theme-picker-hint">Choose a look for Moeazi on this device.</p><div class="theme-choice-grid">${options}</div></fieldset>`;
+}
+
+export function renderSettings(state, themeId = 'original') {
   const dev = state.presentationMode === 'developer';
   const modeAction = dev ? 'user' : 'developer';
   const modeText = dev ? 'Developer Mode is on' : 'User Mode is on';
   const events = state.events.length ? 'Your wallet, strategy, and order updates appear here.' : 'Your updates appear here.';
   return layout(`${head('ACCOUNT · SETTINGS', 'Your Moeazi.', 'Your passkey session and presentation preference are separate.')}
+    ${renderThemePicker(themeId)}
     ${card('Presentation', `<div class="settings-item"><span><strong>${modeText}</strong><small>${dev ? 'Shows extra screens and diagnostics.' : 'Four focused tabs, with developer tools tucked away.'}</small></span><button class="switch" role="switch" aria-checked="${dev}" data-action="mode" data-value="${modeAction}" aria-label="Enable Developer Mode" ${state.signingPending || state.signingOperation ? 'disabled' : ''}></button></div><p class="card-copy">Saved on this device. Your passkey session and trading permissions stay unchanged.</p>${state.signingPending || state.signingOperation ? '<p class="helper-text">Finish or cancel the active passkey review first.</p>' : ''}`, 'tint-lilac')}
     <section class="card"><div class="settings-item"><span><strong>Chart preferences</strong><small>Change how charts are drawn</small></span><span aria-hidden="true">→</span></div>${button('Chart settings', 'nav-chart-settings', 'secondary')}<div class="settings-item"><span><strong>Notifications</strong><small>Choose what updates reach you</small></span><span aria-hidden="true">→</span></div>${button('Notification settings', 'nav-notifications', 'secondary')}</section>
     ${card('Your passkey wallet', `${row('Network', '<strong>Monad Testnet · practice only</strong>')}${row('Wallet', '<strong>Short address shown in funding</strong>')}<span class="tag blue">Demo session</span>`, 'tint-sky')}
@@ -26,7 +37,7 @@ export function renderSendReceive(state) {
     ${card('Transfer summary', `${row('From', '<strong>Your Mera test wallet</strong>')}${row('To', `<strong class="mono-text">${esc(state.recipient || 'Not entered')}</strong>`)}${row('Amount', `<strong>${money(Number(state.sendAmount))} USDC</strong>`)}${row('Network fee', '<strong>Exact fee not modeled · MON required</strong>')}`, 'tint-yellow')}
     ${button('Continue to passkey review', 'send-submit', 'pink')}`);
   return layout(`${head('RECEIVE · TESTNET', 'Receive test tokens.', 'Use this illustrative address only on Monad Testnet.', 'settings')}
-    ${card('Your Mera address', `<div role="img" aria-label="Illustrative QR placeholder, not scannable" style="width:126px;height:126px;display:grid;place-items:center;margin:10px auto;border:6px solid #111;background:repeating-conic-gradient(#111 0 25%,#fff 0 50%) 50%/18px 18px"><span style="padding:5px;background:#fff;border:2px solid #111;font:800 1.2rem Syne">M</span></div><code class="demo-address">0x7a31f1c490a0e6e1c7b52c43d926da72c1c4c490</code>${button('Copy demo address', 'copy-address', 'secondary')}${row('Network', '<strong>Monad Testnet · Chain 10143</strong>')}`, 'tint-sky')}
+    ${card('Your Mera address', `<div class="demo-qr" role="img" aria-label="Illustrative QR placeholder, not scannable"><span class="demo-qr-mark">M</span></div><code class="demo-address">0x7a31f1c490a0e6e1c7b52c43d926da72c1c4c490</code>${button('Copy demo address', 'copy-address', 'secondary')}${row('Network', '<strong>Monad Testnet · Chain 10143</strong>')}`, 'tint-sky')}
     <p class="risk-note">Do not send mainnet assets here. This address is an illustration and is not a real wallet.</p>`);
 }
 

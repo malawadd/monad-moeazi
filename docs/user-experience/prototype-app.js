@@ -2,6 +2,7 @@ import {createState, reduceState, SCENARIOS, STATE_VERSION, STORAGE_KEY} from '.
 import {renderScreen, renderTabs} from './prototype-view.js';
 import {loadPreviewPreferences, togglePreviewPreference} from './prototype-app-preferences.js';
 import {createActionTable} from './prototype-app-actions.js';
+import {connectThemePreferences} from './prototype-theme-preferences.js';
 
 const appView = document.querySelector('#app-view');
 const tabbar = document.querySelector('#tabbar');
@@ -13,6 +14,8 @@ const scenarioSelect = document.querySelector('#scenario-select');
 const outcomeSelect = document.querySelector('#simulation-outcome');
 const reviewerResolve = document.querySelector('#reviewer-resolve');
 const reviewerPanel = document.querySelector('.reviewer-panel');
+const deviceShell = document.querySelector('.device-shell');
+const currentTheme = connectThemePreferences(deviceShell, announce);
 const STATE_KEY = 'moeazi.monad.prototype-state.v2';
 const LEGACY_STATE_KEY = 'moeazi.monad.prototype-state.v1';
 let state = readState();
@@ -93,7 +96,7 @@ function render({preserveFocus = false, focusScreen = false} = {}) {
   if (preserveFocus && active) { try { selection = typeof active.selectionStart === 'number' ? active.selectionStart : null; } catch { selection = null; } }
   const scroll = appView.scrollTop;
   appView.classList.toggle('same-route-render', sameRoute);
-  appView.innerHTML = renderScreen(state);
+  appView.innerHTML = renderScreen(state, currentTheme());
   for (const id of openDetails) { const replacement = document.getElementById(id); if (replacement) replacement.open = true; }
   tabbar.innerHTML = renderTabs(state);
   const providerActive = ['provider-handoff', 'provider-pending'].includes(state.route);

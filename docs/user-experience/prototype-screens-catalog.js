@@ -42,7 +42,7 @@ function spark(points, item, period, large = false) {
   const high = Math.max(...points); const low = Math.min(...points); const range = Math.max(1e-5, high - low);
   const coords = points.map((value, index) => `${index * width / (points.length - 1)},${8 + ((high - value) / range) * (height - 16)}`).join(' ');
   const label = `Illustrative ${item.name} ${periodLabels[period]} price in ${item.quoteUnit}. Source: fixture data, no live quotes.`;
-  return `<svg class="spark ${large ? 'spark-large chart-line' : ''}" data-chart-style="line" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title><polyline points="${coords}" fill="none" stroke="#111" stroke-width="${large ? 4 : 3}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  return `<svg class="spark ${large ? 'spark-large chart-line' : ''}" data-chart-style="line" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title><polyline class="chart-line-path" points="${coords}" fill="none" stroke-width="${large ? 4 : 3}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 function candleChart(points, item, period) {
   const width = 320; const height = 116;
@@ -55,8 +55,8 @@ function candleChart(points, item, period) {
     const wick = Math.max(range * .035, Math.abs(close - open) * .35);
     const candleHigh = Math.min(high, bodyHigh + wick); const candleLow = Math.max(low, bodyLow - wick);
     const x = slot * (index + .5); const top = y(bodyHigh); const bottom = y(bodyLow);
-    const color = close >= open ? '#88d498' : '#ff7ba5';
-    return `<g><line x1="${x}" y1="${y(candleHigh)}" x2="${x}" y2="${y(candleLow)}" stroke="#111" stroke-width="2"/><rect x="${x - bodyWidth / 2}" y="${top}" width="${bodyWidth}" height="${Math.max(2, bottom - top)}" fill="${color}" stroke="#111" stroke-width="2"/></g>`;
+    const direction = close >= open ? 'up' : 'down';
+    return `<g><line class="chart-candle-wick" x1="${x}" y1="${y(candleHigh)}" x2="${x}" y2="${y(candleLow)}" stroke-width="2"/><rect class="chart-candle-${direction}" x="${x - bodyWidth / 2}" y="${top}" width="${bodyWidth}" height="${Math.max(2, bottom - top)}" stroke-width="2"/></g>`;
   }).join('');
   const label = `Illustrative ${item.name} ${periodLabels[period]} synthetic OHLC candles in ${item.quoteUnit}; opens and closes follow consecutive fixture quotes, wick values are illustrative. No live data.`;
   return `<svg class="spark spark-large chart-candles" data-chart-style="candles" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(label)}"><title>${esc(label)}</title>${candles}</svg>`;

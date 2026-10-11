@@ -23,12 +23,16 @@ node docs/user-experience/verify-v2-guards.mjs
 node docs/user-experience/prototype-consent-test.mjs
 node docs/user-experience/verify-v2-layout-consent.mjs
 node docs/user-experience/verify-v3-funding-workflow.mjs
+node docs/user-experience/verify-theme.mjs
+node docs/user-experience/verify-theme-contrast.mjs
 ```
 
-Current offline verification passes all nine Node commands listed above:
+Current offline verification passes all 11 Node commands listed above:
 9 reducer fixtures, 16 view checks, 11 journey checks, 7 guard checks, consent,
-layout/consent, controller, the funding-and-required-strategy suite, and hub
-structure (57 text files ≤300 lines; 35 routes). These inspect local sources,
+layout/consent, controller, the funding-and-required-strategy suite, two theme
+checks, and hub structure (61 text files ≤300 lines; 35 routes). The theme
+checks cover preference isolation, rendered SVG tokens, 40 used text-role pairs,
+and essential boundary pairs in the five palettes. These inspect local sources,
 simulated state and minimal DOM wiring; they do not launch a browser or native
 Android app and do not establish visual quality or human comprehension. See the
 [versioned validation log](reader.html?doc=validation.md) and
@@ -40,6 +44,15 @@ the route audit, research notes, contemporary-source ledger, interaction
 coverage matrix, screen specs, implementation backlog, moderated study script,
 findings report, validation report, marketplace revision and evidence manifest
 inside the hub.
+
+The prototype offers five phone-only appearance presets in Settings → Appearance.
+The selected theme is stored separately from the practice session; it does not
+change account state or apply to the research hub/reviewer panel. Run
+`node docs/user-experience/verify-theme.mjs` and
+`node docs/user-experience/verify-theme-contrast.mjs` for preference, picker,
+and palette-role checks. Native radio keyboard interaction and browser visual
+review at 320, 393 and 430 px remain pending; no browser or native visual review
+was performed.
 
 Research was checked 11 October 2026. Competitor patterns come from first-party
 product announcements, official support pages, developer docs and platform

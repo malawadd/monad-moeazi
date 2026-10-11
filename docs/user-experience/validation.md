@@ -10,19 +10,20 @@ supersede the earlier top-up-everywhere and strategy-cart decisions: initial
 top-up only on Home while needed, repeat top-ups at the bottom of Settings by
 Receive/Send, and no marketplace cart.
 
-All nine current Node checks pass, including reducer/view/journey/guard fixtures,
+All 11 current Node checks pass, including reducer/view/journey/guard fixtures,
 controller, consent, layout assertions, the updated funding/required-base
-marketplace suite and hub structure. They exercise local sources and simulated
-state; they do not establish visual quality, native behavior, accessibility
-conformance or novice comprehension. No production funding, signing or trading
-occurred.
+marketplace suite, theme checks and hub structure. They exercise local sources
+and simulated state; they do not establish visual quality, native behavior,
+accessibility conformance or novice comprehension. No production funding,
+signing or trading occurred.
 
 **No visual pass is recorded for the current revision.** Browser access to the
 local preview was blocked by the CUA URL policy, so there is no browser or
 native screenshot/interaction result for the latest Home, Settings and Strategies
-changes. Human usability, native wallet/provider handoff and full accessibility
-checks remain pending. Fixture outcomes are simulated and do not represent
-production transactions.
+changes. Explicitly pending: visual checks at 320, 393 and 430 px; actual native
+radio keyboard behavior; Android rendering, text scaling, reduced-motion and
+TalkBack checks; human usability; and native wallet/provider handoff. Fixture
+outcomes are simulated and do not represent production transactions.
 
 ## Current source and simulated-state checks
 
@@ -36,7 +37,9 @@ production transactions.
 | `prototype-consent-test.mjs` | Pass | Strategy consent review and provider handoff checks. |
 | `verify-v2-layout-consent.mjs` | Pass | Compact-market and consent HTML/CSS source assertions; not browser or pixel QA. |
 | `verify-v3-funding-workflow.mjs` | Pass | Initial Home and repeat Settings entrypoints, receipt progress/idempotency, required non-toggleable base and disabled optional modules; reducer/render checks only. |
-| `verify-hub.mjs` | Pass · 57 text files ≤300 lines | 35 routes, local links/assets/imports/fonts and no live service/network hooks. Structural only. |
+| `verify-theme.mjs` | Pass | Theme storage/bootstrap, native-radio markup, state isolation, SVG token hooks, hardcoded-paint scan and phone-only palette scoping; no actual browser/native interaction. |
+| `verify-theme-contrast.mjs` | Pass · 5 palettes | 40 actual-use text pairs at 4.5:1; seven graphic pairs, five accent-boundary alternatives and two layered-focus contexts at 3:1. Static token checks, not rendered/composited pixel measurements. |
+| `verify-hub.mjs` | Pass · 61 text files ≤300 lines | 35 routes, local links/assets/imports/fonts and no live service/network hooks. Structural only. |
 
 
 ## Historical V1 build and browser checks
@@ -103,7 +106,7 @@ motion, authentication or recovery from help pages; see the
 | Back behavior and system handoff | Not fully tested. Native passkey/provider/system screens are outside the prototype and remain unobserved. |
 | Loading/pending and copy feedback | Submitted/pending states rendered; real response timing and copy-address feedback not measured. |
 | Touch targets, labels and assistive tech | Home controls sampled at ≥48 px; full-screen target audit, screen-reader labels and TalkBack remain pending. |
-| Motion and contrast | Reduced-motion setting and two text contrast pairs sampled; other transitions/states not audited. |
+| Motion and contrast | Static role-pair thresholds pass for five theme palettes; no rendered contrast or current-revision motion behavior was visually inspected. |
 | Errors and recovery | Nine fixtures rendered; the copy for rejection, expiry, uncertain, offline and stale states is recorded above. Real network failure behavior is untested. |
 | Participant outcomes | No novice sessions, completion rates, confidence scores, quotes or task timings. |
 

@@ -8,7 +8,7 @@ import {renderAuthScreens, renderProviderHandoff} from './prototype-screens-sign
 
 const ICONS = {Home: '⌂', Markets: '◈', Strategies: '✳', Activity: '↗', Account: '☻'};
 
-export function renderScreen(state) {
+export function renderScreen(state, themeId = 'original') {
   if (!state.signedIn) return state.route.startsWith('auth-') ? renderAuthScreens(state) : renderWelcome();
   if (state.route === 'auth-provider' || state.route === 'auth-pending' || state.route === 'auth-error' || state.route === 'provider-handoff' || state.route === 'provider-pending') return state.route.startsWith('auth-') ? renderAuthScreens(state) : renderProviderHandoff(state);
   const renderers = {
@@ -29,7 +29,7 @@ export function renderScreen(state) {
     'manual-perpl-setup': () => renderManualOrder(state), 'manual-perpl-review': () => renderManualOrder(state),
     'perpl-close-review': () => renderManualOrder(state), 'manual-position': () => renderMarketStates(state),
     'strategy-unavailable': () => renderMarketStates(state), 'strategy-funds': () => renderMarketStates(state),
-    activity: () => renderActivityV2(state), receipt: () => renderReceiptV2(state), settings: () => renderSettings(state),
+    activity: () => renderActivityV2(state), receipt: () => renderReceiptV2(state), settings: () => renderSettings(state, themeId),
     send: () => renderSendReceive(state), 'send-review': () => renderSendReceive(state), 'send-invalid': () => renderSendReceive(state), receive: () => renderSendReceive(state),
     'chart-settings': () => renderPreferences(state), notifications: () => renderPreferences(state),
     'quote-expired': () => renderStatusScreens(state), 'sign-rejected': () => renderStatusScreens(state),

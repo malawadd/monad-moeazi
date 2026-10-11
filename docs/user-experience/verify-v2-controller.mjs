@@ -54,7 +54,7 @@ class NodeStub {
 }
 const selectors = ['#app-view', '#tabbar', '#global-status', '#toast', '#sr-live', '#settings-shortcut', '#scenario-select', '#simulation-outcome', '#reviewer-resolve', '.reviewer-panel', '.device-shell'];
 const nodes = Object.fromEntries(selectors.map(key => [key, new NodeStub(key)]));
-const documentStub = {activeElement: null, documentElement: {classList: {contains: () => false, toggle: () => {}}},
+const documentStub = {activeElement: null, documentElement: {dataset: {}, classList: {contains: () => false, toggle: () => {}}},
   querySelector: selector => nodes[selector], createElement: () => new NodeStub(), getElementById: id => nodes['#app-view'].elements.get(id) ?? null};
 const storage = new Map();
 globalThis.document = documentStub;

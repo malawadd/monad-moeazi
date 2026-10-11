@@ -31,6 +31,7 @@ jest.mock('@react-navigation/native', () => {
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
 jest.mock('../src/services/useMarketQueries', () => ({
   useManualPerplAccountQuery: () => ({data: mockAccount, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
+  useMarketSnapshotQuery: () => ({data: null, isLoading: false, isError: false, refetch: async () => ({})}),
 }));
 jest.mock('../src/services/manualPerplApi', () => ({manualPerplApi: {
   account: async () => mockAccount,

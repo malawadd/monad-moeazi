@@ -27,6 +27,19 @@ The Origin requirement does not block public market data. From `backend/`, run `
 
 The user selects Perp → Perpl, chooses AUSD amount and duration, and reviews the exact AUSD transfer, predicted strategy vault, delegated account, eligible live markets, exposure and leverage bounds, direct transport, operator trading scope, and settlement behavior. One Mera unlock signs the exact funding transaction and versioned run mandate. A new run requires fresh approval. Direct routine orders use the gas-paying operator through the delegated account; no Perpl API key or per-order passkey prompt is needed. Future API runs use a per-run trade key held in ignored local secret storage.
 
+An unsigned `prepared` run is only a saved review. It has not moved AUSD or
+activated operator trading. Mobile 1.7 ignores that state when checking for a
+competing active run, then presents **Unlock Mera and sign exact setup** above
+the transaction details. A fresh review supersedes an earlier unsigned one.
+The previous mobile pre-sign check treated its own newly prepared run as active,
+cleared the review, and returned before opening the passkey session. The
+backend's `getCurrent` intentionally includes `prepared` for status visibility;
+the mobile active-run guard now distinguishes it from an activated run.
+The app still blocks signing if another run becomes active in the meantime.
+On the offline KeePassDX emulator, the new prepare flow displayed the sign
+action and opened passkey selection for `moeazi-monad.kiyan.finance`; the
+verification stopped before signing, so it created no funded run.
+
 The strategy vault is owned by the Mera wallet and owns the Perpl delegated account. The operator can trade but cannot withdraw user AUSD. Per-order caps are enforced by Moeazi's backend, **not by Perpl's contracts**. The backend's default market-order slippage cap is 100 bps, separate from Perpl's live venue maximum, and is shown in the setup review. The account's collateral and positions remain at Perpl; a run cannot switch transports while a position is open. On stop or expiry, the system must cancel pending orders, close exposure, reconcile receipts and balances, revoke operator access, and return withdrawable AUSD to the Mera owner. If any step fails, the app shows incomplete settlement and retains owner recovery. Owner recovery can return AUSD left at a deterministic vault after failed activation; after stop or expiry, an available-collateral recovery checks fresh finalized Perpl account state and refuses to bypass open positions or order locks.
 
 Activity and Perp status distinguish accepted for forwarding, submitted, partially filled, filled, finalized, blocked, and settlement outcomes. A Perpl acknowledgement alone is not a fill. Existing mock Perp history remains accessible through the mock venue.

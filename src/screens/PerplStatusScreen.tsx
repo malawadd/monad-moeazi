@@ -96,13 +96,19 @@ export function PerplStatusScreen() {
   }
 
   const currentStatus = current?.status.toLowerCase() ?? '';
-  const canStop = Boolean(current && !TERMINAL.has(currentStatus) && currentStatus !== 'stopping' && !stopUncertain);
+  const unsignedPrepared = currentStatus === 'prepared';
+  const canStop = Boolean(current && !unsignedPrepared && !TERMINAL.has(currentStatus) && currentStatus !== 'stopping' && !stopUncertain);
   return <Screen refreshing={loading} onRefresh={() => { void refresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perpl · Monad Testnet" title="Positions and activity" copy="Status refreshes every 15 seconds. Direct runs show finalized onchain orders and account state; API runs remain labeled separately." />
     {error ? <Notice live tone="rose" title="Perpl status unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
     {loading && !current && !history.runs.length ? <LoadingBlock label="Loading Perpl status" lines={3} /> : null}
     {current ? <>
       <RunCard run={current} />
+      {unsignedPrepared ? <Card tint="#E9F5FF">
+        <Text style={s.strong}>Unsigned setup review</Text>
+        <Text style={s.body}>This run has not been signed or funded, so there is nothing to stop. Return to setup to continue signing or prepare a fresh review.</Text>
+        <Button label="Return to Perpl setup" onPress={() => navigation.navigate('PerplSetup')} />
+      </Card> : <>
       <PerplOptimizerCard run={current} />
       {current.position ? <PositionCard run={current} /> : <Card><Text style={s.strong}>No open position</Text><Text style={s.body}>Positions and orders appear here after the selected Perpl transport confirms them.</Text></Card>}
       {current.orders?.length ? <Card><Text style={s.strong}>Orders</Text>{current.orders.map((order, index) => <OrderCard key={String(order.orderId ?? `${order.marketId}:${index}`)} order={order} run={current} />)}</Card> : null}
@@ -111,7 +117,7 @@ export function PerplStatusScreen() {
       {current.settlement ? <RecordCard title="Settlement" record={current.settlement} /> : null}
       {stopResult ? <Card tint="#DDF4E7"><Text style={s.strong}>Stop request recorded</Text><DataRow label="Status" value={humanize(stopResult.status)} /><DataRow label="Phase" value={humanize(stopResult.phase)} /><Text style={s.body}>The service will reconcile this stop with the Perpl account and update the run history.</Text></Card> : null}
       {stopUncertain ? <Card tint="#FFF1E5"><Text style={s.strong}>Stop outcome is being reconciled</Text><Text style={s.body}>Refresh this screen and Activity before preparing another stop.</Text><Button label="Refresh Perpl status" variant="secondary" onPress={() => { void refresh(); }} /></Card> : null}
-      {stopReview ? <Card tint="#FFF1E5">
+      {stopReview && !unsignedPrepared ? <Card tint="#FFF1E5">
         <Text style={s.strong}>Review owner-signed stop transaction</Text>
         <DataRow label="Mera owner" value={ownerAddress ?? 'Unavailable'} /><DataRow label="Perpl vault" value={stopReview.stopTransaction.to} />
         <DataRow label="Network" value="Monad Testnet · EIP-1559 · 10143" />
@@ -123,6 +129,7 @@ export function PerplStatusScreen() {
         <Button label="Cancel stop review" variant="secondary" disabled={busy} onPress={() => setStopReview(null)} />
       </Card> : canStop ? <Button label="Prepare Perpl stop review" variant="danger" onPress={() => { void prepareStop(); }} loading={busy} /> : null}
       <PerplRecoveryPanel run={current} ownerAddress={ownerAddress} disabled={stopReview !== null || stopUncertain || busy} onRefresh={() => { void refresh(); }} />
+      </>}
       <Button label="Open complete run history" variant="secondary" onPress={() => navigation.navigate('PerplHistory', {runId: current.runId})} />
     </> : <Card><Text style={s.strong}>No active Perpl run</Text><Text style={s.body}>Previous enrollment and trading cycles remain available below.</Text><Button label="Review Perpl markets" onPress={() => navigation.navigate('PerplMarkets')} /></Card>}
     {history.runs.length ? <Card><Text style={s.strong}>Previous Perpl runs</Text>

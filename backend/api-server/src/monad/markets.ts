@@ -14,13 +14,15 @@ import { PerplApiClient } from "./perplApi.js";
 import { readPerplContext } from "./perplContext.js";
 import { listV4PoolRecords, scheduleV4PoolIndexScan, seedV4Pool } from "./v4PoolIndex.js";
 import { buildV4MarketRow, resolveV4Markets } from "./v4PoolMarkets.js";
+import { MANUAL_PERPL_LEVERAGE_CAP, MANUAL_PERPL_SLIPPAGE_CAP_BPS,
+  manualPerplMaxOrderUnits } from "./manualPerplLimits.js";
 
 const MOCK_SPOT_VENUE = "moeazi_mock_pools_testnet";
 const RESOLUTIONS = new Set([60, 300, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400]);
 const int = (value: any, fallback = 0) => Number.isSafeInteger(Number(value)) ? Number(value) : fallback;
 const asObject = (value: any) => value && typeof value === "object" ? value : {};
 
-export function perplDirectoryRow(market: any, ticker: any, funding?: any) {
+export function perplDirectoryRow(market: any, ticker: any, funding?: any, globalMaxLeverage?: number) {
   const state = asObject(ticker?.d?.[market.id] ?? ticker?.d?.[String(market.id)]);
   const timestamp = int(asObject(state.at).t);
   const blockNumber = int(asObject(state.at).b);
@@ -35,6 +37,14 @@ export function perplDirectoryRow(market: any, ticker: any, funding?: any) {
     status: isOpen ? "open" : "closed", marketOpen: isOpen, quoteAvailable: Boolean(isOpen && quote),
     available: Boolean(isOpen && quote),
     chainId: PERPL_CHAIN_ID, testOnly: true, priceDecimals: int(market.priceDecimals), sizeDecimals: int(market.sizeDecimals),
+    maxLeverage: int(market.maxLeverage), initialMarginBps: int(market.initialMarginBps),
+    maintenanceMarginBps: int(market.maintenanceMarginBps), minPostingUnits: String(market.minPostingUnits ?? "0"),
+    makerFeeMicros: int(market.makerFeeMicros), takerFeeMicros: int(market.takerFeeMicros),
+    maxMarketSlippageBps: int(market.maxMarketSlippageBps),
+    manualMaxOrderUnits: manualPerplMaxOrderUnits().toString(),
+    manualMaxLeverage: Math.min(MANUAL_PERPL_LEVERAGE_CAP, int(market.maxLeverage),
+      Number.isSafeInteger(globalMaxLeverage) ? Number(globalMaxLeverage) : int(market.maxLeverage)),
+    manualMaxSlippageBps: MANUAL_PERPL_SLIPPAGE_CAP_BPS,
     capabilities: { marketData: Boolean(quote), buy: false, sell: false, manualLongShort: Boolean(isOpen && quote) },
     ...(quote ? { quote } : { quote: null, reason: isOpen ? "perpl_ticker_stale" : "Perpl market is closed." }),
     fundingRateMicros: funding?.rate ?? market.fundingRateMicros,
@@ -66,7 +76,8 @@ async function readPerplDirectory() {
   try { ticker = await api.publicGet("/v1/market-data/ticker"); } catch { /* preserve context rows as unavailable */ }
   const rows = context.markets.map((market) => {
     const state = ticker?.d?.[market.id] ?? ticker?.d?.[String(market.id)];
-    return perplDirectoryRow(market, state ? { d: { [market.id]: state } } : {});
+    return perplDirectoryRow(market, state ? { d: { [market.id]: state } } : {}, undefined,
+      context.limits.maxLeverage);
   });
   perplCache = { expiresAt: Date.now() + 5_000, rows };
   return rows;
@@ -252,7 +263,7 @@ async function detail(context: any) {
   const [venueContext, ticker] = await Promise.all([readPerplContext(api), api.publicGet("/v1/market-data/ticker").catch(() => ({}))]);
   const base = venueContext.markets.find((item) => item.id === id);
   if (!base) throw new MonadApiError("Perpl Testnet market was not found.", 404, "market_not_found");
-  const row = perplDirectoryRow(base, ticker);
+  const row = perplDirectoryRow(base, ticker, undefined, venueContext.limits.maxLeverage);
   const [bookResult, candleResult, funding] = await Promise.allSettled([
     api.publicGet(`/v1/market-data/${id}/book?levels=100`),
     includeCandles ? api.publicGet(`/v1/market-data/${id}/candles/${parsed.resolution}/${parsed.from}-${parsed.to}`)
@@ -298,7 +309,7 @@ async function candles(context: any) {
   catch { /* missing candle history remains explicit */ }
   const rows = Array.isArray(raw?.d) ? raw.d.filter((item: any) => [item.t, item.o, item.h, item.l, item.c].every((value) => Number.isFinite(Number(value))))
     .map((item: any) => ({ t: int(item.t), o: int(item.o), h: int(item.h), l: int(item.l), c: int(item.c), v: String(item.v ?? "0"), n: int(item.n) })) : [];
-  const market = perplDirectoryRow(base, {});
+  const market = perplDirectoryRow(base, {}, undefined, venueContext.limits.maxLeverage);
   return context.json({ market, candles: rows, resolutionSeconds: parsed.resolution, candleTimeUnit: "milliseconds",
     candlesUnavailable: rows.length === 0, observedAt: Date.now(), unavailable: { candles: !raw } });
 }

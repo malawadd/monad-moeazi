@@ -187,7 +187,7 @@ test("Perpl REST batch admission remains separate and acknowledgements are not f
     collateral_token_id: 3, min_account_open_amount: "100000000", min_deposit_amount: "10000000", min_withdraw_amount: "10000000" }],
     tokens: [{ id: 3, symbol: "AUSD", decimals: 6, address: PERPL_TESTNET_AUSD }],
     markets: [{ id: 12, instance_id: 12, symbol: "BTC16", config: { is_open: true, price_decimals: 2, size_decimals: 2,
-      initial_margin: 5000, maintenance_margin: 2500, maker_fee: 100, taker_fee: 500 },
+      initial_margin: 1500, maintenance_margin: 2500, maker_fee: 100, taker_fee: 500 },
       order_max_market_slippage_bps: 100, order_ttl_blocks: 20 }] };
   const ticker = { d: { 12: { orl: 100000, mrk: 100000, lst: 100000, mid: 100000,
     bid: 99900, ask: 100100, at: { t: now, b: 100 } } } };

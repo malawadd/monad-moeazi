@@ -22,6 +22,7 @@ export type VenueMarket = {
   sizeDecimals: number;
   initialMarginBps: number;
   maintenanceMarginBps: number;
+  minPostingUnits?: string;
   maxLeverage: number;
   maxMarketSlippageBps: number;
   makerFeeMicros: number;

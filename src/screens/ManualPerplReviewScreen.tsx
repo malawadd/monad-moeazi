@@ -82,6 +82,10 @@ export function ManualPerplReviewScreen() {
   const terminal = result && ['finalized', 'failed', 'no_fill'].includes(result.status);
   const approvalFinalized = accountCreationSetup && prepared.action === 'approve' && result?.status === 'finalized';
   const creationReview = accountCreationSetup && prepared.action === 'open';
+  const estimatedEntryMarginUnits = prepared.review.estimatedEntryMarginUnits;
+  const estimatedEntryFeeUnits = prepared.review.estimatedEntryFeeUnits;
+  const hasEntryEstimates = ['market_entry', 'limit_entry'].includes(prepared.action)
+    && (estimatedEntryMarginUnits !== undefined || estimatedEntryFeeUnits !== undefined);
   const tint = result?.status === 'failed' || result?.status === 'no_fill' ? 'rose' : result?.status === 'finalized' ? 'mint' : 'orange';
 
   return <FlowScreen>
@@ -103,10 +107,16 @@ export function ManualPerplReviewScreen() {
       <DataRow label="Network" value="Monad Testnet · 10143" />
       <DataRow label="Prepared expiry" value={formatMonadTimestamp(prepared.expiresAt)} />
       {Object.entries(prepared.review).filter(([key, value]) => !['ownerAddress', 'chainId', 'accountAddress', 'venueId', 'marketId',
-        'transactionTarget', 'transactionData', 'transactionNonce', 'transactionValue', 'expiresAt'].includes(key)
+        'transactionTarget', 'transactionData', 'transactionNonce', 'transactionValue', 'expiresAt',
+        'estimatedEntryMarginUnits', 'estimatedEntryFeeUnits'].includes(key)
           && value !== null && value !== undefined && typeof value !== 'object').map(([key, value]) => <DataRow key={key} label={humanize(key)} value={String(value)} />)}
       {expected?.collateralAmountUnits ? <DataRow label="AUSD margin to add" value={`${formatMonadUnits(expected.collateralAmountUnits, 6)} AUSD`} /> : null}
     </Card>
+    {hasEntryEstimates ? <Card tint="#FFF6CE"><Text style={s.strong}>Server quote-time margin estimates</Text>
+      {estimatedEntryMarginUnits !== undefined ? <DataRow label="Estimated entry margin" value={`${formatMonadUnits(String(estimatedEntryMarginUnits), 6)} AUSD`} /> : null}
+      {estimatedEntryFeeUnits !== undefined ? <DataRow label="Estimated entry fee · taker reserve" value={`${formatMonadUnits(String(estimatedEntryFeeUnits), 6)} AUSD`} /> : null}
+      <Text style={s.body}>These estimates use the fresh quote used to prepare this exact transaction. Final fees and margin can differ; finalized Perpl state is authoritative.</Text>
+    </Card> : null}
     {prepared.action === 'amend_limit' && prepared.review.existingOrder && typeof prepared.review.existingOrder === 'object' ? <Card>
       <Text style={s.strong}>Existing limit order terms</Text>
       <ExistingOrderTerms record={prepared.review.existingOrder as Record<string, unknown>} priceDecimals={Number(prepared.review.priceDecimals ?? 0)}

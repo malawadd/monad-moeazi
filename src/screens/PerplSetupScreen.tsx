@@ -178,6 +178,7 @@ export function PerplSetupScreen() {
     {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>The service may still be reconciling your signed setup. Check the run and Activity before preparing another enrollment.</Text><Button label="Check Perpl status" onPress={() => navigation.navigate('PerplStatus')} /></Card> : null}
     {!activeRun && !activeRunError && !checkingActiveRun && !prepared && !uncertain && venue?.enabled ? <Card>
       <Text style={s.strong}>Live AUSD setup</Text>
+      <Text style={s.body}>An earlier unsigned review can be refreshed or superseded. Funds move and the mandate becomes active only after you sign the exact review below.</Text>
       <DataRow label="Available in Mera wallet" value={walletAusd} />
       {directOptimizer ? <DataRow label="Funding amount" value="100 AUSD · fixed for this experiment" /> : null}
       <Field label="Duration in minutes" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="120" keyboardType="number-pad" />
@@ -190,6 +191,11 @@ export function PerplSetupScreen() {
       <Button label="Prepare exact Perpl review" onPress={() => { void prepare(); }} loading={busy} disabled={checkingActiveRun || Boolean(activeRun) || Boolean(activeRunError)} />
     </Card> : null}
     {prepared && !activeRun && !activeRunError && !checkingActiveRun ? <>
+      <Card tint="#E9F5FF">
+        <Text style={s.strong}>Step 2 · Sign this exact setup with Mera</Text>
+        <Text style={s.body}>A prior unsigned review can be refreshed or superseded. Nothing is funded or activated until you sign this review.</Text>
+        <Button label="Unlock Mera and sign exact setup" onPress={() => { void signAndEnroll(); }} loading={busy} />
+      </Card>
       <Card>
         <Text style={s.strong}>AUSD funding transaction</Text>
         <DataRow label="Mera owner" value={prepared.ownerAddress} />
@@ -236,7 +242,6 @@ export function PerplSetupScreen() {
         })}
       </Card>
       <Card tint="#FFF1E5"><Text style={s.strong}>Funds and permissions</Text><Text style={s.body}>The signed transaction sends only the reviewed AUSD amount to the displayed Perpl vault. Mera signs the exact EIP-1559 transaction and mandate in one passkey session. The session closes before the signatures are sent to the service. The operator has no withdrawal permission; all AUSD collateral and trading losses remain at risk.</Text></Card>
-      <Button label="Unlock Mera and sign exact setup" onPress={() => { void signAndEnroll(); }} loading={busy} />
       <Button label="Change amount or duration" variant="secondary" disabled={busy} onPress={() => { setPrepared(null); setError(''); }} />
     </> : null}
     <Button label="Perpl positions and history" variant="secondary" onPress={() => navigation.navigate('PerplStatus')} />
@@ -247,7 +252,7 @@ async function fetchActivePerplRun(ownerAddress: string): Promise<PerplRun | nul
   const {current} = await perplApi.current();
   if (!current) return null;
   validatePerplRunOwner(current, ownerAddress);
-  return isTerminalRun(current.status) ? null : current;
+  return isTerminalRun(current.status) || current.status.toLowerCase() === 'prepared' ? null : current;
 }
 
 function isTerminalRun(status: string) {

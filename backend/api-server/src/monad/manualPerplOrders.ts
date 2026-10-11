@@ -14,6 +14,8 @@ import { buildDirectOrderDesc, PERPL_DIRECT_EXEC_ABI } from "./perplDirectOrders
 import { decodeDirectReceipt } from "./perplDirectEvents.js";
 import { reconcileManualOperation } from "./manualPerplReconcile.js";
 import { readLegacyManualState } from "./manualPerplState.js";
+import { MANUAL_PERPL_LEVERAGE_CAP, MANUAL_PERPL_SLIPPAGE_CAP_BPS,
+  manualPerplEntryCollateralUnits, manualPerplMaxOrderUnits } from "./manualPerplLimits.js";
 import { storedManualAccounts, storedOperation, persistPrepared, storedIdempotentOperation, sha256Json,
   validateIdempotencyKey, manualOperationDto, requireManualPerplActions, requireManualPerplBroadcast } from "./manualPerplShared.js";
 
@@ -121,7 +123,8 @@ async function prepareOrder(context: any) {
     }
   }
     const leverage = Number(body.leverage ?? 1);
-    if (["market_entry", "limit_entry"].includes(kind) && (!Number.isSafeInteger(leverage) || leverage < 1 || leverage > Math.min(3, live.limits.maxLeverage, market.maxLeverage))) {
+    if (["market_entry", "limit_entry"].includes(kind) && (!Number.isSafeInteger(leverage) || leverage < 1
+        || leverage > Math.min(MANUAL_PERPL_LEVERAGE_CAP, live.limits.maxLeverage, market.maxLeverage))) {
       throw new MonadApiError("Manual Perpl leverage exceeds the capped Testnet limit.", 400, "manual_perpl_leverage_invalid");
     }
     let price = 0; let limitPrice: string | undefined;
@@ -139,16 +142,19 @@ async function prepareOrder(context: any) {
     const priceForNotional = price || (side === "short" ? market.price!.bid : market.price!.ask);
     const notional = marketAction && size ? BigInt(priceForNotional) * BigInt(size) * 1_000_000n
       / (10n ** BigInt(market.priceDecimals + market.sizeDecimals)) : 0n;
-    const margin = leverage > 0 ? notional / BigInt(leverage) : 0n;
-    const maxOrder = BigInt(process.env.MONAD_TESTNET_MANUAL_PERPL_MAX_ORDER_AUSD_UNITS ?? "10000000");
+    const entryCollateral = ["market_entry", "limit_entry"].includes(kind)
+      ? manualPerplEntryCollateralUnits(notional, leverage, market.takerFeeMicros) : null;
+    const maxOrder = manualPerplMaxOrderUnits();
     if (["market_entry", "limit_entry"].includes(kind) && (notional <= 0n || notional > maxOrder
-        || BigInt(account.balanceUnits) - BigInt(account.lockedUnits) < margin)) {
-      throw new MonadApiError("Manual Perpl entry exceeds the 10 AUSD default cap or free collateral.", 409, "manual_perpl_order_cap");
+        || BigInt(account.balanceUnits) - BigInt(account.lockedUnits) < entryCollateral!.requiredUnits)) {
+      throw new MonadApiError("Manual Perpl entry exceeds the configured AUSD cap or free collateral including opening fee.", 409, "manual_perpl_order_cap");
     }
     const action: any = { kind, marketId, accountId, ...(side ? { side } : {}), size, price,
-      leverage, orderId: existingOrderId ?? 0, requestId, maxSlippageBps: 100,
+      leverage, orderId: existingOrderId ?? 0, requestId, maxSlippageBps: MANUAL_PERPL_SLIPPAGE_CAP_BPS,
       ...(kind === "add_margin" ? { collateralAmount: String(body.collateralAmountUnits) } : {}) };
-    if (["market_entry", "close_position", "reduce_size"].includes(kind)) checkDepth(action, market, 100);
+    if (["market_entry", "close_position", "reduce_size"].includes(kind)) {
+      checkDepth(action, market, MANUAL_PERPL_SLIPPAGE_CAP_BPS);
+    }
     const checkpoint = await finalizedBlockNumber(provider);
     const orderDesc = buildDirectOrderDesc(action, market, requestId, checkpoint);
     const data = new Interface(PERPL_DIRECT_EXEC_ABI).encodeFunctionData("execOrder", [orderDesc]);
@@ -159,7 +165,10 @@ async function prepareOrder(context: any) {
       accountAddress: daAddress, accountId, marketId, symbol: market.symbol, priceDecimals: market.priceDecimals,
       sizeDecimals: market.sizeDecimals, ...(side ? { side, direction: side } : {}),
       sizeUnits: String(size), ...(limitPrice ? { limitPrice } : {}), leverage,
-      quotedAUSDUnits: notional.toString(), maxOrderAUSDUnits: maxOrder.toString(), observedAt: market.price?.observedAt ?? null,
+      quotedAUSDUnits: notional.toString(), maxOrderAUSDUnits: maxOrder.toString(),
+      estimatedEntryMarginUnits: entryCollateral?.marginUnits.toString() ?? null,
+      estimatedEntryFeeUnits: entryCollateral?.feeUnits.toString() ?? null,
+      observedAt: market.price?.observedAt ?? null,
       quoteBlockNumber: market.price?.blockNumber ?? null, requestId, orderId: existingOrderId ?? null,
       ...(beforeOrder ? { existingOrder: beforeOrder } : {}), orderDescription: orderDesc,
       target: transactionTarget, transactionValue: "0", method: "execOrder(OrderDesc)", gas: built.gas,

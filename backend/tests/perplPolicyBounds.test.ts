@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readPerplContext } from "../api-server/src/monad/perplContext.js";
+import { perplDirectoryRow } from "../api-server/src/monad/markets.js";
+import { PERPL_TESTNET_AUSD, PERPL_TESTNET_EXCHANGE } from "../api-server/src/monad/perplConfig.js";
+import { manualPerplEntryCollateralUnits } from "../api-server/src/monad/manualPerplLimits.js";
 import { validatePerplAction } from "../api-server/src/monad/perplPolicy.js";
 import { phaseFor } from "../api-server/src/monad/perplVenue.js";
 import type { VenueAction, VenueAccountSnapshot, VenueMarket } from "../api-server/src/monad/venueTypes.js";
@@ -27,6 +30,41 @@ const entry: VenueAction = { kind: "market_entry", marketId: 16, accountId: 7,
 test("Perpl rejects a wrong-chain live context before using its markets", async () => {
   await assert.rejects(readPerplContext({publicGet: async () => ({chain: {chain_id: 143}})} as any),
     {code: "perpl_wrong_chain"});
+});
+
+test("Perpl margin fractions expose correct market and manual leverage limits", async () => {
+  const now = Date.now();
+  const raw = { chain: { chain_id: 10143 }, instances: [{ id: 1, address: PERPL_TESTNET_EXCHANGE,
+    collateral_token_id: 2, min_account_open_amount: "100000000", min_deposit_amount: "10000000",
+    min_withdraw_amount: "10000000" }],
+    tokens: [{ id: 2, symbol: "AUSD", decimals: 6, address: PERPL_TESTNET_AUSD }],
+    markets: [{ id: 16, instance_id: 1, symbol: "BTC", config: { is_open: true,
+      price_decimals: 2, size_decimals: 5, initial_margin: 1500, maintenance_margin: 2500,
+      min_posting_amount: "1000000", maker_fee: 45, taker_fee: 345 },
+      order_max_market_slippage_bps: 1000, order_ttl_blocks: 20 }] };
+  const context = await readPerplContext({ publicGet: async () => raw } as any);
+  const market = context.markets[0];
+  assert.equal(market.maxLeverage, 15);
+  assert.equal(market.initialMarginBps, 667);
+  assert.equal(market.maintenanceMarginBps, 400);
+  assert.equal(market.minPostingUnits, "1000000");
+  const ticker = { d: { 16: { orl: 100000, mrk: 100000, lst: 100000, mid: 100000,
+    bid: 99900, ask: 100100, at: { t: now, b: 100 } } } };
+  const row = perplDirectoryRow(market, ticker, undefined, context.limits.maxLeverage);
+  assert.equal(row.maxLeverage, 15);
+  assert.equal(row.manualMaxLeverage, 3);
+  assert.equal(row.manualMaxOrderUnits, "10000000");
+  assert.equal(row.maintenanceMarginBps, 400);
+  assert.equal(row.quoteAvailable, true);
+});
+
+test("Manual entry sizing reserves both initial margin and the opening taker fee", () => {
+  assert.deepEqual(manualPerplEntryCollateralUnits(10_000_000n, 2, 345), {
+    marginUnits: 5_000_000n, feeUnits: 3_450n, requiredUnits: 5_003_450n,
+  });
+  assert.deepEqual(manualPerplEntryCollateralUnits(1n, 3, 345), {
+    marginUnits: 1n, feeUnits: 1n, requiredUnits: 2n,
+  });
 });
 
 test("Perpl policy blocks replay, stale quotes, unsigned markets, expired entry and excess exposure", () => {

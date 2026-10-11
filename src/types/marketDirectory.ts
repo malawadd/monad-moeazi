@@ -61,6 +61,15 @@ export type MarketDirectoryRow = {
   priceDecimals?: number;
   sizeDecimals?: number;
   maxLeverage?: number;
+  initialMarginBps?: number;
+  maintenanceMarginBps?: number;
+  minPostingUnits?: string;
+  makerFeeMicros?: number;
+  takerFeeMicros?: number;
+  maxMarketSlippageBps?: number;
+  manualMaxOrderUnits?: string;
+  manualMaxLeverage?: number;
+  manualMaxSlippageBps?: number;
   quote?: MarketQuote | null;
   fundingRateMicros?: number | null;
   fundingObservedAt?: number | string | null;

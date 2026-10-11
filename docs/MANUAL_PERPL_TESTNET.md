@@ -53,8 +53,47 @@ govern preparation and submission. Manual Guard and Lite Mode remain on.
 The default manual order notional cap is 10 AUSD
 (`MONAD_TESTNET_MANUAL_PERPL_MAX_ORDER_AUSD_UNITS=10000000`), and leverage is
 capped at 3× or Perpl's lower live limit. The backend checks fresh book data,
-market limits, collateral, slippage, and finalized account state. An unavailable
-or stale executable book blocks order preparation.
+market limits, collateral including estimated opening fee, slippage, and
+finalized account state. An unavailable or stale executable book blocks a
+market order; a limit order may rest on Perpl's book and does not imply a fill.
+
+### Choosing a position
+
+The order screen uses live Perpl market configuration and the owner's finalized
+direct account. Perpl expresses initial and maintenance margin as leverage
+fractions in hundredths: for example, `1500` means a 15× base market maximum
+and approximately 6.67% initial margin. The manual Testnet cap can be lower.
+The size control is in AUSD notional; the app converts it to a base-asset lot
+rounded down to the market's size precision. The usable maximum is constrained
+by the configured order cap, free exchange AUSD after estimated entry fee, and
+fresh executable depth for a market order. Deposited collateral and Mera wallet
+AUSD are shown separately.
+
+The screen shows the chosen base size, margin, opening and estimated closing
+fees, spread and book impact, and a **pre-trade liquidation estimate** from
+the market maintenance margin. The estimate assumes the shown entry price and
+no future funding, fee-tier change, collateral adjustment, or mark movement.
+Perpl's live liquidation point can change; the exact outcome is determined by
+its exchange state and final receipts. A limit order may sit unfilled, so its
+displayed liquidation estimate only applies if it fills at the reviewed price.
+Every prepared transaction still obtains a fresh quote and exact Mera review.
+
+Sources: [Perpl API types](https://raw.githubusercontent.com/PerplFoundation/api-docs/main/types.md),
+[margin](https://github.com/PerplFoundation/perpl-docs/blob/main/docs/exchange/margin.md),
+and [liquidation](https://github.com/PerplFoundation/perpl-docs/blob/main/docs/exchange/liquidation/README.md).
+
+Mobile 1.7 adds touch controls for AUSD notional and leverage, quick size
+choices, and limit-price ticks. Its preview shows the live Perpl maximum beside
+the lower Moeazi cap, current free collateral, spread, depth or impact,
+estimated entry and exit fees, break-even, and an estimated liquidation price.
+The exact prepared Mera review can differ if the market moves before signing.
+On the offline KeePassDX emulator, ETH market data and the new controls loaded;
+that emulator's direct Perpl account held zero free AUSD, so no manual order was
+submitted during this UI check.
+The ARM phone build is `android/app/build/outputs/apk/release/moeazi-monad-v1.7-arm.apk`
+(SHA-256 `3299490F7BD88C08678B5041CF4EEE05D1BE21A40A36C7F48ABC107999061BEC`).
+It includes `arm64-v8a` and `armeabi-v7a`, uses the HTTPS Moeazi API, and
+packages the public asset-link statement.
 
 ## Signing and reconciliation
 

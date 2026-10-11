@@ -14,8 +14,13 @@ function amount(value: any, field: string) {
   if (!/^\d+$/.test(raw)) throw new PerplApiError("Perpl Testnet context has invalid " + field + ".", 503, "perpl_context_invalid");
   return raw;
 }
-function limitLeverage(initialMarginBps: number) {
-  return initialMarginBps > 0 ? Math.floor(10_000 / initialMarginBps) : 0;
+// Perpl's Fraction is a leverage factor in hundredths: 1500 = 15x
+// (6.67% initial margin), while 2500 = 4% maintenance margin.
+function marginRateBps(factorHundredths: number) {
+  return factorHundredths > 0 ? Math.ceil(1_000_000 / factorHundredths) : 0;
+}
+function limitLeverage(initialMarginFactor: number) {
+  return initialMarginFactor > 0 ? Math.floor(initialMarginFactor / 100) : 0;
 }
 
 export async function readPerplContext(api = new PerplApiClient()): Promise<PerplContext> {
@@ -41,12 +46,19 @@ export async function readPerplContext(api = new PerplApiClient()): Promise<Perp
   const bounds = perplFundingBounds();
   const markets: VenueMarket[] = marketRows.map((market: any) => {
     const config = object(market.config);
-    const initialMarginBps = integer(config.initial_margin);
-    const maxLeverage = limitLeverage(initialMarginBps);
-    if (maxLeverage < 1 || maxLeverage > 100) throw new PerplApiError("Perpl market leverage configuration is invalid.", 503, "perpl_context_invalid");
+    const initialFactor = integer(config.initial_margin);
+    const maintenanceFactor = integer(config.maintenance_margin);
+    const initialMarginBps = marginRateBps(initialFactor);
+    const maintenanceMarginBps = marginRateBps(maintenanceFactor);
+    const maxLeverage = limitLeverage(initialFactor);
+    if (maxLeverage < 1 || maxLeverage > 100 || maintenanceMarginBps <= 0
+        || maintenanceMarginBps >= initialMarginBps) {
+      throw new PerplApiError("Perpl market margin configuration is invalid.", 503, "perpl_context_invalid");
+    }
     return { id: integer(market.id), symbol: String(market.symbol), name: String(market.name ?? market.symbol),
       isOpen: Boolean(config.is_open), priceDecimals: integer(config.price_decimals), sizeDecimals: integer(config.size_decimals),
-      initialMarginBps, maintenanceMarginBps: integer(config.maintenance_margin), maxLeverage,
+      initialMarginBps, maintenanceMarginBps, maxLeverage,
+      minPostingUnits: amount(config.min_posting_amount ?? "0", "minimum posting amount"),
       maxMarketSlippageBps: integer(market.order_max_market_slippage_bps),
       makerFeeMicros: integer(config.maker_fee), takerFeeMicros: integer(config.taker_fee),
       fundingRateMicros: integer(object(config.funding).rate ?? object(market.funding).rate ?? config.funding_rate),

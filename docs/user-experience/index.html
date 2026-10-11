@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fffdf5">
+  <meta name="description" content="Local Moeazi user experience research, current route audit, prototype, and implementation handoff.">
+  <title>Moeazi UX Field Notes</title>
+  <link rel="stylesheet" href="hub.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="#top" aria-label="Moeazi UX Field Notes home"><span class="mark">M</span><span>MOEAZI<br><small>UX FIELD NOTES</small></span></a>
+    <div class="topmeta"><span class="eyebrow">LOCAL RESEARCH HUB</span><span class="date-stamp">11 OCT 2026</span></div>
+  </header>
+  <div class="layout" id="top">
+    <aside class="rail" aria-label="Research sections">
+      <nav>
+        <a href="#brief">Brief</a><a href="#baseline">Emulator baseline</a><a href="#audit">Route audit</a>
+        <a href="#friction">Friction review</a><a href="#patterns">Pattern library</a>
+        <a href="#decisions">Decisions</a><a href="#handoff">Screen specs</a><a href="#study">Usability study</a><a href="#validation">Validation</a>
+      </nav>
+      <p class="rail-note">Design research only<br>Testnet · simulated prototype</p>
+    </aside>
+    <main>
+      <section class="hero panel" id="brief">
+        <div class="hero-copy"><span class="eyebrow">PRODUCT DESIGN / 01</span><h1>A calmer front door<br>to testnet trading.</h1>
+          <p>Keep Moeazi’s bold, tactile identity. Make the first useful thing clear: what is in the wallet, what it means on testnet, and what a person can safely do next.</p>
+          <div class="hero-actions"><a class="button primary" href="prototype.html">Open clickable prototype <span aria-hidden="true">↗</span></a><a class="button" href="reader.html?doc=screen-specs.md">Read implementation handoff</a></div>
+        </div>
+        <div class="hero-stamp" aria-label="Research status"><b>FIELD<br>NOTES</b><span>USER MODE<br>PROPOSAL</span><i>↘</i></div>
+      </section>
+      <section class="principles grid-3" aria-label="Design principles">
+        <article class="panel mini-card yellow"><span class="number">01</span><h2>Balance first</h2><p>Show test AUSD and fee MON as separate, understandable balances.</p></article>
+        <article class="panel mini-card pink"><span class="number">02</span><h2>One next step</h2><p>Guide funding and autonomy in a short, resumable sequence.</p></article>
+        <article class="panel mini-card blue"><span class="number">03</span><h2>Keep the proof</h2><p>Explain amount, destination, permission, and risk before every signature.</p></article>
+      </section>
+      <section class="section" id="baseline">
+        <div class="section-head"><div><span class="eyebrow">OBSERVED / ANDROID</span><h2>Current app baseline</h2></div><a class="text-link" href="reader.html?doc=evidence%2FREADME.md">Capture notes ↗</a></div>
+        <p class="lede">Moeazi 1.8 (9), Android API 36 emulator, 1080 × 2400 at density 420. Screenshots were captured on 11 Oct 2026 around 17:45–17:48 Riyadh time. These are screen observations, not usability findings.</p>
+        <div class="evidence-grid">
+          <figure><a href="evidence/current-home.png"><img src="evidence/current-home.png" alt="Current Home with four testnet asset rows and several stacked actions"></a><figcaption><b>Home</b><span>Four assets, observed block, many actions.</span></figcaption></figure>
+          <figure><a href="evidence/current-markets.png"><img src="evidence/current-markets.png" alt="Current Markets screen captured on Android"></a><figcaption><b>Markets</b><span>Market directory capture.</span></figcaption></figure>
+          <figure><a href="evidence/current-strategies.png"><img src="evidence/current-strategies.png" alt="Current Strategies screen captured mid-scroll"></a><figcaption><b>Strategies</b><span>Mid-scroll capture.</span></figcaption></figure>
+          <figure><a href="evidence/current-strategy-detail.png"><img src="evidence/current-strategy-detail.png" alt="Current strategy detail screen captured mid-scroll"></a><figcaption><b>Strategy detail</b><span>Mid-scroll capture.</span></figcaption></figure>
+          <figure><a href="evidence/current-perpl-setup.png"><img src="evidence/current-perpl-setup.png" alt="Current Perpl setup screen with Android React Native debugger overlay"></a><figcaption><b>Perpl setup</b><span>Debugger overlay is visible.</span></figcaption></figure>
+          <figure><a href="evidence/current-activity.png"><img src="evidence/current-activity.png" alt="Current Activity screen captured on Android"></a><figcaption><b>Activity</b><span>Tab capture.</span></figcaption></figure>
+          <figure><a href="evidence/current-account.png"><img src="evidence/current-account.png" alt="Current Account screen captured on Android"></a><figcaption><b>Account</b><span>Tab capture.</span></figcaption></figure>
+        </div>
+        <p class="note"><b>Scope:</b> read-only navigation. No signing, funding, swaps, or trades were performed. The evidence manifest explains partial-scroll coverage and the Perpl debugger overlay.</p>
+      </section>
+      <section class="section" id="audit">
+        <div class="section-head"><div><span class="eyebrow">SOURCE AUDIT / ROUTES</span><h2>Every current destination</h2></div><a class="text-link" href="reader.html?doc=route-audit.md">Audit notes ↗</a></div>
+        <p class="lede">This inventory is derived from <code>RootNavigator.tsx</code>, nested tabs, navigation calls, and registered screen components. It describes current reachability and proposes a User Mode destination; it does not change production navigation.</p>
+        <div id="route-table" class="table-wrap" aria-live="polite"></div>
+        <div class="subsection-head"><h3>Screen files outside the live route graph</h3><span class="tag">UNREGISTERED / LEGACY CANDIDATES</span></div>
+        <div id="legacy-table" class="table-wrap" aria-live="polite"></div>
+        <div class="subsection-head"><h3>Deep-link mismatch to resolve</h3></div>
+        <div id="link-table" class="table-wrap" aria-live="polite"></div>
+      </section>
+      <section class="section" id="friction">
+        <div class="section-head"><div><span class="eyebrow">CODE + SCREENSHOT REVIEW</span><h2>Before → after opportunities</h2></div><span class="tag">HYPOTHESES TO TEST</span></div>
+        <div id="friction-table" class="table-wrap" aria-live="polite"></div>
+      </section>
+      <section class="section" id="patterns">
+        <div class="section-head"><div><span class="eyebrow">EVIDENCE / DOCUMENTATION / HYPOTHESIS</span><h2>Pattern library</h2></div><a class="text-link" href="reader.html?doc=research-notes.md">Full research notes ↗</a></div>
+        <p class="lede">Competitor app behavior below is documented from official help pages. No competitor app was installed or directly observed on the emulator. Moeazi observations come from source and baseline captures. Every design application is a hypothesis until tested with people.</p>
+        <div id="source-list" class="source-grid"></div>
+        <div id="pattern-list" class="pattern-grid"></div>
+      </section>
+      <section class="section" id="decisions">
+        <div class="section-head"><div><span class="eyebrow">TRACEABLE CHOICES</span><h2>Decision register</h2></div><span class="tag">REVISABLE</span></div>
+        <div id="decision-list" class="decision-list"></div>
+      </section>
+      <section class="section split-section" id="handoff">
+        <div><span class="eyebrow">NEXT BUILD STAGE</span><h2>Screen specs &amp; backlog</h2><p class="lede">The handoff maps prototype flows to existing capabilities, highlights data gaps, and keeps mode selection separate from authentication and backend authorization.</p>
+          <div class="doc-links"><a href="reader.html?doc=screen-specs.md">Screen specifications <span>↗</span></a><a href="reader.html?doc=implementation-backlog.md">Prioritized implementation backlog <span>↗</span></a><a href="reader.html?doc=route-audit.md">Routes and unused legacy screens <span>↗</span></a></div>
+        </div>
+        <aside class="callout"><span class="eyebrow">IMPLEMENTATION BOUNDARY</span><h3>Two presentations.<br>One account and service layer.</h3><p>Default User Mode; a namespaced local Developer Mode setting restores current tools. The preference cannot grant trading, change wallet ownership, or bypass transaction validation.</p><a href="reader.html?doc=implementation-backlog.md">Read mode and deep-link rules ↗</a></aside>
+      </section>
+      <section class="section study" id="study">
+        <div class="section-head"><div><span class="eyebrow">VALIDATION PLAN</span><h2>Five moderated sessions</h2></div><span class="tag orange-tag">PENDING · NO PARTICIPANTS</span></div>
+        <p class="lede">The protocol targets five adults with no prior trading experience across age groups. Target: at least four complete the main simulated flows without coaching. No human validation has been claimed or conducted.</p>
+        <div class="study-row"><a class="button primary" href="reader.html?doc=study-plan.md">Open moderator script</a><a class="button" href="reader.html?doc=findings.md">Research findings</a><span class="note-inline">Use simulated balances and a non-broadcasting prototype only.</span></div>
+      </section>
+      <section class="section" id="validation">
+        <div class="section-head"><div><span class="eyebrow">BUILD CHECKS</span><h2>Preview validation</h2></div><span class="tag orange-tag">CORE PASS · FULL AUDIT PENDING</span></div>
+        <p class="lede">Hub, route coverage, primary simulated flows and sampled 320 px layouts are verified. Full accessibility and native handoff checks remain pending; see the validation log.</p>
+        <a class="button" href="reader.html?doc=validation.md">Open validation log ↗</a>
+      </section>
+      <footer><span>MOEAZI / USER EXPERIENCE RESEARCH</span><span>Local static files · no build step · simulated UI data</span></footer>
+    </main>
+  </div>
+  <script type="module" src="hub.js"></script>
+</body>
+</html>

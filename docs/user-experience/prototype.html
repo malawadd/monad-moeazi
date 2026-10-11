@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fffdf5">
+  <title>Moeazi · User Mode prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body>
+  <a class="skip-link" href="#app-view">Skip to app content</a>
+  <main class="prototype-workspace" aria-label="Moeazi beginner experience prototype">
+    <section class="device-column" aria-label="Phone preview">
+      <div class="device-topline"><span class="device-dot" aria-hidden="true"></span><span>ANDROID · 393 × 852</span><span class="device-dot" aria-hidden="true"></span></div>
+      <div class="device-shell">
+        <div class="status-bar" aria-label="Illustrative device status bar"><span>9:41</span><span aria-hidden="true">◉ ◉ ▰</span></div>
+        <header class="app-header">
+          <a class="brand" href="#home" data-action="tab" data-value="Home" aria-label="Moeazi Home"><span class="brand-mark" aria-hidden="true">M</span><span>moeazi</span></a>
+          <span class="network-pill"><i aria-hidden="true"></i> Monad testnet</span>
+          <button id="settings-shortcut" class="icon-button" data-action="settings" aria-label="Open settings" title="Settings">☰</button>
+        </header>
+        <div id="prototype-ribbon" class="prototype-ribbon" role="note"><span aria-hidden="true">✳</span> SIMULATED PREVIEW · NO WALLET OR NETWORK ACTIONS</div>
+        <div id="global-status" class="global-status" role="status" aria-live="polite" hidden></div>
+        <div id="app-view" class="app-view" tabindex="-1"></div>
+        <nav id="tabbar" class="tabbar" aria-label="Main navigation"></nav>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+      </div>
+      <p class="device-caption">A responsive phone preview. Every amount and event shown here is a named fixture.</p>
+    </section>
+    <aside class="reviewer-panel" aria-labelledby="reviewer-title">
+      <div class="panel-kicker">DESIGN LAB <span>01 / 04</span></div>
+      <h1 id="reviewer-title">Try the experience</h1>
+      <p>Explore realistic states without connecting a wallet. Scenario changes reset the preview and never call a service.</p>
+      <label class="field-label" for="scenario-select">Preview state</label>
+      <select id="scenario-select" class="select-control" aria-describedby="scenario-help"></select>
+      <p id="scenario-help" class="helper">Choosing a state loads clearly marked demo balances and status.</p>
+      <button class="button secondary" type="button" data-action="reviewer-reset">Reset this preview state</button>
+      <div class="panel-rule"></div>
+      <h2>Review checklist</h2>
+      <ul class="review-list">
+        <li><span class="check-box" aria-hidden="true">01</span> Find balance and next step</li>
+        <li><span class="check-box" aria-hidden="true">02</span> Fund a test wallet safely</li>
+        <li><span class="check-box" aria-hidden="true">03</span> Understand autonomy consent</li>
+        <li><span class="check-box" aria-hidden="true">04</span> Compare Spot and Perpl</li>
+        <li><span class="check-box" aria-hidden="true">05</span> Recover from uncertain status</li>
+      </ul>
+      <div class="panel-rule"></div>
+      <div class="reviewer-callout"><strong>What is real here?</strong><span>Only the design. No signatures, requests, market quotes, funds, or trade results are created.</span></div>
+      <div class="review-controls"><button class="button secondary" type="button" data-action="large-text" aria-pressed="false">Large text preview</button><button class="button secondary" type="button" data-action="reduced-motion" role="switch" aria-checked="false">Reduce motion</button></div>
+      <details class="reviewer-notes"><summary>Researcher controls</summary><p>Open Settings to compare four focused tabs with the five-tab Developer Mode shell. The current app baseline is linked from Developer Mode.</p><p>Try keyboard Tab navigation and your device’s reduced-motion setting.</p></details>
+    </aside>
+  </main>
+  <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <script type="module" src="prototype-app.js"></script>
+</body>
+</html>

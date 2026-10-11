@@ -1,0 +1,79 @@
+# Preview validation log
+
+Updated 11 October 2026. **Static checks, Chrome prototype flows and sampled
+small-screen checks passed.** Human usability, full accessibility and native
+Android handoff checks remain pending. These are local design artifacts and
+fictional fixture outcomes, not production transactions.
+
+## Build and browser checks
+
+| Check | Result | Evidence |
+|---|---|---|
+| MIME-aware local server | Pass | Windows Python server returned 200; JavaScript modules used `application/javascript`, `Cache-Control: no-store` even with `If-Modified-Since`, Markdown `text/plain`, and local Syne `font/woff2`. Tested on port 8766; README launch remains port 8765. |
+| Local API health | Pass · read-only | Supervisor `GET :3102/health` identified `moeazi-mobile-api` with Hono runtime. The prototype made no API calls; this health check was the only API request. |
+| Hub and reader | Pass · Chrome | Four audit tables, eight patterns, eight decisions and all 35 route bindings rendered. Wrapped list lines stay in one item; internal Markdown heading links scroll to the matching section. |
+| Automated checks | Pass | `prototype-test.mjs`: 8 reducer guard tests. `verify-prototype-views.mjs`: 15 reachability/handler checks. `verify-hub.mjs`: 30 text files ≤300 lines, 35 routes, imports/links/assets/fonts and static no-network guard pass. |
+| 320 × 740 layout | Pass · sampled | Normal text: document width/scroll width 305 px; Home primary action fully visible with 12 px spare. All Home buttons and links sampled at ≥48 px. No horizontal overflow observed. |
+| 320 × 740 at 200% text | Pass · sampled | Root text 32 px; document width/scroll width 305 px; app width/scroll width 295 px. No horizontal overflow observed. |
+| Reduced motion | Pass · sampled | Motion duration resolves to `0.00001s`; scrolling uses `auto`. This records the prototype setting, not native Android animation timing. |
+| Web keyboard focus | Partial | Tab navigation reaches the summary with a visible solid focus indicator. Full keyboard-only coverage and TalkBack were not tested. |
+| Contrast | Partial | Sampled ink on paper: 18.54:1; muted text on paper: 7.38:1. This is not a full component/state contrast audit. |
+| Android prototype launch | Blocked | ADB launch was rejected by automatic approval review without a further reason. No workaround was attempted. |
+
+## Simulated flows exercised in Chrome
+
+| Flow | Observed fixture path |
+|---|---|
+| Funding | Opening and returning from the faucet without a receipt leaves MON at 0. Explicitly confirming demo arrival enables the AUSD request; submitted → confirmed credits exactly 100 demo AUSD once. |
+| Autonomous strategy | Start → active → stop → settling → Home → check → settled → review → pending → confirmed; the fixture then shows 100 AUSD returned. |
+| Spot swap | 25 USDC → review for 100 WMON minimum 99.5; disclosed demo fees are 0.075 USDC + 0.001 MON → submitted → filled. |
+| Manual Perpl | Approval → finalized → 50 AUSD test account → 10 AUSD order at 2× → submitted → filled → close → closed. |
+| Mode preference | Four-tab User Mode → five-tab Developer Mode; preference survives reload and explicit return restores four tabs. |
+| Recovery and route guards | Settled recovery review, pending recovery reconciliation, incomplete settlement, unavailable strategies, invalid amounts and uncertain order states were checked by the view/reducer suites. |
+
+Nine error fixtures rendered. Rejected passkey says **“Nothing sent”**; expired
+quote says **“Nothing submitted”**; uncertain operation instructs the user to
+check the same operation. Offline and stale views label the amount as **LAST
+KNOWN**. Manual live quote and liquidation data remain unavailable placeholders;
+these checks do not validate live market or risk calculations.
+
+No production signing, funding or trading occurred. Faucet receipts, positions,
+fees and returns above are simulated. `verify-hub.mjs` checks prototype source
+for live service/network hooks; runtime network capture was not performed. The
+supervisor's health GET is separately recorded above. Baseline Android captures
+are in the [evidence manifest](evidence/README.md).
+
+## Competitor evidence metadata
+
+Competitor interaction patterns are **documented from official publisher
+sources**, not directly observed in installed apps. Pages were reviewed on
+11 October 2026. Competitor app versions were **not observed**.
+
+| Product / publisher | Official source | Evidence type | App version |
+|---|---|---|---|
+| Coinbase | [Coinbase Help · Coinbase vs. Advanced](https://help.coinbase.com/en/getting-started/other/coinbase-vs-coinbase-advanced) | Help page; emulator Play intent did not resolve. | Not observed |
+| Phantom | [Swap](https://help.phantom.com/articles/swap-crypto-in-phantom-5985106844435), [Perps](https://help.phantom.com/articles/trade-perps-in-phantom-42292249388307) | Help pages; [download page](https://phantom.com/download) separately browser-observed with QR/Search Google Play prompt, no direct APK. | Not observed |
+| Kraken | [Support · Recurring buys](https://support.kraken.com/articles/6906240918804-recurring-buys-on-the-kraken-app) | Official help page; no app walkthrough. | Not observed |
+| Revolut | [Help · Robo-advisor setup](https://help.revolut.com/en-US/help/wealth/robo-advisor/how-do-i-get-started/) | Official help page; no app walkthrough. | Not observed |
+
+No competitor apps were installed. Do not infer their tap counts, keyboard,
+motion, authentication or recovery from help pages; see the
+[research ledger](reader.html?doc=research-notes.md).
+
+## Microinteraction record and remaining limits
+
+| Field | Current result |
+|---|---|
+| Tap path/count, first action, wrong turns | Primary fixture paths exercised; exact tap counts and novice wrong turns not recorded. |
+| Scroll and keyboard | Responsive scroll widths recorded above; browser Tab focus observed. Native keyboard types/dismissal and full web keyboard coverage not tested. |
+| Back behavior and system handoff | Not fully tested. Native passkey/provider/system screens are outside the prototype and remain unobserved. |
+| Loading/pending and copy feedback | Submitted/pending states rendered; real response timing and copy-address feedback not measured. |
+| Touch targets, labels and assistive tech | Home controls sampled at ≥48 px; full-screen target audit, screen-reader labels and TalkBack remain pending. |
+| Motion and contrast | Reduced-motion setting and two text contrast pairs sampled; other transitions/states not audited. |
+| Errors and recovery | Nine fixtures rendered; the copy for rejection, expiry, uncertain, offline and stale states is recorded above. Real network failure behavior is untested. |
+| Participant outcomes | No novice sessions, completion rates, confidence scores, quotes or task timings. |
+
+Also pending: actual backend integration, real network latency, live Perpl
+quotes/liquidation values, native keyboard and passkey/system handoffs, broader
+large-text/assistive-technology coverage and the five-person novice study in
+the [moderator plan](reader.html?doc=study-plan.md).

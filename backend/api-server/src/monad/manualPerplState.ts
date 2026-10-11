@@ -4,6 +4,7 @@ import { MonadApiError } from "./config.js";
 import { PERPL_TESTNET_AUSD, PERPL_TESTNET_EXCHANGE } from "./perplConfig.js";
 import { MANUAL_DA_ABI } from "./manualPerplShared.js";
 import { readDirectAccount, readDirectAccountId, readDirectOrder } from "./perplDirectState.js";
+import { estimatePerplLiquidationPrice } from "./perplLiquidation.js";
 import { requireContractCode } from "./provider.js";
 
 export function manualPositionRows(account: any, markets: any[]) {
@@ -13,15 +14,42 @@ export function manualPositionRows(account: any, markets: any[]) {
     const priceScale = 10n ** BigInt(market?.priceDecimals ?? 0);
     const sizeScale = 10n ** BigInt(market?.sizeDecimals ?? 0);
     const deposit = BigInt(position.depositUnits ?? "0");
+    const fundingPnl = BigInt(position.fundingPnlUnits ?? "0");
     const notional = priceScale && sizeScale ? BigInt(position.ep) * BigInt(position.s) * 1_000_000n
       / (priceScale * sizeScale) : 0n;
+    const liquidationEstimate = estimatePerplLiquidationPrice({ side: Number(position.sd) === 2 ? "short" : "long",
+      entryPriceUnits: String(position.ep), entryPriceResidueQ16: String(position.entryPriceResidueQ16 ?? "0"),
+      sizeUnits: String(position.s), depositUnits: String(position.depositUnits ?? "0"),
+      fundingPnlUnits: String(position.fundingPnlUnits ?? "0"), maintenanceMarginFactor: market?.maintenanceMarginFactor,
+      priceDecimals: market?.priceDecimals, sizeDecimals: market?.sizeDecimals,
+      markPriceUnits: String(position.markPrice ?? "0"), markValid: Boolean(position.markValid) });
     return { marketId: String(position.mkt), symbol: market?.symbol ?? String(position.mkt),
       side: Number(position.sd) === 2 ? "short" : "long", sizeUnits: String(position.s),
+      size: String(position.s),
       entryPrice: String(position.ep), markPrice: String(position.markPrice),
       leverage: deposit > 0n ? Number(notional * 100n / deposit) / 100 : null,
-      unrealizedPnlUnits: String(position.pnlUnits), fundingPnlUnits: String(position.fundingPnlUnits ?? "0"),
+      depositUnits: String(position.depositUnits ?? "0"), deltaPnlUnits: String(position.deltaPnlUnits ?? position.pnlUnits ?? "0"),
+      // pnlCNS is the exchange's aggregate PnL field; keep its established
+      // meaning while exposing the delta and premium components separately.
+      unrealizedPnlUnits: String(position.pnlUnits ?? "0"), totalPnlUnits: String(position.pnlUnits ?? "0"),
+      fundingPnlUnits: fundingPnl.toString(), maintenanceMarginFactor: market?.maintenanceMarginFactor ?? null,
+      maintenanceMarginBps: market?.maintenanceMarginBps ?? null, markValid: Boolean(position.markValid),
+      entryBlock: Number(position.entryBlock), finalizedBlockNumber: Number(account?.blockNumber ?? 0),
+      verified: true, stateSource: "finalized_perpl_exchange", liquidationEstimate,
+      liquidationPriceUnits: liquidationEstimate.priceUnits, liquidationPrice: liquidationEstimate.priceUnits,
+      liquidationEstimateReason: liquidationEstimate.reason ?? null,
       priceDecimals: market?.priceDecimals ?? null, sizeDecimals: market?.sizeDecimals ?? null };
   });
+}
+
+/** Normalize a finalized Perpl order price into the chart's raw PNS scale. */
+export function manualOrderRow(order: any, market: any, blockNumber: number) {
+  const pricePNS = String(order.pricePNS);
+  return { orderId: String(order.orderId), marketId: String(market.id), mkt: String(market.id), symbol: market.symbol,
+    side: order.orderType === 0 ? "long" : order.orderType === 1 ? "short" : "unknown",
+    sizeUnits: String(order.size), price: String(order.price), priceONS: String(order.priceONS ?? order.price),
+    pricePNS, priceUnits: pricePNS, priceUnitSystem: "PNS", status: "open", filledUnits: "0",
+    verified: true, stateSource: "finalized_perpl_exchange", finalizedBlockNumber: blockNumber };
 }
 
 export async function readManualOrders(provider: any, account: any, markets: any[], accountId: number) {
@@ -31,9 +59,7 @@ export async function readManualOrders(provider: any, account: any, markets: any
     try {
       const order = await readDirectOrder(provider, market.id, Number(lock.lockId), account.blockNumber);
       if (order.accountId !== accountId || order.orderId !== Number(lock.lockId)) continue;
-      rows.push({ orderId: String(order.orderId), marketId: String(market.id), symbol: market.symbol,
-        side: order.orderType === 0 ? "long" : order.orderType === 1 ? "short" : "unknown",
-        sizeUnits: String(order.size), price: String(order.price), status: "open", filledUnits: "0" });
+      rows.push(manualOrderRow(order, market, Number(account.blockNumber)));
       break;
     } catch { /* another market owns this lock ID or its order is no longer live */ }
   }

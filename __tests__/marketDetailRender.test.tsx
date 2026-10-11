@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactTestRenderer, {act} from 'react-test-renderer';
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 const mockRoute = {params: {venueId: 'perpl-direct-testnet-v1', marketId: '16'}};
 const mockMarket = {kind: 'perpl' as const, venueId: 'perpl-direct-testnet-v1', marketId: '16', displayName: 'Perpl Testnet',

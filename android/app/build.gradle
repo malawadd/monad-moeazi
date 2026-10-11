@@ -103,8 +103,8 @@ android {
         applicationId "com.moeazi.monad.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.7"
+        versionCode 10
+        versionName "1.9"
         buildConfigField "String", "MOEAZI_API_BASE_URL", "\"${moeaziConfig('moeazi.apiBaseUrl', 'MOEAZI_API_BASE_URL', 'http://10.0.2.2:3102')}\""
         if (System.getProperty('os.name').toLowerCase().contains('windows')) {
             externalNativeBuild {

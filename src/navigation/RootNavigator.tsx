@@ -3,6 +3,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {StyleSheet, Text, View} from 'react-native';
 import {AccountScreen} from '../screens/AccountScreen';
+import {ChartSettingsScreen} from '../screens/ChartSettingsScreen';
 import {ActivityDetailScreen} from '../screens/ActivityDetailScreen';
 import {ActivityScreen} from '../screens/ActivityScreen';
 import {AgentScreen} from '../screens/AgentScreen';
@@ -78,6 +79,7 @@ export function RootNavigator() {
       <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
       <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="ChartSettings" component={ChartSettingsScreen} />
       <Stack.Screen name="AgentSettings" component={AgentSettingsScreen} />
     </> : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
   </Stack.Navigator>;

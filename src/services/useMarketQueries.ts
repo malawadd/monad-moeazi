@@ -10,46 +10,67 @@ const ownerKey = (ownerAddress: string | null | undefined) => ownerAddress?.toLo
 export const marketCacheTimes = {directory: 30_000, snapshot: 10_000, candles: 60_000, account: 15_000, history: 15_000} as const;
 
 export function marketSnapshotQueryOptions(ownerAddress: string, venueId: string, marketId: string) {
+  const queryKey = marketQueryKeys.snapshot(ownerKey(ownerAddress), venueId, marketId);
   return {
-    queryKey: marketQueryKeys.snapshot(ownerKey(ownerAddress), venueId, marketId),
-    queryFn: () => marketDirectoryApi.snapshot(venueId, marketId),
+    queryKey,
+    queryFn: async () => {
+      const updateCount = queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0;
+      const response = await marketDirectoryApi.snapshot(venueId, marketId);
+      const state = queryClient.getQueryState(queryKey);
+      const newer = queryClient.getQueryData<typeof response>(queryKey);
+      return state && state.dataUpdateCount > updateCount && newer ? newer : response;
+    },
     staleTime: marketCacheTimes.snapshot,
   };
 }
 
 export function useMarketDirectoryQuery(ownerAddress: string | null, focused: boolean) {
   const owner = ownerKey(ownerAddress);
+  const queryKey = marketQueryKeys.directory(owner);
   return useQuery({
-    queryKey: marketQueryKeys.directory(owner),
-    queryFn: () => marketDirectoryApi.list(),
+    queryKey,
+    queryFn: async () => {
+      const updateCount = queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0;
+      const response = await marketDirectoryApi.list();
+      const state = queryClient.getQueryState(queryKey);
+      const newer = queryClient.getQueryData<typeof response>(queryKey);
+      return state && state.dataUpdateCount > updateCount && newer ? newer : response;
+    },
     enabled: Boolean(ownerAddress),
     staleTime: marketCacheTimes.directory,
     refetchInterval: focused ? marketCacheTimes.directory : false,
   });
 }
 
-export function useMarketSnapshotQuery(ownerAddress: string | null, venueId: string, marketId: string, enabled: boolean) {
+export function useMarketSnapshotQuery(ownerAddress: string | null, venueId: string, marketId: string, enabled: boolean, liveStream = false) {
   const owner = ownerKey(ownerAddress);
   return useQuery({
     ...marketSnapshotQueryOptions(owner, venueId, marketId),
     enabled: Boolean(ownerAddress && venueId && marketId && enabled),
-    refetchInterval: enabled ? marketCacheTimes.snapshot : false,
+    refetchInterval: enabled && !liveStream ? marketCacheTimes.snapshot : false,
   });
 }
 
 export function useMarketCandlesQuery(ownerAddress: string | null, venueId: string, marketId: string,
-  window: {resolutionSeconds: number; durationMs: number}, enabled: boolean) {
+  window: {resolutionSeconds: number; durationMs: number}, enabled: boolean, liveStream = false) {
   const owner = ownerKey(ownerAddress);
+  const queryKey = marketQueryKeys.candles(owner, venueId, marketId, window.resolutionSeconds);
   return useQuery({
-    queryKey: marketQueryKeys.candles(owner, venueId, marketId, window.resolutionSeconds),
-    queryFn: () => marketDirectoryApi.candles(venueId, marketId, {
-      resolutionSeconds: window.resolutionSeconds,
-      from: Date.now() - window.durationMs,
-      to: Date.now(),
-    }),
+    queryKey,
+    queryFn: async () => {
+      const updateCount = queryClient.getQueryState(queryKey)?.dataUpdateCount ?? 0;
+      const response = await marketDirectoryApi.candles(venueId, marketId, {
+        resolutionSeconds: window.resolutionSeconds,
+        from: Date.now() - window.durationMs,
+        to: Date.now(),
+      });
+      const state = queryClient.getQueryState(queryKey);
+      const newer = queryClient.getQueryData<typeof response>(queryKey);
+      return state && state.dataUpdateCount > updateCount && newer ? newer : response;
+    },
     enabled: Boolean(ownerAddress && venueId && marketId && enabled),
     staleTime: marketCacheTimes.candles,
-    refetchInterval: enabled ? marketCacheTimes.candles : false,
+    refetchInterval: enabled && !liveStream ? marketCacheTimes.candles : false,
   });
 }
 

@@ -15,6 +15,7 @@ import { operatorWallet } from "./vaultTrades.js";
 import { perplMobileTransaction } from "./perplMobileTransaction.js";
 import { createPerplOptimizerState, isPerplOptimizerDuration, perplOptimizerReview, PERPL_OPTIMIZER_VERSION } from "./perplOptimizerConfig.js";
 import { allOpenPerplMarketIds } from "./perplMarketSelection.js";
+import { ownerPerplCurrentSnapshot } from "./perplCurrentSnapshot.js";
 
 const activeStatuses = ["prepared", "activation_pending", "active", "stopping", "settling", "uncertain", "incomplete_settlement"];
 function validKey(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z0-9._:-]{8,160}$/.test(value); }
@@ -184,7 +185,9 @@ async function enroll(context: any) {
   } finally { await provider.destroy(); }
 }
 
-async function current(context: any) { const auth = await requireMera(context); return context.json(await meraQuery(auth.token, "monadVenueRuns", "getCurrent", {})); }
+async function current(context: any) { const auth = await requireMera(context);
+  const result = await meraQuery(auth.token, "monadVenueRuns", "getCurrent", {});
+  return context.json(await ownerPerplCurrentSnapshot(auth, result)); }
 async function history(context: any) {
   const auth = await requireMera(context); const limit = Number(context.req.query("limit") ?? 20); const cursor = context.req.query("cursor");
   return context.json(await meraQuery(auth.token, "monadVenueRuns", "getHistory", { limit, ...(cursor ? { cursor } : {}) }));

@@ -33,3 +33,19 @@ export function priceTicks(low: number, high: number) {
   for (let value = start, count = 0; value <= high + step * 1e-8 && count < 6; value += step, count++) result.push(value);
   return result.length ? result : [low, high];
 }
+
+export function visiblePriceRange(
+  candles: Array<{o: number; h: number; l: number; c: number}>,
+  xPositions: number[], offset: number, viewportWidth: number, currentPrices: number[] = [],
+) {
+  const visible = candles.flatMap((candle, index) => {
+    const x = xPositions[index];
+    return x >= offset - 12 && x <= offset + viewportWidth + 12
+      ? [candle.o, candle.h, candle.l, candle.c] : [];
+  });
+  const values = [...visible, ...currentPrices].filter(value => Number.isFinite(value) && value > 0);
+  if (!values.length) return {low: 0, high: 1};
+  const minimum = Math.min(...values), maximum = Math.max(...values);
+  const span = Math.max(maximum - minimum, maximum * 0.0005);
+  return {low: Math.max(0, minimum - span * 0.12), high: maximum + span * 0.12};
+}

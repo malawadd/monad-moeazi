@@ -191,6 +191,9 @@ export function PerplTradeScreen() {
       : Object.values(account.capabilities).every(enabled => !enabled)) ? <Notice tone="orange" title={legacyMode ? 'Legacy recovery is unavailable' : 'Manual Perpl gate is off'}
       message={legacyMode ? 'No owner-signed close, reduce, or cancel action is currently available.' : 'Trading and account mutation remain disabled until the local manual gate is explicitly enabled.'} /> : null}
     {legacyMode && !action ? <Notice tone="orange" title="Choose a recovery action" message="Return to the legacy account card and select a position or order to manage." /> : null}
+    {(selectedKind === 'market_entry' || selectedKind === 'limit_entry') && entrySizing.reason
+      ? <Notice tone="orange" title="Order review waiting for fresh data" message={entrySizing.reason}
+          actionLabel="Refresh market and account" onAction={() => { void pullToRefresh(); }} /> : null}
     <Button label={legacyMode ? 'Prepare exact legacy recovery review' : 'Prepare exact Mera review'} onPress={() => { void prepareOrder(); }} loading={busy}
       disabled={!account || !allowed || accountQuery.isLoading || (selectedKind === 'market_entry' || selectedKind === 'limit_entry') && !entrySizing.canReview} />
     {account ? <Button label="Manual Perpl account details" variant="secondary" onPress={() => navigation.navigate('PerplManualAccount')} /> : null}

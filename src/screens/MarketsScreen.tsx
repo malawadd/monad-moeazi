@@ -9,6 +9,7 @@ import {perplApi} from '../services/perplApi';
 import {formatMonadTimestamp, monadTimestampMillis} from '../services/monadFormatting';
 import type {MonadMarket} from '../types/monad';
 import {resolveMarketsForInput, useMarketDirectoryQuery} from '../services/useMarketQueries';
+import {usePerplMarketStream} from '../services/usePerplMarketStream';
 import {hasExecutableSpotRoute, isDirectoryMarketEligible, isHookedPool, isV4PoolLookup} from '../services/marketDirectoryPresentation';
 import {useApp} from '../state/AppContext';
 import {colors, spacing, type} from '../theme/tokens';
@@ -25,6 +26,7 @@ export function MarketsScreen() {
   const focused = useIsFocused();
   const {ownerAddress} = useApp();
   const directory = useMarketDirectoryQuery(ownerAddress, focused);
+  usePerplMarketStream(ownerAddress, null, 60, focused);
   const {isStale: directoryStale, refetch: refetchDirectory} = directory;
   const [fallback, setFallback] = useState<MarketDirectoryRow[]>([]);
   const [resolved, setResolved] = useState<MarketDirectoryRow[]>([]);

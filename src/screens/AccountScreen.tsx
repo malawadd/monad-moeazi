@@ -24,6 +24,7 @@ export function AccountScreen() {
       <Text style={s.body}>This Mera address is used on Monad Testnet (chain 10143). Signing requests open short-lived sessions; private keys are not stored by Moeazi.</Text>
     </Panel>
     <Button label="Trade notification settings" variant="secondary" onPress={() => navigation.navigate('NotificationSettings' as never)} />
+    <Button label="Market chart settings" variant="secondary" onPress={() => navigation.navigate('ChartSettings' as never)} />
     <Button label="Sign out on this device" variant="secondary" loading={busy} onPress={() => {void signOut();}} />
   </Screen>;
 }

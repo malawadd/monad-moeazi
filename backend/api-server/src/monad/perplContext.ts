@@ -57,7 +57,7 @@ export async function readPerplContext(api = new PerplApiClient()): Promise<Perp
     }
     return { id: integer(market.id), symbol: String(market.symbol), name: String(market.name ?? market.symbol),
       isOpen: Boolean(config.is_open), priceDecimals: integer(config.price_decimals), sizeDecimals: integer(config.size_decimals),
-      initialMarginBps, maintenanceMarginBps, maxLeverage,
+      initialMarginBps, maintenanceMarginBps, maintenanceMarginFactor: maintenanceFactor, maxLeverage,
       minPostingUnits: amount(config.min_posting_amount ?? "0", "minimum posting amount"),
       maxMarketSlippageBps: integer(market.order_max_market_slippage_bps),
       makerFeeMicros: integer(config.maker_fee), takerFeeMicros: integer(config.taker_fee),

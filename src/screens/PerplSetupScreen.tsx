@@ -10,8 +10,8 @@ import {openMeraSigningSession} from '../services/wallet/meraAuth';
 import {effectivePerplMarketSlippageBps, findPerplVenue, isPerplDirectOptimizerDuration,
   PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS, PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS,
   PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS, validatePreparedPerpl, validatePerplRawTransaction,
-  validatePerplSignature} from '../services/perplValidation';
-import type {PerplPreparedEnrollment, PerplVenue} from '../types/perpl';
+  validatePerplRunOwner, validatePerplSignature} from '../services/perplValidation';
+import type {PerplPreparedEnrollment, PerplRun, PerplVenue} from '../types/perpl';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -26,6 +26,9 @@ export function PerplSetupScreen() {
   const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState('');
   const [walletAusd, setWalletAusd] = useState('Checking Mera balance…');
+  const [activeRun, setActiveRun] = useState<PerplRun | null>(null);
+  const [checkingActiveRun, setCheckingActiveRun] = useState(true);
+  const [activeRunError, setActiveRunError] = useState('');
 
   const loadVenue = useCallback(async () => {
     setError('');
@@ -52,7 +55,19 @@ export function PerplSetupScreen() {
       setWalletAusd(balance ? `${formatMonadUnits(balance.amountUnits, balance.decimals)} AUSD` : 'Not returned');
     } catch { setWalletAusd('Unavailable'); }
   }, [ownerAddress]);
-  useFocusEffect(useCallback(() => { void loadVenue(); void loadWalletAusd(); }, [loadVenue, loadWalletAusd]));
+  const loadActiveRun = useCallback(async () => {
+    setCheckingActiveRun(true); setActiveRunError('');
+    try {
+      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      const currentRun = await fetchActivePerplRun(ownerAddress);
+      setActiveRun(currentRun);
+      if (currentRun) setPrepared(null);
+    } catch (reason) {
+      setActiveRun(null);
+      setActiveRunError(reason instanceof Error ? reason.message : 'An active Perpl run could not be checked.');
+    } finally { setCheckingActiveRun(false); }
+  }, [ownerAddress]);
+  useFocusEffect(useCallback(() => { void loadVenue(); void loadWalletAusd(); void loadActiveRun(); }, [loadVenue, loadWalletAusd, loadActiveRun]));
 
   function terms() {
     if (!venue?.enabled || !venue.collateral || !venue.limits) throw new Error(venue?.reasonMessage || venue?.reason || 'Perpl enrollment is currently unavailable.');
@@ -80,9 +95,22 @@ export function PerplSetupScreen() {
   }
 
   async function prepare() {
+    if (checkingActiveRun || activeRun || activeRunError) {
+      setError(activeRunError || 'Check the existing Perpl run before preparing another enrollment.');
+      return;
+    }
     setBusy(true); setError(''); setPrepared(null); setUncertain(false);
     try {
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      let latestRun: PerplRun | null;
+      try { latestRun = await fetchActivePerplRun(ownerAddress); }
+      catch (reason) {
+        const message = reason instanceof Error ? reason.message : 'The active Perpl run could not be checked.';
+        setActiveRunError(message);
+        throw new Error(`The active Perpl run could not be checked. ${message}`);
+      }
+      setActiveRun(latestRun);
+      if (latestRun) throw new Error('A Perpl run is already active. Review its status before starting another enrollment.');
       const requested = terms();
       const review = await perplApi.prepare({...requested, venueId: venue!.venueId as 'perpl-direct-testnet-v1' | 'perpl-testnet-v1', chainId: 10143, idempotencyKey: createPerplIdempotencyKey()});
       validatePreparedPerpl(review, {ownerAddress, venue: venue!, ...requested});
@@ -94,6 +122,17 @@ export function PerplSetupScreen() {
   async function signAndEnroll() {
     if (!prepared || !ownerAddress || !venue) return;
     setBusy(true); setError('');
+    let latestRun: PerplRun | null;
+    try {
+      latestRun = await fetchActivePerplRun(ownerAddress);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'The active Perpl run could not be checked.';
+      setPrepared(null); setActiveRunError(message); setError(`The active Perpl run could not be checked. ${message}`); setBusy(false); return;
+    }
+    setActiveRun(latestRun);
+    if (latestRun) {
+      setPrepared(null); setError('A Perpl run is already active. Review its status before signing another enrollment.'); setBusy(false); return;
+    }
     let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     let signaturesSent = false;
     try {
@@ -122,10 +161,22 @@ export function PerplSetupScreen() {
   return <Screen onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perpl · AUSD Testnet setup" title="Choose amount and duration" copy="One Mera unlock signs the exact AUSD funding transaction and Perpl mandate. Per-order limits and market selection come from the prepared review." />
     {error ? <Notice live tone="rose" title="Perpl setup could not continue" message={error} actionLabel={!prepared && !uncertain ? 'Retry context' : undefined} onAction={() => { void loadVenue(); }} /> : null}
+    {activeRunError ? <Notice live tone="rose" title="Could not check Perpl run status" message={activeRunError} actionLabel="Check again" onAction={() => { void loadActiveRun(); }} /> : null}
+    {checkingActiveRun && !activeRunError ? <LoadingBlock label="Checking for an active Perpl run" lines={2} /> : null}
+    {activeRun ? <Card tint="#E9F5FF">
+      <Text style={s.strong}>A Perpl run is already active</Text>
+      <DataRow label="Run ID" value={activeRun.runId} />
+      <DataRow label="Status" value={activeRun.status} />
+      <DataRow label="Venue" value={activeRun.venueId === 'perpl-direct-testnet-v1' ? 'Direct onchain' : 'Perpl API'} />
+      {activeRun.expiresAt ? <DataRow label="Run expires" value={formatMonadTimestamp(activeRun.expiresAt)} /> : null}
+      <Text style={s.body}>Review this run before starting another enrollment.</Text>
+      <Button label="Open Perpl run status" onPress={() => navigation.navigate('PerplStatus')} />
+      <Button label="Refresh active run" variant="secondary" onPress={() => { void loadActiveRun(); }} loading={checkingActiveRun} />
+    </Card> : null}
     {venue && !venue.enabled ? <Notice tone="orange" title="Perpl enrollment is paused" message={venue.reasonMessage ?? venue.reason ?? 'The venue service has not enabled Testnet enrollment.'} /> : null}
     {!venue && !error ? <LoadingBlock label="Loading live Perpl limits" lines={3} /> : null}
     {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>The service may still be reconciling your signed setup. Check the run and Activity before preparing another enrollment.</Text><Button label="Check Perpl status" onPress={() => navigation.navigate('PerplStatus')} /></Card> : null}
-    {!prepared && !uncertain && venue?.enabled ? <Card>
+    {!activeRun && !activeRunError && !checkingActiveRun && !prepared && !uncertain && venue?.enabled ? <Card>
       <Text style={s.strong}>Live AUSD setup</Text>
       <DataRow label="Available in Mera wallet" value={walletAusd} />
       {directOptimizer ? <DataRow label="Funding amount" value="100 AUSD · fixed for this experiment" /> : null}
@@ -136,9 +187,9 @@ export function PerplSetupScreen() {
       {venue.limits?.backendMaxMarketSlippageBps ? <DataRow label="Backend market-order slippage cap" value={`${venue.limits.backendMaxMarketSlippageBps} bps`} /> : null}
       {directOptimizer ? <DataRow label="Allowed duration" value={`${PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS / 60}–${PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS / 60} minutes · default ${PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS / 60}`} />
         : lowerBound && upperBound ? <DataRow label="Allowed duration" value={`${Math.ceil(lowerBound / 60)}–${Math.floor(upperBound / 60)} minutes`} /> : null}
-      <Button label="Prepare exact Perpl review" onPress={() => { void prepare(); }} loading={busy} />
+      <Button label="Prepare exact Perpl review" onPress={() => { void prepare(); }} loading={busy} disabled={checkingActiveRun || Boolean(activeRun) || Boolean(activeRunError)} />
     </Card> : null}
-    {prepared ? <>
+    {prepared && !activeRun && !activeRunError && !checkingActiveRun ? <>
       <Card>
         <Text style={s.strong}>AUSD funding transaction</Text>
         <DataRow label="Mera owner" value={prepared.ownerAddress} />
@@ -190,6 +241,17 @@ export function PerplSetupScreen() {
     </> : null}
     <Button label="Perpl positions and history" variant="secondary" onPress={() => navigation.navigate('PerplStatus')} />
   </Screen>;
+}
+
+async function fetchActivePerplRun(ownerAddress: string): Promise<PerplRun | null> {
+  const {current} = await perplApi.current();
+  if (!current) return null;
+  validatePerplRunOwner(current, ownerAddress);
+  return isTerminalRun(current.status) ? null : current;
+}
+
+function isTerminalRun(status: string) {
+  return new Set(['stopped', 'settled', 'failed', 'expired', 'inactive', 'complete', 'completed']).has(status.toLowerCase());
 }
 
 function maximumCost(gasLimit: string, maxFee: string) {

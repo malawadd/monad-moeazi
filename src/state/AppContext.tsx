@@ -1,4 +1,4 @@
-import React, {createContext, PropsWithChildren, useContext, useEffect, useState} from 'react';
+import React, {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from 'react';
 import {previewActivity, previewHome, previewLimits, previewMarkets} from '../data/fixtures';
 import {AccountBootstrap, mobileApi, refreshSession} from '../services/apiClient';
 import {getNotificationPreferences, getPushRegistrationAdapter} from '../services/notifications/NotificationClient';
@@ -7,6 +7,7 @@ import {clearSession} from '../services/sessionStore';
 import {getDeviceIdentity} from '../services/deviceIdentity';
 import {openMeraSigningSession, type PasskeyAction} from '../services/wallet/meraAuth';
 import {ActivityItem, AutopilotLimits, MarketSummary, MobileHomeSnapshot} from '../types/mobile';
+import {clearOwnerScopedQueryCache} from '../services/queryCache';
 
 export type MobileStopResult = Awaited<ReturnType<typeof mobileApi.stopAutopilot>>;
 type Mode = 'loading' | 'signed-out' | 'preview' | 'authenticated';
@@ -37,6 +38,13 @@ export function AppProvider({children}: PropsWithChildren) {
   const [account, setAccount] = useState<AccountBootstrap | null>(null);
   const [activityRows, setActivityRows] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const previousQueryOwner = useRef<string | null>(null);
+
+  useEffect(() => {
+    const nextOwner = mode === 'authenticated' && ownerAddress ? ownerAddress.toLowerCase() : null;
+    if (previousQueryOwner.current !== nextOwner) clearOwnerScopedQueryCache();
+    previousQueryOwner.current = nextOwner;
+  }, [mode, ownerAddress]);
 
   async function loadAuthenticated(address: string) {
     setAccount(null); setHome(previewHome); setActivityRows([]); setLimits(null);

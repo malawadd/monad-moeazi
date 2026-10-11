@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "deploymentStatus": "verified on Monad Testnet at finalized block 69941795",
+  "verified": true,
+  "addresses": {
+    "uniswapV4DynamicAdapter": "0x0db92B0f59981DA38d88E07346a5eb93Ff1a0DBd"
+  },
+  "codeHashes": {
+    "uniswapV4DynamicAdapter": "0x5b866d2e46c9048fc0a1316d845eb3586382976c311a1565e663b8ba18c55da1"
+  },
+  "source": {
+    "revision": "85466a656d3c42537991480724235b4e150c4155-dirty-v4-dynamic",
+    "foundry": "v1.8.4",
+    "solc": "0.8.26",
+    "evmVersion": "cancun",
+    "optimizer": true,
+    "optimizerRuns": 10000,
+    "contractSourceHash": "0xb1fc7258b0875cc3478307703bb608ec14ae6935f3f148e1b462490a5db25e97"
+  },
+  "deploymentReceipt": {
+    "status": "finalized success",
+    "txHash": "0x04e41215778eeecbb06dc3eb693fb9535130872a6deb9b631707b270cd9d3c2b",
+    "blockNumber": 69941795
+  },
+  "poolManager": "0x451D64ab3b650040d2aE1886602b97ed6eDc643d"
+}

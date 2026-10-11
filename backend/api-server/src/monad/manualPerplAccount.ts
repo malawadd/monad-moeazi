@@ -1,7 +1,6 @@
-import { Contract, Interface, ZeroAddress, formatUnits, getAddress } from "ethers";
+import { Contract, formatUnits } from "ethers";
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
-import { meraMutation } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
 import { MonadApiError } from "./config.js";
 import { AUSD_DECIMALS, ERC20_ABI } from "./constants.js";
@@ -10,163 +9,182 @@ import { monadProvider, finalizedBlockNumber, requireContractCode } from "./prov
 import { PERPL_CHAIN_ID, PERPL_TESTNET_AUSD, PERPL_TESTNET_EXCHANGE, PERPL_DIRECT_VENUE_ID,
   PerplApiError } from "./perplConfig.js";
 import { readPerplContext } from "./perplContext.js";
-import { readDirectAccount, readDirectOrder } from "./perplDirectState.js";
-import { storedAccount, persistPrepared, storedIdempotentOperation, sha256Json, integerUnits, validateIdempotencyKey,
-  manualOperationDto, manualPerplEnabled, MANUAL_DA_ABI, MANUAL_DA_FACTORY_ABI, MANUAL_PERPL_FACTORY,
-  requireManualPerplActions } from "./manualPerplShared.js";
+import { readDirectManualState, readLegacyManualState } from "./manualPerplState.js";
+import { manualPerplAccountCall } from "./manualPerplCalls.js";
+import { storedManualAccounts, persistPrepared, storedIdempotentOperation, sha256Json, integerUnits,
+  validateIdempotencyKey, manualOperationDto, manualPerplEnabled, requireManualPerplActions } from "./manualPerplShared.js";
 
-function walletAUsdAbi() { return ERC20_ABI; }
-function daFactory(provider: any) { return new Contract(MANUAL_PERPL_FACTORY, MANUAL_DA_FACTORY_ABI, provider); }
-function decimalsToNumber(value: any) { return Number.isSafeInteger(Number(value)) ? Number(value) : 0; }
+const LEGACY_ACTIONS = new Set(["legacy_withdraw", "legacy_rescue"]);
+const ACCOUNT_ACTIONS = new Set(["approve", "open", "deposit", "withdraw", ...LEGACY_ACTIONS]);
 
 async function account(context: any) {
-  const auth = await requireMera(context); const saved: any = await storedAccount(auth.token);
+  const auth = await requireMera(context); const saved: any = await storedManualAccounts(auth.token);
   let provider: any;
   try {
-    provider = await monadProvider(); const blockNumber = await finalizedBlockNumber(provider);
-    await requireContractCode(provider, PERPL_TESTNET_AUSD, "Perpl AUSD");
-    const token = new Contract(PERPL_TESTNET_AUSD, walletAUsdAbi(), provider);
-    const [walletUnits, tokenDecimals] = await Promise.all([token.balanceOf(auth.ownerAddress, { blockTag: blockNumber }), token.decimals({ blockTag: blockNumber })]);
-    if (Number(tokenDecimals) !== AUSD_DECIMALS) throw new PerplApiError("AUSD decimals differ from the pinned Perpl Testnet deployment.", 503, "perpl_collateral_mismatch");
+    provider = await monadProvider();
+    const network = await provider.getNetwork();
+    if (network.chainId !== BigInt(PERPL_CHAIN_ID)) throw new MonadApiError("Manual Perpl requires Monad Testnet.", 503, "perpl_wrong_chain");
+    const blockNumber = await finalizedBlockNumber(provider);
+    await Promise.all([requireContractCode(provider, PERPL_TESTNET_AUSD, "Perpl AUSD"),
+      requireContractCode(provider, PERPL_TESTNET_EXCHANGE, "Perpl exchange")]);
     const live = await readPerplContext();
-    const enabled = manualPerplEnabled();
-    if (!saved) return context.json({ chainId: PERPL_CHAIN_ID, ownerAddress: auth.ownerAddress, accountAddress: null, accountId: null,
-      status: "not_created", collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: 6,
-        balanceUnits: "0", lockedUnits: "0", walletBalanceUnits: String(walletUnits), delegatedTokenUnits: "0" },
-      positions: [], orders: [], observedAt: Date.now(), blockNumber, capabilities: { createAccount: enabled, fundAccount: false, openAccount: false,
-        deposit: false, withdraw: false, marketOrders: false, limitOrders: false, cancelOrders: false, closePosition: false, reducePosition: false } });
-    const daAddress = getAddress(saved.accountAddress);
-    await requireContractCode(provider, daAddress, "Perpl manual delegated account");
-    const da = new Contract(daAddress, MANUAL_DA_ABI, provider);
-    const [owner, exchange, accountIdRaw, daUnits] = await Promise.all([da.owner({ blockTag: blockNumber}), da.exchange({ blockTag: blockNumber}),
-      da.accountId({ blockTag: blockNumber }), token.balanceOf(daAddress, { blockTag: blockNumber })]);
-    if (String(owner).toLowerCase() !== auth.ownerAddress.toLowerCase()
-        || String(exchange).toLowerCase() !== PERPL_TESTNET_EXCHANGE.toLowerCase()) {
-      throw new MonadApiError("Stored Perpl delegated account owner or exchange differs from the Mera review.", 409, "manual_perpl_account_mismatch");
+    const token = new Contract(PERPL_TESTNET_AUSD, ERC20_ABI, provider);
+    const [walletUnits, allowance, tokenDecimals] = await Promise.all([
+      token.balanceOf(auth.ownerAddress, { blockTag: blockNumber }),
+      token.allowance(auth.ownerAddress, PERPL_TESTNET_EXCHANGE, { blockTag: blockNumber }),
+      token.decimals({ blockTag: blockNumber }),
+    ]);
+    if (Number(tokenDecimals) !== AUSD_DECIMALS || live.limits.collateralAddress.toLowerCase() !== PERPL_TESTNET_AUSD.toLowerCase()) {
+      throw new PerplApiError("Perpl Testnet collateral differs from the pinned AUSD deployment.", 503, "perpl_collateral_mismatch");
     }
-    const accountId = Number(accountIdRaw); let accountRead: any = null;
-    if (Number.isSafeInteger(accountId) && accountId > 0) accountRead = await readDirectAccount(provider, accountId,
-      live.markets.filter((market) => market.isOpen).map((market) => market.id), daAddress);
-    const marketById = new Map(live.markets.map((market) => [market.id, market]));
-    const positions = (accountRead?.positions ?? []).map((position: any) => {
-      const market = marketById.get(Number(position.mkt)); const priceScale = 10n ** BigInt(market?.priceDecimals ?? 0);
-      const sizeScale = 10n ** BigInt(market?.sizeDecimals ?? 0); const deposit = BigInt(position.depositUnits ?? "0");
-      const notional = priceScale && sizeScale ? BigInt(position.ep) * BigInt(position.s) * 1_000_000n / (priceScale * sizeScale) : 0n;
-      const leverage = deposit > 0n ? Number(notional * 100n / deposit) / 100 : null;
-      return { marketId: String(position.mkt), symbol: market?.symbol ?? String(position.mkt), side: Number(position.sd) === 2 ? "short" : "long",
-        sizeUnits: String(position.s), entryPrice: String(position.ep), markPrice: String(position.markPrice), leverage,
-        unrealizedPnlUnits: String(position.pnlUnits), fundingPnlUnits: String(position.fundingPnlUnits ?? "0"),
-        priceDecimals: market?.priceDecimals ?? null, sizeDecimals: market?.sizeDecimals ?? null };
-    });
-    const orders = await readOpenOrders(provider, accountRead, live.markets, accountId);
-    const open = accountId > 0;
-    return context.json({ chainId: PERPL_CHAIN_ID, ownerAddress: auth.ownerAddress, accountAddress: daAddress, accountId: open ? accountId : null,
-      status: open ? "open" : "created", collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: 6,
-        balanceUnits: accountRead?.balanceUnits ?? "0", lockedUnits: accountRead?.lockedUnits ?? "0",
-        walletBalanceUnits: String(walletUnits), delegatedTokenUnits: String(daUnits) }, positions, orders,
+    const direct = await readDirectManualState(provider, auth.ownerAddress, live, blockNumber);
+    let legacy: any = null; let legacyReadError: string | null = null;
+    try { legacy = await readLegacyManualState(provider, auth.ownerAddress, saved?.legacy, live, blockNumber); }
+    catch (error) { legacyReadError = error instanceof Error ? error.message : "Legacy recovery account could not be verified."; }
+    const enabled = manualPerplEnabled(); const directOpen = Boolean(direct.accountId);
+    const accountRead: any = direct.account;
+    return context.json({ chainId: PERPL_CHAIN_ID, exchangeAddress: PERPL_TESTNET_EXCHANGE,
+      ownerAddress: auth.ownerAddress, accountMode: directOpen ? "direct_wallet" : "not_created",
+      accountAddress: directOpen ? auth.ownerAddress : null, accountId: direct.accountId,
+      status: directOpen ? "open" : "not_created", collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD,
+        decimals: AUSD_DECIMALS, balanceUnits: accountRead?.balanceUnits ?? "0", lockedUnits: accountRead?.lockedUnits ?? "0",
+        walletBalanceUnits: String(walletUnits), allowanceUnits: String(allowance) },
+      positions: direct.positions, orders: direct.orders,
+      legacyRecovery: legacy ? { accountMode: "legacy_delegated", status: legacy.accountId ? "open" : "created",
+        accountAddress: legacy.accountAddress, accountId: legacy.accountId, collateral: legacy.collateral,
+        positions: legacy.positions, orders: legacy.orders,
+        capabilities: { withdraw: enabled && Boolean(legacy.accountId), rescueTokens: enabled && BigInt(legacy.collateral.tokenBalanceUnits) > 0n,
+          marketOrders: enabled && Boolean(legacy.accountId), limitOrders: enabled && Boolean(legacy.accountId),
+          cancelOrders: enabled && Boolean(legacy.accountId), closePosition: enabled && Boolean(legacy.accountId),
+          reducePosition: enabled && Boolean(legacy.accountId) } }
+        : legacyReadError ? { accountMode: "legacy_delegated", status: "unavailable",
+          accountAddress: saved?.legacy?.accountAddress ?? null, accountId: null,
+          collateral: { balanceUnits: "0", lockedUnits: "0", tokenBalanceUnits: "0" }, positions: [], orders: [], error: legacyReadError,
+          capabilities: { withdraw: false, rescueTokens: false, marketOrders: false, limitOrders: false,
+            cancelOrders: false, closePosition: false, reducePosition: false } }
+        : { accountMode: null, status: "none", accountAddress: null, accountId: null,
+          collateral: { balanceUnits: "0", lockedUnits: "0", tokenBalanceUnits: "0" }, positions: [], orders: [],
+          capabilities: { withdraw: false, rescueTokens: false, marketOrders: false, limitOrders: false,
+            cancelOrders: false, closePosition: false, reducePosition: false } },
       observedAt: Date.now(), blockNumber: accountRead?.blockNumber ?? blockNumber,
-      capabilities: { createAccount: false, fundAccount: enabled, openAccount: enabled && !open, deposit: enabled && open, withdraw: enabled && open,
-        marketOrders: enabled && open, limitOrders: enabled && open, cancelOrders: enabled && open, closePosition: enabled && open,
-        reducePosition: enabled && open } });
+      capabilities: { approve: enabled, open: enabled && !directOpen, createAccount: enabled && !directOpen,
+        deposit: enabled && directOpen, withdraw: enabled && directOpen, marketOrders: enabled && directOpen,
+        limitOrders: enabled && directOpen, cancelOrders: enabled && directOpen, closePosition: enabled && directOpen,
+        reducePosition: enabled && directOpen } });
   } catch (error) {
     if (error instanceof MonadApiError) throw error;
-    return context.json({ chainId: PERPL_CHAIN_ID, ownerAddress: auth.ownerAddress,
-      accountAddress: saved?.accountAddress ?? null, accountId: saved?.accountId ?? null, status: "unavailable",
-      collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: 6, balanceUnits: saved?.balanceUnits ?? "0",
-        lockedUnits: saved?.lockedUnits ?? "0", walletBalanceUnits: "0", delegatedTokenUnits: "0" }, positions: [], orders: [],
+    return context.json({ chainId: PERPL_CHAIN_ID, exchangeAddress: PERPL_TESTNET_EXCHANGE,
+      ownerAddress: auth.ownerAddress, accountMode: "unavailable", accountAddress: null, accountId: null,
+      status: "unavailable", collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: AUSD_DECIMALS,
+        balanceUnits: "0", lockedUnits: "0", walletBalanceUnits: "0", allowanceUnits: "0" },
+      positions: [], orders: [], legacyRecovery: { accountMode: null, status: "unavailable", accountAddress: null,
+        accountId: null, collateral: { balanceUnits: "0", lockedUnits: "0", tokenBalanceUnits: "0" }, positions: [], orders: [],
+        capabilities: { withdraw: false, rescueTokens: false, marketOrders: false, limitOrders: false,
+          cancelOrders: false, closePosition: false, reducePosition: false } },
       observedAt: Date.now(), unavailable: true,
-      capabilities: { createAccount: manualPerplEnabled() && !saved, fundAccount: false, openAccount: false, deposit: false, withdraw: false,
+      capabilities: { approve: false, open: false, createAccount: false, deposit: false, withdraw: false,
         marketOrders: false, limitOrders: false, cancelOrders: false, closePosition: false, reducePosition: false } });
   } finally { await provider?.destroy(); }
 }
 
-async function readOpenOrders(provider: any, account: any, markets: any[], accountId: number) {
-  if (!account || !account.orders?.length) return [];
-  const block = account.blockNumber; const rows: any[] = [];
-  for (const lock of account.orders) {
-    for (const market of markets) {
-      try {
-        const order = await readDirectOrder(provider, market.id, Number(lock.lockId), block);
-        if (order.accountId !== accountId || order.orderId !== Number(lock.lockId)) continue;
-        rows.push({ orderId: String(order.orderId), marketId: String(market.id), symbol: market.symbol,
-          side: order.orderType === 0 ? "long" : order.orderType === 1 ? "short" : "unknown",
-          sizeUnits: String(order.size), price: String(order.price), status: "open", filledUnits: "0" });
-        break;
-      } catch { /* this lock ID belongs to a different market or is no longer live */ }
-    }
-  }
-  return rows;
-}
-
 async function prepareAccount(context: any) {
   const auth = await requireMera(context); const body = parseBody(await context.req.json());
-  const action = String(body.action ?? ""); const amount = ["fund", "open", "deposit", "withdraw"].includes(action)
-    ? integerUnits(body.amountUnits, "AUSD amount") : 0n;
+  const action = String(body.action ?? "");
+  if (!ACCOUNT_ACTIONS.has(action)) throw new MonadApiError("Manual Perpl account action is unsupported.", 400, "manual_perpl_action_invalid");
+  const amount = integerUnits(body.amountUnits, "AUSD amount");
   const idempotencyKey = validateIdempotencyKey(body.idempotencyKey); requireManualPerplActions();
-  if (!["create", "fund", "open", "deposit", "withdraw"].includes(action)) throw new MonadApiError("Manual Perpl account action is unsupported.", 400, "manual_perpl_action_invalid");
-  const intentHash = sha256Json({ owner: auth.ownerAddress.toLowerCase(), action, amountUnits: amount.toString() });
+  const accountMode = LEGACY_ACTIONS.has(action) ? "legacy_delegated" : "direct_wallet";
+  const intentHash = sha256Json({ owner: auth.ownerAddress.toLowerCase(), accountMode, action, amountUnits: amount.toString() });
   const prior = await storedIdempotentOperation(auth.token, idempotencyKey, intentHash);
   if (prior) return context.json(manualOperationDto(prior, action, prior.actionDetails ?? {}));
-  const saved: any = await storedAccount(auth.token);
-  if (action !== "create" && !saved) throw new MonadApiError("Create the Mera-owned delegated account before managing AUSD or orders.", 409, "manual_perpl_account_missing");
-  const provider = await monadProvider();
+  const saved: any = await storedManualAccounts(auth.token); const provider = await monadProvider();
   try {
+    if ((await provider.getNetwork()).chainId !== BigInt(PERPL_CHAIN_ID)) {
+      throw new MonadApiError("Manual Perpl account actions require Monad Testnet.", 503, "perpl_wrong_chain");
+    }
     const live = await readPerplContext(); const checkpoint = await finalizedBlockNumber(provider);
-    let to: string; let data: string; let accountAddress = saved?.accountAddress ? getAddress(saved.accountAddress) : undefined;
-    let accountId: number | undefined; let before: any = {};
-    const token = new Contract(PERPL_TESTNET_AUSD, walletAUsdAbi(), provider);
-    const factory = daFactory(provider); const daInterface = new Interface(MANUAL_DA_ABI);
-    if (action === "create") {
-      if (saved) throw new MonadApiError("This Mera owner already has a manual Perpl delegated account.", 409, "manual_perpl_account_exists");
-      await requireContractCode(provider, MANUAL_PERPL_FACTORY, "Perpl delegated-account factory");
-      accountAddress = getAddress(await factory.create.staticCall(ZeroAddress, 0, "0x", { from: auth.ownerAddress }));
-      if ((await provider.getCode(accountAddress)) !== "0x") throw new MonadApiError("Predicted Perpl account already exists; reconcile it before preparing another.", 409, "manual_perpl_account_exists");
-      to = MANUAL_PERPL_FACTORY; data = factory.interface.encodeFunctionData("create", [ZeroAddress, 0, "0x"]);
-    } else {
-      await requireContractCode(provider, accountAddress!, "Perpl manual delegated account");
-      const da = new Contract(accountAddress!, MANUAL_DA_ABI, provider);
-      const [owner, exchange, id, daAusd, walletAusd] = await Promise.all([da.owner({ blockTag: checkpoint }), da.exchange({ blockTag: checkpoint }),
-        da.accountId({ blockTag: checkpoint }), token.balanceOf(accountAddress!, { blockTag: checkpoint }), token.balanceOf(auth.ownerAddress, { blockTag: checkpoint })]);
-      if (String(owner).toLowerCase() !== auth.ownerAddress.toLowerCase() || String(exchange).toLowerCase() !== live.exchangeAddress.toLowerCase()) {
-        throw new MonadApiError("Perpl delegated account owner or exchange does not match the live Mera account.", 409, "manual_perpl_account_mismatch");
-      }
-      accountId = Number(id); before = { accountId, daAusdUnits: String(daAusd), walletAusdUnits: String(walletAusd) };
-      if (action === "fund") {
-        if (BigInt(walletAusd) < amount) throw new MonadApiError("Mera wallet has insufficient AUSD to fund the manual account.", 409, "manual_perpl_ausd_insufficient");
-        to = PERPL_TESTNET_AUSD; data = token.interface.encodeFunctionData("transfer", [accountAddress, amount]);
+    await Promise.all([requireContractCode(provider, PERPL_TESTNET_AUSD, "Perpl AUSD"),
+      requireContractCode(provider, PERPL_TESTNET_EXCHANGE, "Perpl exchange")]);
+    const token = new Contract(PERPL_TESTNET_AUSD, ERC20_ABI, provider);
+    if (Number(await token.decimals({ blockTag: checkpoint })) !== AUSD_DECIMALS
+        || live.limits.collateralAddress.toLowerCase() !== PERPL_TESTNET_AUSD.toLowerCase()) {
+      throw new PerplApiError("Perpl Testnet collateral differs from the pinned AUSD deployment.", 503, "perpl_collateral_mismatch");
+    }
+    const direct = await readDirectManualState(provider, auth.ownerAddress, live, checkpoint);
+    const legacy = await readLegacyManualState(provider, auth.ownerAddress, saved?.legacy, live, checkpoint);
+    let operationAction = ""; let reviewAccountAddress = auth.ownerAddress;
+    let accountId: number | undefined; let before: Record<string, unknown> = {};
+    const walletUnits = BigInt(await token.balanceOf(auth.ownerAddress, { blockTag: checkpoint }));
+    const allowance = BigInt(await token.allowance(auth.ownerAddress, PERPL_TESTNET_EXCHANGE, { blockTag: checkpoint }));
+    if (accountMode === "direct_wallet") {
+      if (action === "approve") {
+        operationAction = "approve_collateral";
+        before = { walletAusdUnits: walletUnits.toString(), allowanceUnits: allowance.toString() };
       } else if (action === "open") {
-        if (accountId > 0) throw new MonadApiError("Manual Perpl account is already open.", 409, "manual_perpl_account_open");
-        if (amount < BigInt(live.limits.minAccountOpenUnits)) throw new MonadApiError(`Perpl account opening requires at least ${live.limits.minAccountOpenUnits} AUSD base units.`, 400, "manual_perpl_open_minimum");
-        if (BigInt(daAusd) < amount) throw new MonadApiError("Fund the delegated account with the exact AUSD amount before opening the exchange account.", 409, "manual_perpl_fund_required");
-        to = accountAddress!; data = daInterface.encodeFunctionData("createAccount", [amount]);
-      } else if (action === "deposit") {
-        if (accountId <= 0) throw new MonadApiError("Open the Perpl exchange account before depositing collateral.", 409, "manual_perpl_account_not_open");
-        if (amount < BigInt(live.limits.minDepositUnits)) throw new MonadApiError("Deposit is below Perpl's live minimum.", 400, "manual_perpl_deposit_minimum");
-        if (BigInt(daAusd) < amount) throw new MonadApiError("Fund the delegated account with AUSD before depositing it to Perpl.", 409, "manual_perpl_fund_required");
-        const snapshot = await readDirectAccount(provider, accountId, live.markets.filter((m) => m.isOpen).map((m) => m.id), accountAddress!);
-        before = { ...before, balanceUnits: snapshot.balanceUnits, lockedUnits: snapshot.lockedUnits };
-        to = accountAddress!; data = daInterface.encodeFunctionData("depositCollateral", [amount]);
+        if (direct.accountId) throw new MonadApiError("This Mera wallet already owns an open Perpl account.", 409, "manual_perpl_account_exists");
+        if (amount < BigInt(live.limits.minAccountOpenUnits)) throw new MonadApiError(
+          `Perpl account creation requires at least ${formatUnits(live.limits.minAccountOpenUnits, AUSD_DECIMALS)} AUSD.`,
+          400, "manual_perpl_open_minimum");
+        if (walletUnits < amount) throw new MonadApiError("Mera wallet has insufficient AUSD for the reviewed account deposit.", 409, "manual_perpl_ausd_insufficient");
+        if (allowance !== amount) throw new MonadApiError("Approve the exact AUSD deposit to Perpl before opening the direct account.",
+          409, "approval_required", { action: "approve", amountUnits: amount.toString(), tokenAddress: PERPL_TESTNET_AUSD,
+            spender: PERPL_TESTNET_EXCHANGE });
+        operationAction = "open_account";
+        before = { walletAusdUnits: walletUnits.toString(), allowanceUnits: allowance.toString(),
+          minAccountOpenUnits: live.limits.minAccountOpenUnits };
       } else {
-        if (accountId <= 0) throw new MonadApiError("Open the Perpl exchange account before withdrawing collateral.", 409, "manual_perpl_account_not_open");
-        const snapshot = await readDirectAccount(provider, accountId, live.markets.filter((m) => m.isOpen).map((m) => m.id), accountAddress!);
-        const free = BigInt(snapshot.balanceUnits) - BigInt(snapshot.lockedUnits);
-        if (amount > free || amount < BigInt(live.limits.minWithdrawalUnits)) throw new MonadApiError("Withdrawal exceeds free collateral or is below Perpl's live minimum.", 409, "manual_perpl_withdraw_limits");
-        before = { ...before, balanceUnits: snapshot.balanceUnits, lockedUnits: snapshot.lockedUnits };
-        to = accountAddress!; data = daInterface.encodeFunctionData("withdrawCollateral", [amount]);
+        if (!direct.accountId) throw new MonadApiError("Create the direct Mera-owned Perpl account before managing collateral.", 409, "manual_perpl_account_missing");
+        accountId = direct.accountId; reviewAccountAddress = auth.ownerAddress;
+        const account: any = direct.account;
+        if (action === "deposit") {
+          if (amount < BigInt(live.limits.minDepositUnits)) throw new MonadApiError("Deposit is below Perpl's live minimum.", 400, "manual_perpl_deposit_minimum");
+          if (walletUnits < amount) throw new MonadApiError("Mera wallet has insufficient AUSD for this deposit.", 409, "manual_perpl_ausd_insufficient");
+          if (allowance !== amount) throw new MonadApiError("Approve the exact AUSD deposit to Perpl before depositing.",
+            409, "approval_required", { action: "approve", amountUnits: amount.toString(), tokenAddress: PERPL_TESTNET_AUSD,
+              spender: PERPL_TESTNET_EXCHANGE });
+          operationAction = "deposit_collateral";
+        } else if (action === "withdraw") {
+          const free = BigInt(account.balanceUnits) - BigInt(account.lockedUnits);
+          if (amount > free || amount < BigInt(live.limits.minWithdrawalUnits)) throw new MonadApiError(
+            "Withdrawal exceeds free collateral or is below Perpl's live minimum.", 409, "manual_perpl_withdraw_limits");
+          operationAction = "withdraw_collateral";
+        } else throw new MonadApiError("Action does not apply to a direct Perpl account.", 400, "manual_perpl_action_invalid");
+        before = { accountId, balanceUnits: account.balanceUnits, lockedUnits: account.lockedUnits,
+          walletAusdUnits: walletUnits.toString(), allowanceUnits: allowance.toString() };
+      }
+    } else {
+      if (!legacy) throw new MonadApiError("No legacy delegated Perpl account is available for recovery.", 404, "manual_perpl_legacy_missing");
+      reviewAccountAddress = legacy.accountAddress; accountId = legacy.accountId ?? undefined;
+      const daTokenUnits = BigInt(legacy.collateral.tokenBalanceUnits);
+      if (action === "legacy_withdraw") {
+        if (!legacy.accountId || !legacy.account) throw new MonadApiError("Legacy Perpl account is not open.", 409, "manual_perpl_account_not_open");
+        const free = BigInt(legacy.account.balanceUnits) - BigInt(legacy.account.lockedUnits);
+        if (amount > free || amount < BigInt(live.limits.minWithdrawalUnits)) throw new MonadApiError(
+          "Legacy withdrawal exceeds free collateral or is below Perpl's live minimum.", 409, "manual_perpl_withdraw_limits");
+        operationAction = "legacy_withdraw_collateral";
+        before = { accountId, balanceUnits: legacy.account.balanceUnits, lockedUnits: legacy.account.lockedUnits,
+          delegatedTokenUnits: daTokenUnits.toString() };
+      } else {
+        if (amount > daTokenUnits) throw new MonadApiError("Legacy delegated account has insufficient stranded AUSD to rescue.",
+          409, "manual_perpl_legacy_rescue_insufficient");
+        operationAction = "legacy_rescue_tokens";
+        before = { accountId, delegatedTokenUnits: daTokenUnits.toString(), rescueTokenAddress: PERPL_TESTNET_AUSD };
       }
     }
-    const built = await buildEip1559Transaction(provider, auth.ownerAddress, to!, data!);
-    const actionDetails = { action, ownerAddress: auth.ownerAddress, chainId: PERPL_CHAIN_ID, venueId: PERPL_DIRECT_VENUE_ID,
-      accountAddress: accountAddress ?? null, ...(accountId ? { accountId } : {}), ...(amount > 0n ? { amountUnits: amount.toString() } : {}),
-      ...before, ...(action === "create" ? { operator: ZeroAddress, accountOwner: auth.ownerAddress } : {}),
-      method: action === "create" ? "create(address,uint256,bytes)" : action === "fund" ? "transfer(address,uint256)"
-        : action === "open" ? "createAccount(uint256)" : action === "deposit" ? "depositCollateral(uint256)" : "withdrawCollateral(uint256)",
-      gas: built.gas, collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: 6 } };
+    const call = manualPerplAccountCall(action, amount, reviewAccountAddress);
+    const built = await buildEip1559Transaction(provider, auth.ownerAddress, call.to, call.data);
+    const actionDetails = { action, accountMode, ownerAddress: auth.ownerAddress, chainId: PERPL_CHAIN_ID,
+      venueId: PERPL_DIRECT_VENUE_ID, exchangeAddress: PERPL_TESTNET_EXCHANGE, accountAddress: reviewAccountAddress,
+      ...(accountId ? { accountId } : {}), amountUnits: amount.toString(), ...before,
+      ...(action === "approve" ? { tokenAddress: PERPL_TESTNET_AUSD, spender: PERPL_TESTNET_EXCHANGE }
+        : action === "legacy_rescue" ? { tokenAddress: PERPL_TESTNET_AUSD } : {}), method: call.method,
+      target: call.to, transactionValue: "0", gas: built.gas,
+      collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: AUSD_DECIMALS } };
     const operationId = randomUUID(); const expiresAt = Date.now() + 240_000;
-    const row: any = await persistPrepared(auth.token, { operationId, idempotencyKey, intentHash, action: action === "create" ? "create_account"
-      : action === "open" ? "open_account" : action === "deposit" ? "deposit_collateral" : action === "withdraw" ? "withdraw_collateral" : "fund_account",
-      actionJson: JSON.stringify(actionDetails), transactionJson: JSON.stringify(built.transaction), nonce: built.transaction.nonce,
-      expiresAt, accountAddress, ...(accountId ? { accountId } : {}) });
+    const row: any = await persistPrepared(auth.token, { operationId, idempotencyKey, intentHash,
+      action: operationAction, actionJson: JSON.stringify(actionDetails), transactionJson: JSON.stringify(built.transaction),
+      nonce: built.transaction.nonce, expiresAt, accountAddress: reviewAccountAddress,
+      accountMode, ...(accountId ? { accountId } : {}) });
     return context.json(manualOperationDto(row, action, actionDetails), 201);
   } finally { await provider.destroy(); }
 }

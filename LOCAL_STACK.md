@@ -116,6 +116,22 @@ For the current deterministic optimizer runbook, follow
 [Perpl optimizer operations](docs/REPEAT_PERPL_OPTIMIZER.md). The
 [three-cycle manual guide](docs/REPEAT_PERPL_DIRECT_CYCLES.md) describes the
 earlier acceptance workflow.
+
+Manual Perpl accounts have a separate global Testnet gate, independent of the
+Perpl autonomy gate. The loopback operator console shows the configured and
+effective manual gate plus Monad RPC and Perpl exchange readiness. It can only
+enable or disable the global gate; each user's direct-wallet Perpl account,
+deposited AUSD, orders, and positions remain in that user's app, and every
+transaction still requires that user's fresh Mera signature. Existing delegated
+manual accounts remain in a labeled owner-only recovery view; autonomous vaults
+stay separate. The [manual account guide](docs/MANUAL_PERPL_TESTNET.md) covers
+exact approval, one-time opening deposit, later orders, and legacy recovery.
+Gate changes and audit entries persist
+in ignored `backend/.data/manual-perpl-gate.json` across API and console restarts.
+The generated `MONAD_TESTNET_MANUAL_PERPL_ENABLED` environment value is the
+initial value when no persisted gate file exists and remains false for a fresh
+stack. A separate deployment has its own environment and local `.data` state.
+
 The API transport still requires `PERPL_API_ORIGIN` in ignored
 `backend/.env.local` and an origin whitelisted by Perpl. On 2026-10-07, Perpl
 rejected the intended Moeazi origin for API-key enrollment. The

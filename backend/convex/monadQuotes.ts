@@ -25,7 +25,9 @@ export const getOperatorQuote = query({
 
 export const recordQuote = mutation({
   args: { subject: v.string(), ownerAddress: v.string(), quoteId: v.string(), accountScope: v.union(v.literal("wallet"), v.literal("vault")),
-    venue: v.string(), tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()), amountInUnits: v.string(), amountOutUnits: v.string(),
+    venue: v.string(), tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()),
+    poolId: v.optional(v.string()), poolKeyJson: v.optional(v.string()), marketId: v.optional(v.string()),
+    inputDecimals: v.optional(v.number()), outputDecimals: v.optional(v.number()), amountInUnits: v.string(), amountOutUnits: v.string(),
     minimumAmountOutUnits: v.string(), slippageBps: v.number(), feeProvenance: v.string(), expiresAt: v.number(), gasJson: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireMonadOperator(ctx);
@@ -38,6 +40,31 @@ export const recordQuote = mutation({
         || !/^\d+$/.test(args.minimumAmountOutUnits) || BigInt(args.amountInUnits) <= 0n
         || BigInt(args.minimumAmountOutUnits) <= 0n || args.tokenIn.toLowerCase() === args.tokenOut.toLowerCase()) {
       throw new Error("Monad quote envelope is invalid or expired.");
+    }
+    const hasPoolId = args.poolId !== undefined;
+    if (hasPoolId) {
+      let key: any; let gas: any;
+      try { key = JSON.parse(args.poolKeyJson ?? ""); } catch { key = null; }
+      try { gas = JSON.parse(args.gasJson ?? ""); } catch { gas = null; }
+      if (args.venue !== "uniswap_v4_testnet" || args.accountScope !== "wallet"
+          || !/^0x[a-f0-9]{64}$/.test(args.poolId!) || args.poolAddress !== undefined
+          || !/^v4_0x[a-f0-9]{64}$/.test(args.marketId ?? "") && args.marketId !== "WMON_USDC"
+          || !key || !/^0x[a-f0-9]{40}$/i.test(key.currency0 ?? "") || !/^0x[a-f0-9]{40}$/i.test(key.currency1 ?? "")
+          || !/^0x[a-f0-9]{40}$/i.test(key.hooks ?? "") || !Number.isSafeInteger(key.fee) || key.fee < 0 || key.fee > 0xffffff
+          || !Number.isSafeInteger(key.tickSpacing) || key.tickSpacing <= 0 || key.tickSpacing > 0x7fffff
+          || !Number.isSafeInteger(args.inputDecimals) || args.inputDecimals! < 0 || args.inputDecimals! > 36
+          || !Number.isSafeInteger(args.outputDecimals) || args.outputDecimals! < 0 || args.outputDecimals! > 36
+          || ![key.currency0.toLowerCase(), key.currency1.toLowerCase()].includes(args.tokenIn.toLowerCase())
+          || ![key.currency0.toLowerCase(), key.currency1.toLowerCase()].includes(args.tokenOut.toLowerCase())
+          || !gas || !/^\d+$/.test(gas.gasLimit ?? "") || BigInt(gas.gasLimit) <= 0n || BigInt(gas.gasLimit) > 3_000_000n
+          || !/^\d+$/.test(gas.maxFeePerGas ?? "") || !/^\d+$/.test(gas.maxPriorityFeePerGas ?? "")
+          || !/^\d+$/.test(gas.maxCostWei ?? "") || BigInt(gas.maxFeePerGas) <= 0n
+          || BigInt(gas.maxPriorityFeePerGas) <= 0n || BigInt(gas.maxPriorityFeePerGas) > BigInt(gas.maxFeePerGas)
+          || BigInt(gas.maxCostWei) !== BigInt(gas.gasLimit) * BigInt(gas.maxFeePerGas)) {
+        throw new Error("PoolId-bound Monad v4 quote is invalid.");
+      }
+    } else if (args.poolKeyJson !== undefined || args.marketId !== undefined || args.inputDecimals !== undefined || args.outputDecimals !== undefined) {
+      throw new Error("Monad v4 quote fields require a PoolId.");
     }
     const existing = await ctx.db.query("monadQuotes")
       .withIndex("by_userId_quoteId", (q: any) => q.eq("userId", user._id).eq("quoteId", args.quoteId)).first();

@@ -1,26 +1,120 @@
 # Manual Perpl Testnet account
 
-Manual Perpl uses a separate delegated account owned by the signed-in Mera wallet. It does not reuse or transfer collateral from an autonomous vault. The owner wallet pays Monad gas in MON and signs every account or order transaction. The delegated account is created with the zero address as operator, so the backend has no trading key or operator authority.
+Manual Perpl uses the signed-in Mera wallet's **direct Perpl exchange account**.
+The owner signs every account change and order. Deposited AUSD belongs to that
+exchange account and is reused for later orders; it is not transferred to an
+autonomous vault. The autonomous Perpl path keeps its separate vault, delegated
+account, mandate, and operator execution.
 
-## Account setup
+## Direct-wallet setup
 
-1. Create the delegated account from the Mera wallet. Review the factory address, owner, chain, zero operator, transaction target, nonce, and gas before signing.
-2. Fund that account with AUSD from the Mera wallet in a separate owner-signed transfer.
-3. Open its Perpl exchange account with an owner-signed `createAccount` call. The backend reads Perpl's current Testnet minimum from live context and rejects a lower amount.
-4. Deposit AUSD collateral with an owner-signed transaction. Live Perpl deposit and withdrawal minimums and free collateral are checked before preparing each review.
+1. Open **Markets → Perpl market → Manual Perpl account**. The app checks
+   Perpl's finalized `getAccountByAddr` state for the Mera address, including
+   accounts opened outside Moeazi.
+2. If no account exists, enter at least Perpl's live account-opening minimum
+   in AUSD. Review and Mera-sign an **exact AUSD approval** to the verified
+   Testnet Exchange. Wait for its finalized receipt.
+3. Review and Mera-sign `Exchange.createAccount(amount)`. This opens the
+   owner's account and deposits that amount in one transaction. Wait until the
+   finalized exchange account state reflects it.
+4. Later, use owner-signed `depositCollateral` and `withdrawCollateral` to move
+   AUSD between the Mera wallet and the same exchange account. Orders draw on
+   the **deposited** AUSD balance, not directly on wallet AUSD.
 
-Funding the delegated account is not the same as depositing exchange collateral. The manual account, its AUSD balances, and its positions remain separate from autonomous vaults.
+The app displays wallet AUSD separately from free and locked exchange AUSD.
+The owner wallet also needs MON for gas. There is no manual operator, API key,
+order forwarding, or new delegated account in this flow. Use current Perpl
+context for account and transaction minimums. An approval alone neither opens
+an account nor moves AUSD into it.
 
 ## Gates and limits
 
-Manual order preparation requires `MONAD_TESTNET_MANUAL_PERPL_ENABLED=true` plus the existing Monad action gate. Submission also requires the existing Monad broadcast gate. The manual gate defaults to off when unset. Do not enable it for acceptance until the account and order review flow has been verified.
+The local global Manual Perpl gate is independent of autonomy gates. The
+configured stack keeps it enabled in ignored
+`backend/.data/manual-perpl-gate.json`; the action and broadcast gates still
+govern preparation and submission. Manual Guard and Lite Mode remain on.
 
-The default manual order notional cap is 10 AUSD (`MONAD_TESTNET_MANUAL_PERPL_MAX_ORDER_AUSD_UNITS=10000000`), and leverage is capped at 3x or Perpl's lower live limit. The backend checks fresh ticker/book data, market limits, exact AUSD collateral, slippage, and finalized account state. An unavailable or stale market quote cannot produce an order review.
+The default manual order notional cap is 10 AUSD
+(`MONAD_TESTNET_MANUAL_PERPL_MAX_ORDER_AUSD_UNITS=10000000`), and leverage is
+capped at 3× or Perpl's lower live limit. The backend checks fresh book data,
+market limits, collateral, slippage, and finalized account state. An unavailable
+or stale executable book blocks order preparation.
 
 ## Signing and reconciliation
 
-Each create, fund, open, deposit, withdrawal, entry, limit amendment/cancel, reduce, close, or margin action has a fresh exact transaction review. Mera signs the complete EIP-1559 transaction. The API verifies owner, chain, destination, calldata, value, nonce, gas limit, and fee fields before accepting it.
+Each approval, account action, entry, limit action, reduction, or close gets a
+fresh exact EIP-1559 review and Mera signature. The prepared operation binds
+owner, chain `10143`, mode, Exchange or token target, amount, calldata, nonce,
+gas cap, and expiry. The backend checks the signed transaction against that
+record before broadcast. A new operation cannot reuse a signed payload.
 
-The operation ID is the recovery handle. `GET /api/mobile/manual/perpl/operations/:operationId` checks the same transaction's receipt, canonical block, chain finality, and resulting Perpl account/order state. Retry the same operation to reconcile an uncertain submission; the server will not broadcast its saved signed bytes a second time. A fill is recorded only when the finalized receipt and exchange-state delta match the submitted request. Partial fills and closes are combined in a position summary; price-difference PnL, fees, and verified funding snapshots are separate fields. Net realized PnL remains unknown unless finalized evidence supports it.
+The operation ID is the recovery handle. `GET
+/api/mobile/manual/perpl/operations/:operationId` reconciles the original
+transaction hash and receipt, chain finality, and resulting Perpl state. When
+submission is uncertain, check that same operation before any new order. A
+submitted transaction or Perpl admission is not a fill. Activity and position
+summaries use finalized exchange evidence; fees, funding, and realized PnL
+remain unknown where finalized evidence does not establish them.
 
-No funded setup, order, or transaction was performed while implementing this feature.
+## Existing delegated manual accounts
+
+An earlier Moeazi build created a separate, owner-controlled delegated manual
+account. The app labels it **Legacy delegated account** and keeps its balances,
+positions, orders, and history visible to that owner. It is never silently
+migrated into the direct wallet account. Its recovery actions remain
+owner-signed: cancel, reduce or close, withdraw collateral to the delegated
+account, then rescue any AUSD token balance to the Mera wallet. Check its
+exchange and token balances after each finalized step. Autonomous accounts
+are separate and are not exposed in this recovery view.
+
+## Testnet acceptance
+
+The current acceptance task calls for a capped direct-wallet approval,
+account opening, trade entry, close, and withdrawal on Monad Testnet. Record
+finalized hashes, account IDs, starting and returned AUSD, and any blocked
+steps below once observed. A fork test proves contract behavior but is not
+evidence of a Testnet fill.
+
+| Step | Finalized transaction / observed result |
+| --- | --- |
+| Exact AUSD approval | Finalized: `0x28474d8fff3e50a038c4bfe4d9f844364ce3307444f0d75d1e5c58e224a69cd5`; allowance 100 AUSD to Exchange |
+| Direct account opening and initial deposit | Finalized: `0x7f4b72316f532d95d36901c85c5328e8c859d1c9dc7210e5ccacf9e913839cf8`; owner `0xbb66e7bc26d8a81c36a2f900d141a1fa786a98d8`, account ID `1076`, 100 AUSD transferred to Exchange |
+| Manual entry | Finalized: `0xd9084c2f256e67a4c847cdc9993a5b29c9854f4c7bddfac2a785654dc3282d1e`; BTC long, 0.0001 BTC at 82,975 AUSD, opening fee 0.002863 AUSD. Account 1076 held the position. |
+| Complete close | Finalized: `0x219891b9a25c318d7321dd0c18ce7445d43261341a51b563d14d69b118073cf1`; full 0.0001 BTC closed at 82,926.3 AUSD, closing fee 0.002861 AUSD. Finalized account state had no position or pending order and 99.989406 AUSD free. |
+| AUSD withdrawal | Finalized: `0xd51c78fe9ad3cd61aa370cbb488954bc57cbae1a954018e16054731db78014b0`; the full 99.989406 AUSD returned to the Mera wallet, the exchange balance is zero, and wallet AUSD is 19,999.859323. |
+
+The account began this capped cycle at 100 AUSD and ended flat with 99.989406
+AUSD. The measured net result was **−0.010594 AUSD**, inclusive of the
+0.005724 AUSD opening and closing fees; MON gas was paid separately by the
+owner wallet. All three account operations used the wallet directly, and
+Perpl order forwarding remained disabled. The onchain account state and
+receipts were checked again after withdrawal. A summary repair matched the
+finalized entry and close to consecutive wallet nonces and the exact Perpl
+account balance delta, then recorded `−10594` AUSD base units as verified net
+PnL. Future direct-wallet cycles record this net value on closing finality.
+
+On the offline KeePassDX x86 emulator, the autonomous Perpl card opened the
+AUSD-and-duration setup, while Home's Perpl markets button still opened Markets.
+The direct manual account and BTC position were visible after app restart;
+Activity contains distinct prepared, submitted, and finalized records for the
+entry, close, and withdrawal. The global Manual Perpl gate remained enabled
+in the ignored local gate file after API restart. A slow Metro/KeePassDX debug
+session delayed UI acknowledgement after signing, so each original operation
+was reconciled from its saved transaction hash before another action.
+
+The Android ARM internal APK is
+`android/app/build/outputs/apk/release/moeazi-monad-v1.5-arm.apk` (SHA-256
+`9F3415D36E57637AB3EB062022442CD82C7A62C9AB8B5CBBF53D567D12EB338A`).
+It contains both `arm64-v8a` and `armeabi-v7a`, uses the HTTPS Moeazi API, and
+packages the asset-link statement. The public association endpoint returned
+HTTP 200 and lists the APK's signing certificate fingerprint
+`93:05:40:B4:E8:73:29:85:D0:1A:B5:A0:FF:4F:3D:D9:77:DB:7C:E3:6A:7A:7A:B7:98:88:2C:AB:BA:6B:E5:99`.
+
+Verification: the Monad fork test exercised direct approval, account creation,
+deposit, an EOA long entry and close, withdrawal, and rejection of a different
+address. Backend direct-wallet, gate, and ledger-PnL tests passed (13 checks);
+focused mobile navigation, account, trading, and validation tests passed (20
+checks). Mobile, backend, and Convex typechecks passed; the ARM release build
+succeeded. The bounded submit/status UI change was typechecked and covered by
+the existing mobile suite, but no additional funded transaction was made solely
+to exercise that timeout path.

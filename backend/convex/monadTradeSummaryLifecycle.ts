@@ -11,6 +11,28 @@ const priceValue = (fills: any[]) => {
 };
 function mergedList(raw: string | undefined, value: string) { return [...new Set([...list(raw).map(String), value])]; }
 
+export async function verifiedManualLedgerPnl(ctx: any, row: any, prior: any, details: any) {
+  if (!prior || !/^\d+$/.test(String(details.balanceUnits ?? ""))) return null;
+  const entryId = String(prior.summaryId ?? "").split(":").at(-1);
+  const entryOp = await ctx.db.query("monadManualOperations").withIndex("by_operationId", (q: any) =>
+    q.eq("operationId", entryId)).first();
+  const entryResult = parse(entryOp?.resultJson) ?? {};
+  if (!entryOp || entryOp.userId !== row.userId || entryOp.ownerAddress !== row.ownerAddress
+      || entryOp.accountAddress !== row.accountAddress || entryOp.marketId !== row.marketId
+      || entryOp.status !== "finalized" || entryResult.verified !== true
+      || !/^\d+$/.test(String(entryResult.balanceBeforeUnits ?? ""))
+      || !Number.isSafeInteger(entryOp.nonce) || entryOp.nonce >= row.nonce) return null;
+  const operations = await ctx.db.query("monadManualOperations").withIndex("by_user_nonce", (q: any) =>
+    q.eq("userId", row.userId).gte("nonce", entryOp.nonce).lte("nonce", row.nonce)).collect();
+  const relevant = operations.filter((item: any) => item.ownerAddress === row.ownerAddress);
+  if (relevant.length !== row.nonce - entryOp.nonce + 1
+      || relevant.some((item: any, index: number) => item.nonce !== entryOp.nonce + index
+        || item.accountAddress !== row.accountAddress || item.marketId !== row.marketId
+        || !["market_entry", "limit_entry", "reduce_size", "close_position"].includes(item.action)
+        || (item.operationId !== row.operationId && item.status !== "finalized"))) return null;
+  return (BigInt(details.balanceUnits) - BigInt(entryResult.balanceBeforeUnits)).toString();
+}
+
 export function matchOptimizerCycleEvidence(summary: any, cycles: any[], ownerAddress: string) {
   if (summary.status !== "closed" || !summary.runId || !summary.transactionHashes?.length) return null;
   const hashes = [...new Set(summary.transactionHashes.map((hash: string) => hash.toLowerCase()))].sort();
@@ -67,6 +89,7 @@ export async function recordManualPosition(ctx: any, row: any, details: any, act
     : (integer(previousPricePnl) + BigInt(incrementalPricePnl)).toString();
   const priorFees = integer(prior?.feesUnits); const fees = priorFees + BigInt(aggregate.feesUnits);
   const status = afterSize > 0n ? "open" : "closed";
+  const verifiedNet = status === "closed" ? await verifiedManualLedgerPnl(ctx, row, prior, details) : null;
   const orderRef = String(action.orderId ?? row.requestId ?? row.operationId);
   const hashes = mergedList(prior?.transactionHashesJson, String(row.txHash ?? "")).filter(Boolean);
   const next = { userId: row.userId, ownerAddress: row.ownerAddress, summaryId, venueId: row.venueId, marketId,
@@ -83,8 +106,7 @@ export async function recordManualPosition(ctx: any, row: any, details: any, act
     ...(details.afterPositionFundingUnits !== undefined ? { fundingUnits: String(details.afterPositionFundingUnits) }
       : prior?.fundingUnits !== undefined ? { fundingUnits: prior.fundingUnits }
         : action.preFundingUnits !== undefined ? { fundingUnits: String(action.preFundingUnits) } : {}),
-    ...(typeof details.netRealizedPnlUnits === "string" && /^-?\d+$/.test(details.netRealizedPnlUnits)
-      ? { netRealizedPnlUnits: details.netRealizedPnlUnits } : {}),
+    ...(verifiedNet !== null ? { netRealizedPnlUnits: verifiedNet } : {}),
     status, source: "manual", orderIdsJson: JSON.stringify(mergedList(prior?.orderIdsJson, orderRef)),
     transactionHashesJson: JSON.stringify(mergedList(prior?.transactionHashesJson, String(row.txHash ?? "")).filter(Boolean)),
     activityIdsJson: JSON.stringify(mergedList(prior?.activityIdsJson, activityId)),

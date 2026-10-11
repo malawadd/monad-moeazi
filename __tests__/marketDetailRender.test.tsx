@@ -7,20 +7,23 @@ const mockMarket = {kind: 'perpl' as const, venueId: 'perpl-direct-testnet-v1', 
   symbol: 'BTC-PERP', name: 'Bitcoin perpetual', status: 'open' as const, marketOpen: true, available: true, testOnly: true,
   priceDecimals: 2, sizeDecimals: 3, capabilities: {marketData: true, manualLongShort: false},
   quote: {mark: '6712345', observedAt: Date.now(), bid: '6712300', ask: '6712400'}};
+const mockQuery = (data: unknown) => ({data, isLoading: false, isFetching: false, isError: false, isStale: false, refetch: async () => ({})});
 
 jest.mock('@react-navigation/native', () => {
   const ReactRuntime = require('react');
   return {useNavigation: () => mockNavigation, useRoute: () => mockRoute,
+    useIsFocused: () => true,
     useFocusEffect: (callback: () => void | (() => void)) => ReactRuntime.useEffect(callback, [callback])};
 });
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: '0x1111111111111111111111111111111111111111'})}));
-jest.mock('../src/services/marketDirectoryApi', () => ({marketDirectoryApi: {
-  list: async () => ({markets: [mockMarket]}),
-  detail: async () => ({market: mockMarket, candles: [], resolutionSeconds: 60, observedAt: Date.now()}),
-  trades: async () => ({summaries: [], activity: []}),
-}}));
-jest.mock('../src/services/manualPerplApi', () => ({manualPerplApi: {account: async () => null}}));
-jest.mock('../src/services/perplApi', () => ({perplApi: {current: async () => ({current: null})}}));
+jest.mock('../src/services/useMarketQueries', () => ({
+  useMarketDirectoryQuery: () => mockQuery({markets: [mockMarket]}),
+  useMarketSnapshotQuery: () => mockQuery({market: mockMarket, observedAt: Date.now(), book: null}),
+  useMarketCandlesQuery: () => mockQuery({market: mockMarket, candles: [], resolutionSeconds: 60, candleTimeUnit: 'milliseconds'}),
+  useMarketTradesQuery: () => mockQuery({summaries: [], activity: []}),
+  useManualPerplAccountQuery: () => mockQuery(null),
+  usePerplCurrentQuery: () => mockQuery({current: null}),
+}));
 jest.mock('../src/components/MarketChart', () => ({MarketChart: () => null}));
 jest.mock('../src/components/MarketTradeSummaryCard', () => ({MarketTradeSummaryCard: () => null}));
 jest.mock('../src/components/Ui', () => {

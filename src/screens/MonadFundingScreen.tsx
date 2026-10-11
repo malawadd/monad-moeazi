@@ -2,7 +2,7 @@ import React, {useCallback, useState} from 'react';
 import {Linking, StyleSheet, Text, View} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader, TextLink} from '../components/Ui';
 import {MONAD_AUSD_ADDRESS, MONAD_AUSD_FAUCET_ADDRESS} from '../config/monadAUsd';
 import {monadApi, createMonadIdempotencyKey} from '../services/monadApi';
@@ -10,7 +10,7 @@ import {formatMonadUnits} from '../services/monadFormatting';
 import {haptics} from '../services/haptics';
 import {validatePreparedMonadOperation} from '../services/monadValidation';
 import {useApp} from '../state/AppContext';
-import type {MonadWalletSnapshot} from '../types/monad';
+import {useMonadWalletQuery} from '../services/useMarketQueries';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -21,26 +21,19 @@ const AGORA_FAUCET_DOCS = 'https://docs.agora.finance/instant-settlement/guides/
 export function MonadFundingScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const [wallet, setWallet] = useState<MonadWalletSnapshot | null>(null);
+  const walletQuery = useMonadWalletQuery(ownerAddress, useIsFocused());
+  const {refetch} = walletQuery;
+  const wallet = walletQuery.data ?? null;
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [loading, setLoading] = useState(true);
   const [preparingAusd, setPreparingAusd] = useState(false);
-
-  const refresh = useCallback(async () => {
-    setError(''); setFeedback('');
-    try {
-      const result = await monadApi.wallet();
-      if (result.chainId !== 10143 || result.ownerAddress.toLowerCase() !== ownerAddress?.toLowerCase()) {
-        throw new Error('The wallet response does not match your Monad Testnet session.');
-      }
-      setWallet(result);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The funding address could not be loaded.');
-    } finally { setLoading(false); }
-  }, [ownerAddress]);
-
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  const refresh = useCallback(async () => { setFeedback(''); await refetch(); }, [refetch]);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
+  const walletError = walletQuery.error instanceof Error ? walletQuery.error.message : '';
 
   async function openFaucet(url: string) {
     try { await Linking.openURL(url); }
@@ -68,12 +61,13 @@ export function MonadFundingScreen() {
     } finally { setPreparingAusd(false); }
   }
 
-  return <FlowScreen refreshing={loading} onRefresh={() => { void refresh(); }}>
+  return <FlowScreen refreshing={pullRefreshing || walletQuery.isLoading} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Funding · testnet" title="Fund your Mera wallet" copy="Use Monad Testnet only. Never send mainnet funds to this test wallet." />
-    {error ? <Notice live tone="rose" title="Funding information unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    {walletError ? <Notice live tone="orange" title={wallet ? 'Showing last good balance' : 'Funding information unavailable'} message={walletError} actionLabel="Retry" onAction={() => { void pullToRefresh(); }} /> : null}
+    {error ? <Notice live tone="rose" title="Funding action unavailable" message={error} /> : null}
     {feedback ? <Notice live tone="mint" title="Copied" message={feedback} /> : null}
     {wallet?.stale ? <Notice tone="orange" title="Balances may be out of date" message={`Observed at block ${wallet.observedBlock}.`} /> : null}
-    {loading && !wallet ? <LoadingBlock label="Loading your Mera address" /> : null}
+    {walletQuery.isLoading ? <LoadingBlock label="Loading your Mera address" /> : null}
     {wallet ? <>
       <Card tint={colors.skyTint}>
         <Text style={s.strong}>Your Mera address</Text>

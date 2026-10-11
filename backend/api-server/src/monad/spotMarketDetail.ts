@@ -4,7 +4,10 @@ import { buildSpotCandles, verifySpotSwapHistory } from "./spotTradeHistory.js";
 
 /** Returns candle history derived only from finalized, verified pool observations and swaps. */
 export async function spotMarketDetail(context: any, auth: any, market: any,
-  venueId: string, marketId: string, parsed: { resolution: number; from: number; to: number }) {
+  venueId: string, marketId: string, parsed: { resolution: number; from: number; to: number }, includeCandles = true) {
+  if (!includeCandles) return context.json({ market, book: null, candles: [], candlesIncluded: false,
+    resolutionSeconds: parsed.resolution, candleTimeUnit: "milliseconds", observedAt: Date.now(),
+    unavailable: { book: true } });
   const history: any = await meraQuery(auth.token, "monadManual", "getMarketTrades", {
     venueId, marketId, limit: 100, includeSpotObservations: true,
   });

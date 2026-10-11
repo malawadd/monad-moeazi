@@ -6,6 +6,8 @@ export const AUSD_ADDRESS = getAddress("0xa9012a055bd4e0eDfF8Ce09f960291C09D5322
 export const AUSD_FAUCET_ADDRESS = getAddress("0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C");
 export const USDC_ADDRESS = getAddress("0x534b2f3A21130d7a60830c2Df862319e593943A3");
 export const WMON_ADDRESS = getAddress("0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541");
+export const V4_POOL_MANAGER_ADDRESS = getAddress("0x451D64ab3b650040d2aE1886602b97ed6eDc643d");
+export const V4_QUOTER_ADDRESS = getAddress("0x869834d127b230283fe63E0d0A9bEB67216a94C7");
 export const AUSD_DECIMALS = 6;
 export const USDC_DECIMALS = 6;
 export const WMON_DECIMALS = 18;
@@ -48,6 +50,27 @@ export const ADAPTER_ABI = [
   "function quoteExactInput(address,address,uint256,bytes) returns (uint256,bool)",
   "function swap(address,address,uint256,uint256,bytes) returns (uint256)",
 ];
+const V4_POOL_KEY_COMPONENTS = [
+  { name: "currency0", type: "address" }, { name: "currency1", type: "address" },
+  { name: "fee", type: "uint24" }, { name: "tickSpacing", type: "int24" }, { name: "hooks", type: "address" },
+] as const;
+export const DYNAMIC_V4_ADAPTER_ABI = [
+  "function manager() view returns (address)",
+  { type: "function", name: "quoteExactInput", stateMutability: "nonpayable", inputs: [
+    { name: "expectedPoolId", type: "bytes32" }, { name: "key", type: "tuple", components: V4_POOL_KEY_COMPONENTS },
+    { name: "tokenIn", type: "address" }, { name: "tokenOut", type: "address" }, { name: "amountIn", type: "uint256" },
+  ], outputs: [{ name: "amountOut", type: "uint256" }, { name: "available", type: "bool" }] },
+  { type: "function", name: "swap", stateMutability: "nonpayable", inputs: [
+    { name: "expectedPoolId", type: "bytes32" }, { name: "key", type: "tuple", components: V4_POOL_KEY_COMPONENTS },
+    { name: "tokenIn", type: "address" }, { name: "tokenOut", type: "address" },
+    { name: "amountIn", type: "uint256" }, { name: "minAmountOut", type: "uint256" },
+  ], outputs: [{ name: "amountOut", type: "uint256" }] },
+] as const;
+export const V4_QUOTER_ABI = [{ type: "function", name: "quoteExactInputSingle", stateMutability: "nonpayable",
+  inputs: [{ name: "params", type: "tuple", components: [
+    { name: "poolKey", type: "tuple", components: V4_POOL_KEY_COMPONENTS },
+    { name: "zeroForOne", type: "bool" }, { name: "exactAmount", type: "uint128" }, { name: "hookData", type: "bytes" },
+  ] }], outputs: [{ name: "amountOut", type: "uint256" }, { name: "gasEstimate", type: "uint256" }] }] as const;
 export const MANDATE_DOMAIN = {
   name: "Moeazi Monad Testnet Vault", version: "1", chainId: MONAD_CHAIN_ID,
 } as const;

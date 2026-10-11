@@ -21,7 +21,8 @@ export function AutonomyChoiceScreen() {
     <Card>
       <Text style={s.strong}>Perpl · live Testnet venue</Text>
       <Text style={s.body}>Perpl markets and AUSD collateral are loaded from the Testnet venue service. Enrollment and trading status stay separate from the mock Spot and Perp runs.</Text>
-      <Button label="View Perpl markets" onPress={() => navigation.navigate('PerplMarkets')} />
+      <Button label="Set up autonomous Perpl" onPress={() => navigation.navigate('PerplSetup')} />
+      <Button label="Perpl run status and history" variant="secondary" onPress={() => navigation.navigate('PerplStatus')} />
     </Card>
     <Button label="Perp run status and history" variant="secondary" onPress={() => navigation.navigate('PerpStatus')} />
   </Screen>;

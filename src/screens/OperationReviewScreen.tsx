@@ -1,5 +1,5 @@
-import React, {useState} from 'react';
-import {Text} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {Pressable, Text} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
 import {openMeraSigningSession} from '../services/wallet/meraAuth';
@@ -8,6 +8,7 @@ import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormattin
 import {validatePreparedMonadOperation, type MonadOperationExpectation} from '../services/monadValidation';
 import type {PreparedMonadOperation} from '../types/monad';
 import {useApp} from '../state/AppContext';
+import {invalidateAfterFinalizedOperation} from '../services/queryCache';
 import {screenStyles as s} from '../theme/screenStyles';
 
 type OperationResult = {message: string; transactionHash?: string | null; status?: string;
@@ -28,9 +29,21 @@ export function OperationReviewScreen() {
   const [attempted, setAttempted] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<OperationResult | null>(null);
+  const [unverifiedPoolReviewed, setUnverifiedPoolReviewed] = useState(false);
+
+  useEffect(() => {
+    if (ownerAddress && ['finalized', 'failed', 'reverted'].includes(result?.status ?? '')) {
+      void invalidateAfterFinalizedOperation(ownerAddress);
+    }
+  }, [ownerAddress, result?.status]);
+  useEffect(() => { setUnverifiedPoolReviewed(false); }, [expected?.poolId, expected?.quoteId]);
 
   async function signAndBroadcast() {
     if (!prepared || !expected || !ownerAddress) return;
+    if (expected.unverifiedPoolWarning && !unverifiedPoolReviewed) {
+      setError('Review and acknowledge the unverified pool warning before signing.');
+      return;
+    }
     setBusy(true); setAttempted(true); setError(''); setResult(null);
     let submitStarted = false;
     let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
@@ -113,12 +126,17 @@ export function OperationReviewScreen() {
     {result?.faucetTransferVerified && result.verifiedAmountUnits ? <Card>
       <DataRow label="AUSD received · finalized receipt" value={`${formatMonadUnits(result.verifiedAmountUnits, 6)} AUSD`} />
     </Card> : null}
+    {expected.unverifiedPoolWarning ? <Notice live tone="orange" title="Unverified pool warning"
+      message="This pool is outside the operator verified list. Check the exact Pool ID, PoolKey, token contracts, fee, hooks, quote, and minimum output before signing." /> : null}
     <Card>
       <DataRow label="Action" value={title} />
       {expected.amount || prepared.review?.amount ? <DataRow label="Amount" value={`${amount} ${asset}`} /> : null}
       {expected.recipient || prepared.review?.recipient ? <DataRow label="Recipient" value={String(expected.recipient ?? prepared.review?.recipient)} /> : null}
       {expected.vaultAddress || prepared.review?.vaultAddress ? <DataRow label={prepared.kind === 'autonomy_recovery' ? 'Autonomy vault' : 'Managed vault'} value={String(expected.vaultAddress ?? prepared.review?.vaultAddress)} /> : null}
       {expected.venue || prepared.review?.venue ? <DataRow label="Venue" value={String(expected.venue ?? prepared.review?.venue)} /> : null}
+      {expected.poolId ? <DataRow label="Exact v4 Pool ID" value={expected.poolId} /> : null}
+      {expected.poolKey ? <DataRow label="Exact v4 PoolKey" value={`${expected.poolKey.currency0} / ${expected.poolKey.currency1} · fee ${expected.poolKey.fee} · tick ${expected.poolKey.tickSpacing} · hooks ${expected.poolKey.hooks}`} /> : null}
+      {expected.poolId ? <DataRow label="Pool verification" value={expected.unverifiedPoolWarning ? 'Unverified · owner reviewed' : 'Operator verified'} /> : null}
       {prepared.kind === 'wallet_swap' ? <>
         <DataRow label="Exact input" value={`${formatMonadUnits(String(expected.amountInUnits ?? prepared.review?.amountInUnits ?? '0'), expected.inputDecimals ?? 18)} ${inputSymbol}`} />
         <DataRow label="Minimum output" value={`${formatMonadUnits(String(expected.minAmountOutUnits ?? prepared.review?.minAmountOutUnits ?? '0'), expected.outputDecimals ?? 18)} ${outputSymbol}`} />
@@ -148,10 +166,15 @@ export function OperationReviewScreen() {
         <Text style={s.body}>This request calls the Agora Monad Testnet faucet for your Mera address. It transfers no AUSD from your wallet; your wallet pays the displayed network fee in MON.</Text>
       </> : null}
     </Card>
+    {expected.unverifiedPoolWarning ? <Pressable accessibilityRole="checkbox" accessibilityState={{checked: unverifiedPoolReviewed}}
+      onPress={() => setUnverifiedPoolReviewed(value => !value)} style={styles.poolAcknowledgement}>
+      <Text style={styles.poolCheckbox}>{unverifiedPoolReviewed ? '☑' : '□'}</Text>
+      <Text style={s.body}>I reviewed this unverified pool and want to sign the exact transaction.</Text>
+    </Pressable> : null}
     {tx.data !== '0x' ? <Card><Text style={s.strong}>Exact contract call data</Text><Text selectable style={s.body}>{tx.data}</Text></Card> : null}
     {prepared.review?.summary ? <Card><Text style={s.strong}>Server review</Text><Text style={s.body}>{prepared.review.summary}</Text></Card> : null}
     {result?.transactionHash ? <Card><DataRow label="Transaction hash" value={result.transactionHash} /></Card> : null}
-    <Button label={attempted ? 'Signed request already sent' : 'Sign and broadcast'} onPress={() => { void signAndBroadcast(); }} loading={busy} disabled={attempted} />
+    <Button label={attempted ? 'Signed request already sent' : 'Sign and broadcast'} onPress={() => { void signAndBroadcast(); }} loading={busy} disabled={attempted || Boolean(expected.unverifiedPoolWarning && !unverifiedPoolReviewed)} />
     {result && !terminal ? <Button label="Check confirmation status" variant="secondary" onPress={() => { void checkStatus(); }} loading={busy} /> : null}
     {prepared.kind === 'approve_token' && result?.status === 'finalized'
       && ['TradeReview', 'ManagedVault'].includes(afterApproval?.returnRoute ?? '')
@@ -164,3 +187,6 @@ export function OperationReviewScreen() {
     <Text style={s.body}>Moeazi will verify your signature before it broadcasts. The Mera signing key stays in this short-lived passkey session and is cleared when signing ends.</Text>
   </FlowScreen>;
 }
+
+const styles = {poolAcknowledgement: {flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, minHeight: 52},
+  poolCheckbox: {fontSize: 24, color: '#111111'}};

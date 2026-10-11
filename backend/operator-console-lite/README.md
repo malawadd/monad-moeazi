@@ -18,6 +18,12 @@ The development controls show the current Redis-backed Lite Mode state and can s
 
 The credit form searches by email (case-insensitive), Magic wallet, or exact Convex user ID. It lists every matching account, including duplicate email records, with the ledger balance and wallet when present. The operator explicitly selects one account before granting any positive safe-integer number of **app credits**. Grants are recorded in Convex's credit ledger with an idempotent request ID. No USDC or venue balance changes. Email lookup is a bounded operator-only scan of up to 1,001 user records because existing emails were saved with inconsistent capitalization; a limit warning means the operator must use wallet or user ID rather than assume the list is complete.
 
+## Manual Perpl Testnet gate
+
+The **Manual Perpl gate** panel controls one global switch for manual Testnet account mutations and order preparation. It shows the configured and effective gate values, Monad RPC and Perpl exchange readiness, the separate action and broadcast gates, and whether Perpl autonomy is enabled independently. It does not select an owner or return an account, AUSD balance, order, or position. Each transaction still requires the account owner's fresh Mera signature and exact transaction review in the mobile app.
+
+The bridge-authenticated API stores gate changes and their audit entries in the ignored `backend/.data/manual-perpl-gate.json` file, which survives API and console restarts. With no state file, the effective value comes from `MONAD_TESTNET_MANUAL_PERPL_ENABLED`; local setup generates that value as `false` for a fresh stack. A separate deployment needs its own local environment and `.data` state.
+
 Run the focused proxy-input tests with:
 
 ```powershell

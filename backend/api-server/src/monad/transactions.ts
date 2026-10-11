@@ -3,10 +3,12 @@ import type { JsonRpcProvider, TransactionRequest } from "ethers";
 import { ADAPTER_ABI, AUSD_ADDRESS, AUSD_DECIMALS, AUSD_FAUCET_ABI, AUSD_FAUCET_ADDRESS,
   ASSETS, ERC20_ABI, MONAD_CHAIN_ID, USDC_ADDRESS,
   VAULT_ABI, WMON_ABI, WMON_ADDRESS } from "./constants.js";
-import { configuredAdapter, configuredVault, MonadApiError, type MonadVenue, venueData } from "./config.js";
+import { configuredAdapter, configuredDynamicV4Adapter, configuredVault, MonadApiError, type MonadVenue, venueData } from "./config.js";
 import { requireContractCode } from "./provider.js";
 import { AUTONOMY_POOL_ABI } from "./autonomyChain.js";
 import { MOCK_SPOT_VENUE, quoteMockPool, resolveMockPool, resolveMockPoolApproval } from "./mockSpot.js";
+import { findV4Pool, poolKeysEqual, v4MarketId, v4PoolKey } from "./v4PoolIndex.js";
+import { buildV4SwapCall, quoteV4Pool } from "./v4PoolSwap.js";
 
 export type Eip1559Transaction = {
   to: string; data: string; value: string; chainId: number; nonce: number;
@@ -36,18 +38,20 @@ export function amountUnits(value: unknown, decimals: number): bigint {
 }
 
 export async function buildEip1559Transaction(provider: JsonRpcProvider, sender: string,
-  to: string, data: string, value = 0n, maxGasLimit = 3_000_000n): Promise<BuiltTransaction> {
+  to: string, data: string, value = 0n, maxGasLimit = 3_000_000n,
+  gasPolicy?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint }): Promise<BuiltTransaction> {
   const [network, nonce, fees] = await Promise.all([
     provider.getNetwork(), provider.getTransactionCount(getAddress(sender), "pending"), provider.getFeeData(),
   ]);
   if (network.chainId !== BigInt(MONAD_CHAIN_ID)) throw new MonadApiError("Transaction builder is not connected to Monad Testnet.", 503, "wrong_chain");
-  if (fees.maxFeePerGas === null || fees.maxPriorityFeePerGas === null
-      || fees.maxFeePerGas < fees.maxPriorityFeePerGas) {
+  const maxFeePerGas = gasPolicy?.maxFeePerGas ?? fees.maxFeePerGas;
+  const maxPriorityFeePerGas = gasPolicy?.maxPriorityFeePerGas ?? fees.maxPriorityFeePerGas;
+  if (maxFeePerGas === null || maxPriorityFeePerGas === null || maxFeePerGas < maxPriorityFeePerGas) {
     throw new MonadApiError("Monad Testnet did not provide a usable EIP-1559 fee quote.", 503, "fee_unavailable");
   }
   const base: TransactionRequest = { from: getAddress(sender), to: getAddress(to), data,
     value, type: 2, chainId: MONAD_CHAIN_ID, nonce,
-    maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas, accessList: [] };
+    maxFeePerGas, maxPriorityFeePerGas, accessList: [] };
   let estimate: bigint;
   try { estimate = await provider.estimateGas(base); }
   catch { throw new MonadApiError("Monad Testnet could not estimate this exact transaction.", 409, "gas_estimate_failed"); }
@@ -57,11 +61,10 @@ export async function buildEip1559Transaction(provider: JsonRpcProvider, sender:
   }
   return {
     transaction: { to: getAddress(to), data, value: value.toString(), chainId: MONAD_CHAIN_ID,
-      nonce, gasLimit: gasLimit.toString(), maxFeePerGas: fees.maxFeePerGas.toString(),
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas.toString(), type: "eip1559" },
-    gas: { gasLimit: gasLimit.toString(), maxFeePerGas: fees.maxFeePerGas.toString(),
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas.toString(),
-      maxCostWei: (gasLimit * fees.maxFeePerGas).toString() },
+      nonce, gasLimit: gasLimit.toString(), maxFeePerGas: maxFeePerGas.toString(),
+      maxPriorityFeePerGas: maxPriorityFeePerGas.toString(), type: "eip1559" },
+    gas: { gasLimit: gasLimit.toString(), maxFeePerGas: maxFeePerGas.toString(),
+      maxPriorityFeePerGas: maxPriorityFeePerGas.toString(), maxCostWei: (gasLimit * maxFeePerGas).toString() },
   };
 }
 
@@ -89,7 +92,8 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
     to = faucet.to; data = faucet.data; intent = faucet.intent;
   } else if (kind === "approve_token") {
     const token = getAddress(body.tokenAddress); const spender = getAddress(body.spender);
-    const allowedSpenders = [configuredVault(), configuredAdapter("uniswap_v4_testnet"), configuredAdapter("moeazi_test_amm")].filter(Boolean);
+    const allowedSpenders = [configuredVault(), configuredAdapter("uniswap_v4_testnet"), configuredAdapter("moeazi_test_amm"),
+      configuredDynamicV4Adapter()].filter(Boolean);
     const configured = allowedSpenders.some((address) => address!.toLowerCase() === spender.toLowerCase());
     let mockDecimals: number | undefined;
     if (!configured) mockDecimals = (await resolveMockPoolApproval(provider, token, spender)).tokenDecimals;
@@ -133,7 +137,36 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
     intent = { kind, asset: body.asset, amount: body.amount, amountUnits: units.toString(), vaultAddress: vault };
   } else if (kind === "swap") {
     const tokenIn = getAddress(body.tokenIn); const tokenOut = getAddress(body.tokenOut);
-    if (body.venue === MOCK_SPOT_VENUE) {
+    if (body.poolId !== undefined) {
+      if (body.venue !== "uniswap_v4_testnet" || body.accountScope !== "wallet") {
+        throw new MonadApiError("PoolId-bound v4 swaps are Mera-wallet only.", 403, "operator_only");
+      }
+      const record = await findV4Pool(body.poolId);
+      if (!record) throw new MonadApiError("PoolId was not found in the Monad v4 pool index.", 404, "v4_pool_not_found");
+      const key = v4PoolKey(record);
+      if (body.poolKey && !poolKeysEqual(body.poolKey, key)) {
+        throw new MonadApiError("PoolKey differs from the indexed PoolId record.", 409, "v4_pool_key_mismatch");
+      }
+      const adapter = configuredDynamicV4Adapter();
+      if (!adapter) throw new MonadApiError("The generic no-hook v4 adapter is not configured.", 503, "v4_dynamic_adapter_unavailable");
+      await requireContractCode(provider, adapter, "Generic Uniswap v4 no-hook adapter");
+      const input = typeof body.amountInUnits === "string" && /^\d+$/.test(body.amountInUnits) ? BigInt(body.amountInUnits) : 0n;
+      const minOut = typeof body.minAmountOutUnits === "string" && /^\d+$/.test(body.minAmountOutUnits) ? BigInt(body.minAmountOutUnits) : 0n;
+      if (input <= 0n || minOut <= 0n) throw new MonadApiError("Swap input or minimum output is invalid.", 400, "swap_amount_invalid");
+      const fresh = await quoteV4Pool(provider, record, tokenIn, tokenOut, input);
+      if (fresh.amountOut < minOut) throw new MonadApiError("The finalized v4 quote moved below the reviewed minimum; request a fresh quote.", 409, "quote_stale");
+      const token = new Contract(tokenIn, ERC20_ABI, provider);
+      if (await token.allowance(owner, adapter) < input) throw new MonadApiError("Approve the exact swap input before trading.", 409,
+        "approval_required", { kind: "approve_token", tokenAddress: tokenIn, spender: adapter, amountUnits: input.toString() });
+      const call = buildV4SwapCall(record, tokenIn, tokenOut, input, minOut);
+      to = call.to; data = call.data;
+      intent = { kind, accountScope: "wallet", venue: "uniswap_v4_testnet", marketId: v4MarketId(record.poolId),
+        chainId: MONAD_CHAIN_ID, ownerAddress: getAddress(owner), poolId: record.poolId.toLowerCase(), poolKey: key,
+        verified: record.verified, unverifiedPoolWarning: !record.verified, tokenIn, tokenOut,
+        amountInUnits: input.toString(), minAmountOutUnits: minOut.toString(), inputDecimals: body.inputDecimals,
+        outputDecimals: body.outputDecimals, freshAmountOutUnits: fresh.amountOut.toString(),
+        freshBlockNumber: fresh.checkpoint, freshObservedAt: fresh.observedAt };
+    } else if (body.venue === MOCK_SPOT_VENUE) {
       if (body.accountScope !== "wallet") throw new MonadApiError("Mock pool swaps are Mera-wallet only.", 403, "operator_only");
       const pair = await resolveMockPool(provider, tokenIn, tokenOut);
       if (String(body.poolAddress ?? "").toLowerCase() !== pair.poolAddress.toLowerCase()) {
@@ -176,8 +209,26 @@ export async function buildWalletTransaction(provider: JsonRpcProvider, owner: s
   } else {
     throw new MonadApiError("Unsupported Monad wallet operation.", 400, "operation_unsupported");
   }
-  const built = await buildEip1559Transaction(provider, owner, to, data, value);
+  const gasCap = body.poolId !== undefined ? parseGasCap(body.gasCap) : undefined;
+  const built = await buildEip1559Transaction(provider, owner, to, data, value,
+    gasCap?.gasLimit ?? 3_000_000n, gasCap ? { maxFeePerGas: gasCap.maxFeePerGas,
+      maxPriorityFeePerGas: gasCap.maxPriorityFeePerGas } : undefined);
+  if (gasCap) intent = { ...intent, gasCap: { gasLimit: gasCap.gasLimit.toString(),
+    maxFeePerGas: gasCap.maxFeePerGas.toString(), maxPriorityFeePerGas: gasCap.maxPriorityFeePerGas.toString(),
+    maxCostWei: (gasCap.gasLimit * gasCap.maxFeePerGas).toString() } };
   return { ...built, intent };
+}
+
+function parseGasCap(value: unknown) {
+  const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const fields = [row.gasLimit, row.maxFeePerGas, row.maxPriorityFeePerGas];
+  if (!fields.every((field) => typeof field === "string" && /^\d+$/.test(field))) {
+    throw new MonadApiError("Pool-bound swap quote is missing its gas cap.", 409, "gas_cap_required");
+  }
+  const [gasLimit, maxFeePerGas, maxPriorityFeePerGas] = fields.map((field) => BigInt(String(field)));
+  if (gasLimit <= 0n || gasLimit > 3_000_000n || maxFeePerGas <= 0n || maxPriorityFeePerGas <= 0n
+      || maxPriorityFeePerGas > maxFeePerGas) throw new MonadApiError("Quoted gas cap is outside the reviewed limit.", 409, "gas_cap_invalid");
+  return { gasLimit, maxFeePerGas, maxPriorityFeePerGas };
 }
 
 export function verifyExactSignedTransaction(raw: unknown, expected: Eip1559Transaction,

@@ -73,6 +73,8 @@ export function configuredPerpFactory() { return configuredAddress("MONAD_TESTNE
 
 export function configuredPerplStrategyFactory() { return configuredAddress("MONAD_TESTNET_PERPL_STRATEGY_FACTORY_ADDRESS"); }
 
+export function configuredDynamicV4Adapter() { return configuredAddress("MONAD_TESTNET_UNISWAP_V4_DYNAMIC_ADAPTER_ADDRESS"); }
+
 export function configuredAdapter(venue: MonadVenue): string | null {
   const name = venue === "uniswap_v4_testnet"
     ? "MONAD_TESTNET_UNISWAP_V4_ADAPTER_ADDRESS" : "MONAD_TESTNET_MOEAZI_ADAPTER_ADDRESS";

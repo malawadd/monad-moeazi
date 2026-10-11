@@ -1,3 +1,4 @@
+import {encodeFunctionData} from 'viem';
 import {validateManualPerplPreparation, type ManualReviewExpectation} from '../src/services/manualPerplValidation';
 import type {ManualPerplPreparedOperation} from '../src/types/manualPerpl';
 
@@ -5,20 +6,23 @@ const ownerAddress = '0x1111111111111111111111111111111111111111';
 const destination = '0x2222222222222222222222222222222222222222';
 
 function prepared(overrides: Partial<ManualPerplPreparedOperation> = {}): ManualPerplPreparedOperation {
+  const expiresAt = Date.now() + 60_000;
   const transaction = {chainId: 10143, type: 'eip1559' as const, to: destination, data: '0x1234', value: '0', nonce: '4',
     gasLimit: '21000', maxFeePerGas: '3000000000', maxPriorityFeePerGas: '1000000000'};
-  return {
+  const base: ManualPerplPreparedOperation = {
     operationId: 'operation-1', venueId: 'perpl-direct-testnet-v1', chainId: 10143, status: 'prepared', action: 'market_entry',
-    expiresAt: Date.now() + 60_000, transaction,
+    expiresAt, transaction,
     review: {action: 'market_entry', kind: 'market_entry', ownerAddress, chainId: 10143, venueId: 'perpl-direct-testnet-v1',
-      marketId: '3', side: 'long', sizeUnits: '100', leverage: 2, transactionTarget: destination, transactionValue: '0',
+      marketId: '3', side: 'long', sizeUnits: '100', leverage: 2, transactionTarget: destination,
+      transactionData: transaction.data, transactionNonce: transaction.nonce, transactionValue: '0', expiresAt,
       maxGas: {gasLimit: '21000', maxFeePerGas: '3000000000', maxPriorityFeePerGas: '1000000000', maxCostWei: '63000000000000'}},
     ...overrides,
   };
+  return {...base, review: {...base.review, expiresAt: overrides.expiresAt ?? expiresAt}};
 }
 
 const expected: ManualReviewExpectation = {action: 'market_entry', ownerAddress, venueId: 'perpl-direct-testnet-v1', marketId: '3',
-  side: 'long', sizeUnits: '100', leverage: 2};
+  side: 'long', sizeUnits: '100', leverage: 2, transactionTarget: destination};
 
 describe('validateManualPerplPreparation', () => {
   it('accepts only a fresh owner and market bound EIP-1559 review', () => {
@@ -40,6 +44,32 @@ describe('validateManualPerplPreparation', () => {
     const base = prepared();
     expect(() => validateManualPerplPreparation(prepared({review: {...base.review,
       maxGas: {...(base.review.maxGas as Record<string, unknown>), maxCostWei: '1'}}}), expected)).toThrow(/maximum gas/);
+  });
+
+  it('rejects calldata and nonce that differ from the prepared transaction', () => {
+    const base = prepared();
+    expect(() => validateManualPerplPreparation(prepared({review: {...base.review, transactionData: '0xabcd'}}), expected)).toThrow(/calldata/);
+    expect(() => validateManualPerplPreparation(prepared({review: {...base.review, transactionNonce: '5'}}), expected)).toThrow(/nonce/);
+  });
+
+  it('decodes exact AUSD approval spender and createAccount deposit', () => {
+    const approveAbi = [{type: 'function', name: 'approve', stateMutability: 'nonpayable',
+      inputs: [{name: 'spender', type: 'address'}, {name: 'amount', type: 'uint256'}], outputs: [{type: 'bool'}]}] as const;
+    const createAbi = [{type: 'function', name: 'createAccount', stateMutability: 'nonpayable',
+      inputs: [{name: 'amountCNS', type: 'uint256'}], outputs: [{type: 'uint256'}]}] as const;
+    const amountUnits = '100000000';
+    const approveData = encodeFunctionData({abi: approveAbi, functionName: 'approve', args: [destination, BigInt(amountUnits)]});
+    const approveBase = prepared();
+    const approval = prepared({action: 'approve', transaction: {...approveBase.transaction, to: ownerAddress, data: approveData},
+      review: {...approveBase.review, action: 'approve', kind: 'approve', amountUnits, transactionTarget: ownerAddress,
+        transactionData: approveData}});
+    expect(() => validateManualPerplPreparation(approval, {action: 'approve', ownerAddress, venueId: 'perpl-direct-testnet-v1',
+      amountUnits, transactionTarget: ownerAddress, approvalSpender: destination})).not.toThrow();
+    const createData = encodeFunctionData({abi: createAbi, functionName: 'createAccount', args: [BigInt(amountUnits)]});
+    const creation = prepared({action: 'open', transaction: {...approveBase.transaction, data: createData},
+      review: {...approveBase.review, action: 'open', kind: 'open', amountUnits, transactionData: createData}});
+    expect(() => validateManualPerplPreparation(creation, {action: 'open', ownerAddress, venueId: 'perpl-direct-testnet-v1',
+      amountUnits, transactionTarget: destination})).not.toThrow();
   });
 
   it('rejects expired operations', () => {

@@ -2,12 +2,14 @@ import React, {useCallback, useState} from 'react';
 import {Text} from 'react-native';
 import {useFocusEffect, useRoute} from '@react-navigation/native';
 import {Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader} from '../components/Ui';
-import {monadApi} from '../services/monadApi';
+import {fetchMonadActivityPage} from '../services/useMarketQueries';
+import {useApp} from '../state/AppContext';
 import type {MonadActivityEvent} from '../types/monad';
 import {screenStyles as s} from '../theme/screenStyles';
 
 export function ActivityDetailScreen() {
   const route = useRoute<any>();
+  const {ownerAddress} = useApp();
   const itemId = route.params?.itemId;
   const [event, setEvent] = useState<MonadActivityEvent | null>(route.params?.event ?? null);
   const [error, setError] = useState('');
@@ -16,16 +18,17 @@ export function ActivityDetailScreen() {
     setLoading(true); setError('');
     try {
       if (route.params?.event?.id === itemId) { setEvent(route.params.event); return; }
-      let page = await monadApi.activity(60);
+      if (!ownerAddress) throw new Error('Sign in to view account activity.');
+      let page = await fetchMonadActivityPage(ownerAddress, null);
       let match = page.events.find(item => item.id === itemId) ?? null;
       while (!match && page.hasMore && page.nextCursor) {
-        page = await monadApi.activity(60, page.nextCursor);
+        page = await fetchMonadActivityPage(ownerAddress, page.nextCursor);
         match = page.events.find(item => item.id === itemId) ?? null;
       }
       setEvent(match);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'This event could not be loaded.'); }
     finally { setLoading(false); }
-  }, [itemId, route.params?.event]);
+  }, [itemId, route.params?.event, ownerAddress]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   if (loading) return <FlowScreen><PageHeader kicker="Activity" title="Loading event" /><LoadingBlock label="Checking recorded event" /></FlowScreen>;

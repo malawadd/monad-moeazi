@@ -3,23 +3,35 @@ import ReactTestRenderer, {act} from 'react-test-renderer';
 import {TextInput} from 'react-native';
 
 const mockOwner = '0x1111111111111111111111111111111111111111';
-const mockAccountAddress = '0x3333333333333333333333333333333333333333';
+const mockExchangeAddress = '0x3333333333333333333333333333333333333333';
+const mockLegacyAccountAddress = '0x5555555555555555555555555555555555555555';
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 const mockRoute: {params: Record<string, unknown>} = {params: {}};
 const mockPrepareOrder = jest.fn();
-const mockAccount = {chainId: 10143, ownerAddress: mockOwner, accountAddress: mockAccountAddress, accountId: 71, status: 'open',
-  collateral: {symbol: 'AUSD', address: mockAccountAddress, decimals: 6, balanceUnits: '5000000', lockedUnits: '0'},
+const mockAccount = {chainId: 10143, ownerAddress: mockOwner, exchangeAddress: mockExchangeAddress, accountMode: 'direct_wallet',
+  accountAddress: mockOwner, accountId: 71, status: 'open',
+  collateral: {symbol: 'AUSD', address: '0x4444444444444444444444444444444444444444', decimals: 6,
+    balanceUnits: '5000000', lockedUnits: '0', walletBalanceUnits: '2500000', allowanceUnits: '2500000'},
   positions: [{marketId: '7', symbol: 'ETH-PERP', side: 'short', sizeUnits: '2500', entryPrice: '12345', markPrice: '12300', leverage: 2, unrealizedPnlUnits: '500'}],
   orders: [{orderId: '90', marketId: '7', symbol: 'ETH-PERP', side: 'short', sizeUnits: '1500', price: '12300', status: 'open'}],
-  observedAt: Date.now(), blockNumber: 10, capabilities: {createAccount: false, fundAccount: true, openAccount: false, deposit: true,
-    withdraw: true, marketOrders: true, limitOrders: true, cancelOrders: true, closePosition: true, reducePosition: true}};
+  observedAt: Date.now(), blockNumber: 10, capabilities: {approve: true, open: false, createAccount: false, deposit: true, withdraw: true,
+    marketOrders: true, limitOrders: true, cancelOrders: true, closePosition: true, reducePosition: true},
+  legacyRecovery: {accountMode: 'legacy_delegated', status: 'open', accountAddress: mockLegacyAccountAddress, accountId: 18,
+    collateral: {balanceUnits: '3000000', lockedUnits: '1000000', tokenBalanceUnits: '0'},
+    positions: [{marketId: '7', symbol: 'ETH-PERP', side: 'short', sizeUnits: '2500', entryPrice: '12345', markPrice: '12300', leverage: 2, unrealizedPnlUnits: '500'}],
+    orders: [{orderId: '91', marketId: '7', symbol: 'ETH-PERP', side: 'short', sizeUnits: '1500', price: '12300', status: 'open'}],
+    capabilities: {withdraw: true, rescueTokens: false, marketOrders: false, limitOrders: true, cancelOrders: true, closePosition: true, reducePosition: true}}};
 
 jest.mock('@react-navigation/native', () => {
   const ReactRuntime = require('react');
   return {useNavigation: () => mockNavigation, useRoute: () => mockRoute,
+    useIsFocused: () => true,
     useFocusEffect: (callback: () => void | (() => void)) => ReactRuntime.useEffect(callback, [callback])};
 });
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
+jest.mock('../src/services/useMarketQueries', () => ({
+  useManualPerplAccountQuery: () => ({data: mockAccount, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
+}));
 jest.mock('../src/services/manualPerplApi', () => ({manualPerplApi: {
   account: async () => mockAccount,
   prepareOrder: (input: unknown) => mockPrepareOrder(input),
@@ -40,16 +52,20 @@ jest.mock('../src/components/Ui', () => {
 import {PerplTradeScreen} from '../src/screens/PerplTradeScreen';
 
 function makePrepared(input: Record<string, any>) {
-  const to = '0x2222222222222222222222222222222222222222';
+  const expiresAt = Date.now() + 60_000;
+  const legacy = input.accountMode === 'legacy_delegated';
+  const to = legacy ? mockLegacyAccountAddress : mockExchangeAddress;
   const kind = String(input.kind);
   return {operationId: `op-${kind}`, venueId: 'perpl-direct-testnet-v1', chainId: 10143, status: 'prepared', action: kind,
-    expiresAt: Date.now() + 60_000, transaction: {chainId: 10143, type: 'eip1559', to, data: '0x1234', value: '0', nonce: '3',
+    expiresAt, transaction: {chainId: 10143, type: 'eip1559', to, data: '0x1234', value: '0', nonce: '3',
       gasLimit: '21000', maxFeePerGas: '3000000000', maxPriorityFeePerGas: '1000000000'},
     review: {action: kind, kind, ownerAddress: mockOwner, chainId: 10143, venueId: 'perpl-direct-testnet-v1',
-      accountAddress: mockAccountAddress, marketId: input.marketId, ...(input.side ? {side: input.side} : {}),
+      accountMode: legacy ? 'legacy_delegated' : 'direct_wallet', accountAddress: legacy ? mockLegacyAccountAddress : mockOwner,
+      marketId: input.marketId, ...(input.side ? {side: input.side} : {}),
       sizeUnits: input.sizeUnits ?? (kind === 'close_position' ? '2500' : kind === 'amend_limit' ? '1500' : '0'),
       ...(input.limitPrice ? {limitPrice: input.limitPrice} : {}), orderId: input.orderId ?? null,
-      orderDescription: {amountCNS: input.collateralAmountUnits ?? '0'}, transactionTarget: to, transactionValue: '0',
+      orderDescription: {amountCNS: input.collateralAmountUnits ?? '0'}, transactionTarget: to, transactionData: '0x1234',
+      transactionNonce: '3', transactionValue: '0', expiresAt,
       maxGas: {gasLimit: '21000', maxFeePerGas: '3000000000', maxPriorityFeePerGas: '1000000000', maxCostWei: '63000000000000'}}};
 }
 
@@ -66,7 +82,7 @@ async function setField(renderer: ReactTestRenderer.ReactTestRenderer, label: st
   await act(async () => input!.props.onChangeText(value));
 }
 async function prepare(renderer: ReactTestRenderer.ReactTestRenderer) {
-  const button = renderer.root.findAll(node => node.props.accessibilityLabel === 'Prepare exact Mera review')[0];
+  const button = renderer.root.findAll(node => String(node.props.accessibilityLabel ?? '').startsWith('Prepare exact'))[0];
   expect(button).toBeDefined();
   await act(async () => button!.props.onPress());
 }
@@ -103,6 +119,17 @@ test('add margin sends and reviews exact collateral base units', async () => {
   expect(mockPrepareOrder).toHaveBeenCalledWith(expect.objectContaining({kind: 'add_margin', collateralAmountUnits: '2500000'}));
   expect(mockNavigation.navigate).toHaveBeenCalledWith('ManualPerplReview', expect.objectContaining({
     expected: expect.objectContaining({action: 'add_margin', collateralAmountUnits: '2500000'}),
+  }));
+  await act(async () => renderer.unmount());
+});
+
+test('legacy close action stays bound to the saved delegated account recovery path', async () => {
+  const renderer = await render({marketId: '7', symbol: 'ETH-PERP', action: 'close_position', accountMode: 'legacy_delegated'});
+  await prepare(renderer);
+  expect(mockPrepareOrder).toHaveBeenCalledWith(expect.objectContaining({kind: 'close_position', accountMode: 'legacy_delegated', side: 'short'}));
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('ManualPerplReview', expect.objectContaining({
+    expected: expect.objectContaining({action: 'close_position', accountMode: 'legacy_delegated',
+      accountAddress: mockLegacyAccountAddress, transactionTarget: mockLegacyAccountAddress}),
   }));
   await act(async () => renderer.unmount());
 });

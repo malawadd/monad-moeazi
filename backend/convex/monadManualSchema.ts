@@ -4,7 +4,8 @@ import { v } from "convex/values";
 export const monadManualTables = {
   monadManualAccounts: defineTable({
     userId: v.id("users"), ownerAddress: v.string(), chainId: v.number(), venueId: v.string(),
-    accountAddress: v.string(), accountId: v.optional(v.number()), status: v.string(),
+    accountAddress: v.string(), accountId: v.optional(v.number()), accountMode: v.optional(v.union(
+      v.literal("direct_wallet"), v.literal("legacy_delegated"))), status: v.string(),
     balanceUnits: v.optional(v.string()), lockedUnits: v.optional(v.string()),
     lastObservedBlock: v.optional(v.number()), createdAt: v.number(), updatedAt: v.number(),
   }).index("by_user_owner", ["userId", "ownerAddress"])
@@ -15,7 +16,8 @@ export const monadManualTables = {
     userId: v.id("users"), ownerAddress: v.string(), chainId: v.number(), venueId: v.string(),
     operationId: v.string(), idempotencyKey: v.string(), intentHash: v.string(), action: v.string(),
     actionJson: v.string(), transactionJson: v.string(), nonce: v.number(), expiresAt: v.number(),
-    accountAddress: v.optional(v.string()), accountId: v.optional(v.number()),
+    accountAddress: v.optional(v.string()), accountId: v.optional(v.number()), accountMode: v.optional(v.union(
+      v.literal("direct_wallet"), v.literal("legacy_delegated"))),
     marketId: v.optional(v.number()), requestId: v.optional(v.number()),
     status: v.string(), signedTransaction: v.optional(v.string()), txHash: v.optional(v.string()),
     receiptStatus: v.optional(v.number()), blockNumber: v.optional(v.number()), blockHash: v.optional(v.string()),

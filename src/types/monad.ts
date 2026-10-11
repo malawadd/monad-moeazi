@@ -49,7 +49,8 @@ export type PreparedMonadOperation = {
     summary?: string; amount?: string; asset?: string; recipient?: string; vaultAddress?: string;
     venue?: MonadVenueId; accountScope?: MonadAccountScope; tokenIn?: string; tokenOut?: string;
     pair?: string; tokenAddress?: string; spender?: string; amountUnits?: string; amountInUnits?: string;
-    minAmountOutUnits?: string; inputDecimals?: number; outputDecimals?: number; quoteId?: string;
+    minAmountOutUnits?: string; inputDecimals?: number; outputDecimals?: number; quoteId?: string; poolId?: string;
+    poolKey?: {currency0: string; currency1: string; fee: number; tickSpacing: number; hooks: string};
     faucetAddress?: string; method?: string; [key: string]: unknown;
   };
 };
@@ -77,8 +78,17 @@ export type MonadQuote = {
   feeAmountUnits?: string;
   feeAsset?: string;
   feeProvenance: string;
-  gas?: {gasLimit: string; maxFeePerGas: string; maxPriorityFeePerGas: string; maxCostWei: string};
+  gas?: MonadGasCap | null;
+  gasCap?: MonadGasCap | null;
+  gasEstimationAvailable?: boolean;
+  ownerAddress?: string;
+  chainId?: number;
+  poolId?: string;
+  poolKey?: {currency0: string; currency1: string; fee: number; tickSpacing: number; hooks: string};
+  unverifiedPoolWarning?: boolean;
 };
+
+export type MonadGasCap = {gasLimit: string; maxFeePerGas: string; maxPriorityFeePerGas: string; maxCostWei: string};
 
 export type MonadVenueCapability = {
   id: MonadVenueId;

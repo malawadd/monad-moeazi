@@ -5,10 +5,19 @@ export type MarketCapabilities = {
   marketData: boolean;
   buy?: boolean;
   sell?: boolean;
+  walletSwap?: boolean;
   manualLongShort?: boolean;
   limitOrders?: boolean;
   cancelOrders?: boolean;
   closePosition?: boolean;
+};
+
+export type V4PoolKey = {
+  currency0: string;
+  currency1: string;
+  fee: number;
+  tickSpacing: number;
+  hooks: string;
 };
 
 export type MarketQuote = {
@@ -62,6 +71,11 @@ export type MarketDirectoryRow = {
   change24h?: number | string | null;
   liquidity?: number | string | null;
   quoteAvailable?: boolean;
+  poolId?: string;
+  poolKey?: V4PoolKey;
+  verified?: boolean;
+  verificationSource?: string | null;
+  readOnly?: boolean;
   [field: string]: unknown;
 };
 
@@ -82,6 +96,23 @@ export type MarketDetailResponse = {
   candleTimeUnit?: 'milliseconds' | 'seconds';
   observedAt: number | string;
   manualPosition?: Record<string, unknown> | null;
+};
+
+export type MarketSnapshotResponse = {
+  market: MarketDirectoryRow;
+  book?: MarketBook | null;
+  observedAt: number | string;
+  unavailable?: boolean;
+};
+
+export type MarketCandlesResponse = {
+  market: MarketDirectoryRow;
+  candles: MarketCandle[];
+  resolutionSeconds: number | null;
+  candleTimeUnit?: 'milliseconds' | 'seconds';
+  candlesUnavailable?: boolean;
+  unavailable?: boolean;
+  observedAt: number | string;
 };
 
 export type MarketTradeSummary = {

@@ -1,4 +1,5 @@
-import type {MonadOperationKind, MonadTypedData, MonadVenueId, PreparedMonadMandate, PreparedMonadOperation} from '../types/monad';
+import type {MonadGasCap, MonadOperationKind, MonadQuote, MonadTypedData, MonadVenueId, PreparedMonadMandate, PreparedMonadOperation} from '../types/monad';
+import type {V4PoolKey} from '../types/marketDirectory';
 import {encodeFunctionData, toFunctionSelector} from 'viem';
 import {MONAD_AUSD_ADDRESS, MONAD_AUSD_FAUCET_ABI, MONAD_AUSD_FAUCET_ADDRESS} from '../config/monadAUsd';
 
@@ -26,7 +27,36 @@ export type MonadOperationExpectation = {
   inputDecimals?: number;
   outputDecimals?: number;
   quoteId?: string;
+  poolId?: string;
+  poolKey?: V4PoolKey;
+  gas?: NonNullable<MonadQuote['gas']>;
+  gasCap?: MonadGasCap;
+  unverifiedPoolWarning?: boolean;
 };
+
+export function validateV4MarketQuote(value: MonadQuote, expected: {
+  ownerAddress: string; poolId: string; poolKey: V4PoolKey; verified: boolean; tokenIn: string; tokenOut: string;
+}) {
+  const poolTokens = [expected.poolKey.currency0.toLowerCase(), expected.poolKey.currency1.toLowerCase()].sort();
+  const reviewedTokens = [expected.tokenIn.toLowerCase(), expected.tokenOut.toLowerCase()].sort();
+  if (value.venue !== 'uniswap_v4_testnet' || value.accountScope !== 'wallet'
+      || value.chainId !== 10143 || !sameAddress(value.ownerAddress, expected.ownerAddress)
+      || value.poolId?.toLowerCase() !== expected.poolId.toLowerCase()
+      || !samePoolKey(value.poolKey, expected.poolKey)
+      || poolTokens[0] !== reviewedTokens[0] || poolTokens[1] !== reviewedTokens[1]
+      || value.unverifiedPoolWarning !== !expected.verified) {
+    throw new Error('The fresh quote is not bound to this Mera owner, Monad Testnet, exact v4 Pool ID and PoolKey, or verification warning.');
+  }
+  if (!isValidGasCap(value.gasCap)
+      || (value.gasEstimationAvailable === false ? value.gas != null : !isValidGasCap(value.gas))) {
+    throw new Error('The fresh v4 quote is missing a valid gas cap. Request a new quote before preparing a swap.');
+  }
+  if (value.gas && (BigInt(value.gas.gasLimit) > BigInt(value.gasCap.gasLimit)
+      || BigInt(value.gas.maxFeePerGas) !== BigInt(value.gasCap.maxFeePerGas)
+      || BigInt(value.gas.maxPriorityFeePerGas) !== BigInt(value.gasCap.maxPriorityFeePerGas))) {
+    throw new Error('The fresh v4 quote gas estimate exceeds or changes its explicit cap.');
+  }
+}
 
 export function validatePreparedMonadOperation(value: PreparedMonadOperation, expected: MonadOperationExpectation) {
   if (value.chainId !== 10143 || value.transactionType !== 'eip1559') {
@@ -46,6 +76,16 @@ export function validatePreparedMonadOperation(value: PreparedMonadOperation, ex
   }
   if (BigInt(tx.maxPriorityFeePerGas) > BigInt(tx.maxFeePerGas)) {
     throw new Error('The prepared priority fee exceeds the maximum fee.');
+  }
+  if (expected.gasCap && (BigInt(tx.gasLimit) > BigInt(expected.gasCap.gasLimit)
+      || BigInt(tx.maxFeePerGas) !== BigInt(expected.gasCap.maxFeePerGas)
+      || BigInt(tx.maxPriorityFeePerGas) !== BigInt(expected.gasCap.maxPriorityFeePerGas))) {
+    throw new Error('The prepared transaction exceeds or changed the fresh quote gas cap.');
+  }
+  if (!expected.gasCap && expected.gas && (BigInt(tx.gasLimit) !== BigInt(expected.gas.gasLimit)
+      || BigInt(tx.maxFeePerGas) !== BigInt(expected.gas.maxFeePerGas)
+      || BigInt(tx.maxPriorityFeePerGas) !== BigInt(expected.gas.maxPriorityFeePerGas))) {
+    throw new Error('The prepared transaction exceeds or changed the fresh quote gas cap.');
   }
 
   if (expected.kind === 'autonomy_recovery'
@@ -88,6 +128,8 @@ export function validatePreparedMonadOperation(value: PreparedMonadOperation, ex
   compareReview(review, expected, 'inputDecimals');
   compareReview(review, expected, 'outputDecimals');
   compareReview(review, expected, 'quoteId');
+  compareReview(review, expected, 'poolId');
+  compareReview(review, expected, 'poolKey');
 }
 
 export function validatePreparedMonadMandate(value: PreparedMonadMandate, ownerAddress: string, expected?: {amount: string; amountUnits: string; asset: 'USDC' | 'WMON'; durationDays: number}) {
@@ -225,12 +267,22 @@ function compareReview(review: Record<string, unknown> | undefined, expected: Mo
   if (wanted === undefined) return;
   const actual = review?.[key];
   if (actual === undefined) throw new Error(`The server did not echo the reviewed ${key}.`);
-  const match = key === 'recipient' || key === 'vaultAddress' || key === 'tokenIn' || key === 'tokenOut' || key === 'tokenAddress' || key === 'spender'
+  const match = key === 'poolKey' ? samePoolKey(actual, wanted as V4PoolKey)
+    : key === 'recipient' || key === 'vaultAddress' || key === 'tokenIn' || key === 'tokenOut' || key === 'tokenAddress' || key === 'spender'
     ? sameAddress(actual, String(wanted))
     : key === 'amount' ? canonicalAmount(actual) === canonicalAmount(String(wanted))
       : key === 'amountUnits' || key === 'amountInUnits' || key === 'minAmountOutUnits' ? sameQuantity(actual, String(wanted))
       : String(actual).toLowerCase() === String(wanted).toLowerCase();
   if (!match) throw new Error(`The prepared request changed the reviewed ${key}.`);
+}
+
+function samePoolKey(actual: unknown, expected?: V4PoolKey) {
+  if (!expected || !actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
+  const poolKey = actual as Record<string, unknown>;
+  return typeof poolKey.currency0 === 'string' && poolKey.currency0.toLowerCase() === expected.currency0.toLowerCase()
+    && typeof poolKey.currency1 === 'string' && poolKey.currency1.toLowerCase() === expected.currency1.toLowerCase()
+    && Number(poolKey.fee) === expected.fee && Number(poolKey.tickSpacing) === expected.tickSpacing
+    && typeof poolKey.hooks === 'string' && poolKey.hooks.toLowerCase() === expected.hooks.toLowerCase();
 }
 
 function canonicalAmount(value: unknown) {
@@ -242,6 +294,13 @@ function canonicalAmount(value: unknown) {
 function validQuantity(value: string, positive = false) {
   return /^(?:0|[1-9][0-9]*|0x[0-9a-fA-F]+)$/.test(value)
     && (!positive || BigInt(value) > 0n);
+}
+
+function isValidGasCap(value: MonadGasCap | null | undefined): value is MonadGasCap {
+  return Boolean(value && validQuantity(value.gasLimit, true) && validQuantity(value.maxFeePerGas, true)
+    && validQuantity(value.maxPriorityFeePerGas, true) && validQuantity(value.maxCostWei, true)
+    && BigInt(value.maxPriorityFeePerGas) <= BigInt(value.maxFeePerGas)
+    && BigInt(value.maxCostWei) === BigInt(value.gasLimit) * BigInt(value.maxFeePerGas));
 }
 
 function isHex(value: string) { return /^0x(?:[0-9a-f]{2})*$/i.test(value); }

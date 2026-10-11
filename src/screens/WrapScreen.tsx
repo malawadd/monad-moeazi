@@ -1,12 +1,12 @@
 import React, {useCallback, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, Field, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
 import {createMonadIdempotencyKey, monadApi} from '../services/monadApi';
 import {formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
 import {validatePreparedMonadOperation} from '../services/monadValidation';
-import type {MonadWalletSnapshot} from '../types/monad';
 import {useApp} from '../state/AppContext';
+import {useMonadWalletQuery} from '../services/useMarketQueries';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -15,23 +15,20 @@ type Action = 'wrap' | 'unwrap';
 export function WrapScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const [wallet, setWallet] = useState<MonadWalletSnapshot | null>(null);
+  const walletQuery = useMonadWalletQuery(ownerAddress, useIsFocused());
+  const {refetch} = walletQuery;
+  const wallet = walletQuery.data ?? null;
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const [action, setAction] = useState<Action>('wrap');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
-
-  const refresh = useCallback(async () => {
-    setChecking(true); setError('');
-    try {
-      const result = await monadApi.wallet();
-      if (result.chainId !== 10143 || result.ownerAddress.toLowerCase() !== ownerAddress?.toLowerCase()) throw new Error('Wallet data does not match this session.');
-      setWallet(result);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Wallet data is unavailable.'); }
-    finally { setChecking(false); }
-  }, [ownerAddress]);
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  const refresh = useCallback(async () => { setError(''); await refetch(); }, [refetch]);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
+  const walletError = walletQuery.error instanceof Error ? walletQuery.error.message : '';
 
   async function prepareReview() {
     setLoading(true); setError('');
@@ -54,10 +51,11 @@ export function WrapScreen() {
   const outputAsset = action === 'wrap' ? 'WMON' : 'MON';
   const balance = wallet?.balances.find(row => row.asset === inputAsset);
 
-  return <Screen refreshing={checking} onRefresh={() => { void refresh(); }}>
+  return <Screen refreshing={pullRefreshing || walletQuery.isLoading} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Wrap" title="Move between MON and WMON" copy="Review the exact contract call and maximum MON network fee before signing." />
-    {error ? <Notice live tone="rose" title="Action unavailable" message={error} actionLabel="Refresh balance" onAction={() => { void refresh(); }} /> : null}
-    {checking && !wallet ? <LoadingBlock label="Checking MON and WMON balances" lines={2} /> : null}
+    {error ? <Notice live tone="rose" title="Action unavailable" message={error} actionLabel="Refresh balance" onAction={() => { void pullToRefresh(); }} /> : null}
+    {walletError ? <Notice live tone="orange" title={wallet ? 'Showing last good balance' : 'Wallet balance unavailable'} message={walletError} actionLabel="Refresh balance" onAction={() => { void pullToRefresh(); }} /> : null}
+    {walletQuery.isLoading ? <LoadingBlock label="Checking MON and WMON balances" lines={2} /> : null}
     {wallet ? <Card>
       <View style={styles.actions}>{(['wrap', 'unwrap'] as const).map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{selected: action === item}} onPress={() => setAction(item)} style={[styles.action, action === item && styles.selected]}><Text style={styles.actionLabel}>{item === 'wrap' ? 'MON → WMON' : 'WMON → MON'}</Text></Pressable>)}</View>
       <Field label={`Amount (${inputAsset})`} value={amount} onChangeText={setAmount} placeholder="0" keyboardType="decimal-pad" />

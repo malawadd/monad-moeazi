@@ -5,12 +5,28 @@ export const monadTables = {
   monadQuotes: defineTable({
     userId: v.id("users"), subject: v.string(), ownerAddress: v.string(), chainId: v.number(), quoteId: v.string(),
     accountScope: v.union(v.literal("wallet"), v.literal("vault")), venue: v.string(),
-    tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()), amountInUnits: v.string(), amountOutUnits: v.string(),
+    tokenIn: v.string(), tokenOut: v.string(), poolAddress: v.optional(v.string()), poolId: v.optional(v.string()),
+    poolKeyJson: v.optional(v.string()), marketId: v.optional(v.string()),
+    inputDecimals: v.optional(v.number()), outputDecimals: v.optional(v.number()),
+    amountInUnits: v.string(), amountOutUnits: v.string(),
     minimumAmountOutUnits: v.string(), slippageBps: v.number(), feeProvenance: v.string(),
     expiresAt: v.number(), gasJson: v.optional(v.string()), createdAt: v.number(),
   }).index("by_userId_quoteId", ["userId", "quoteId"])
     .index("by_quoteId", ["quoteId"])
     .index("by_owner_createdAt", ["ownerAddress", "createdAt"]),
+
+  monadV4Pools: defineTable({
+    poolId: v.string(), currency0: v.string(), currency1: v.string(), fee: v.number(), tickSpacing: v.number(),
+    hooks: v.string(), initializedBlock: v.number(), observedAt: v.number(), verified: v.optional(v.boolean()),
+    verificationEvidence: v.optional(v.string()), verifiedBy: v.optional(v.string()), verifiedAt: v.optional(v.number()),
+  }).index("by_poolId", ["poolId"])
+    .index("by_currency0", ["currency0"])
+    .index("by_currency1", ["currency1"])
+    .index("by_verified", ["verified"]),
+
+  monadV4PoolIndexState: defineTable({
+    key: v.string(), scannedThrough: v.number(), latestBlock: v.number(), updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 
   monadOperations: defineTable({
     userId: v.id("users"), subject: v.string(), ownerAddress: v.string(),

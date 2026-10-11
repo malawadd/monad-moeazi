@@ -1,117 +1,122 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {MarketChart, type ChartRange} from '../components/MarketChart';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
-import {marketDirectoryApi} from '../services/marketDirectoryApi';
-import {manualPerplApi} from '../services/manualPerplApi';
-import {perplApi} from '../services/perplApi';
-import {marketIdentity, uniqueMarketTradeActivity, type MarketDetailResponse, type MarketDirectoryRow, type MarketTradesResponse} from '../types/marketDirectory';
-import type {ManualPerplAccount} from '../types/manualPerpl';
+import {marketIdentity, uniqueMarketTradeActivity, type MarketBook, type MarketDirectoryRow} from '../types/marketDirectory';
 import type {MonadMarketAsset, MonadVenueId} from '../types/monad';
 import {formatMonadTimestamp, monadTimestampMillis} from '../services/monadFormatting';
 import {useApp} from '../state/AppContext';
+import {useMarketCandlesQuery, useMarketDirectoryQuery, useMarketSnapshotQuery, useMarketTradesQuery, useManualPerplAccountQuery, usePerplCurrentQuery} from '../services/useMarketQueries';
+import {hasExecutableSpotRoute, isHookedPool} from '../services/marketDirectoryPresentation';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
-const RANGE: Record<ChartRange, {duration: number; resolution: number}> = {
-  '1H': {duration: 60 * 60_000, resolution: 60},
-  '6H': {duration: 6 * 60 * 60_000, resolution: 300},
-  '1D': {duration: 24 * 60 * 60_000, resolution: 900},
-  '1W': {duration: 7 * 24 * 60 * 60_000, resolution: 3600},
+const RANGE: Record<ChartRange, {durationMs: number; resolutionSeconds: number}> = {
+  '1H': {durationMs: 60 * 60_000, resolutionSeconds: 60},
+  '6H': {durationMs: 6 * 60 * 60_000, resolutionSeconds: 300},
+  '1D': {durationMs: 24 * 60 * 60_000, resolutionSeconds: 900},
+  '1W': {durationMs: 7 * 24 * 60 * 60_000, resolutionSeconds: 3600},
 };
 
 export function MarketDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const focused = useIsFocused();
   const {ownerAddress} = useApp();
   const venueId = String(route.params?.venueId ?? '');
   const marketId = String(route.params?.marketId ?? '');
   const selectedSummaryId = route.params?.summaryId ? String(route.params.summaryId) : undefined;
   const [range, setRange] = useState<ChartRange>('1D');
-  const [market, setMarket] = useState<MarketDirectoryRow | null>(null);
-  const [detail, setDetail] = useState<MarketDetailResponse | null>(null);
-  const [trades, setTrades] = useState<MarketTradesResponse | null>(null);
-  const [manualAccount, setManualAccount] = useState<ManualPerplAccount | null>(null);
-  const [autonomousPosition, setAutonomousPosition] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const directory = useMarketDirectoryQuery(ownerAddress, focused);
+  const snapshot = useMarketSnapshotQuery(ownerAddress, venueId, marketId, focused);
+  const candles = useMarketCandlesQuery(ownerAddress, venueId, marketId, RANGE[range], focused);
+  const trades = useMarketTradesQuery(ownerAddress, venueId, marketId, focused);
+  const isPerpl = venueId.startsWith('perpl-');
+  const manualQuery = useManualPerplAccountQuery(ownerAddress, isPerpl && focused);
+  const autonomousQuery = usePerplCurrentQuery(ownerAddress, isPerpl && focused);
+  const {refetch: refetchDirectory, isStale: directoryStale} = directory;
+  const {refetch: refetchSnapshot, isStale: snapshotStale} = snapshot;
+  const {refetch: refetchCandles, isStale: candlesStale} = candles;
+  const {refetch: refetchTrades, isStale: tradesStale} = trades;
+  const {refetch: refetchManual} = manualQuery;
+  const {refetch: refetchAutonomous} = autonomousQuery;
+  const market = snapshot.data?.market ?? directory.data?.markets.find(item =>
+    marketIdentity(item.venueId, item.marketId) === marketIdentity(venueId, marketId)) ?? null;
+  const manualAccount = ownerAddress && manualQuery.data?.ownerAddress.toLowerCase() === ownerAddress.toLowerCase()
+    && manualQuery.data.chainId === 10143 ? manualQuery.data : null;
+  const autonomousPosition = useMemo(() => {
+    const run = autonomousQuery.data?.current;
+    const position = run?.position as Record<string, unknown> | null | undefined;
+    return ownerAddress && run?.ownerAddress.toLowerCase() === ownerAddress.toLowerCase()
+      && position && position.marketId !== undefined && String(position.marketId) === marketId ? position : null;
+  }, [autonomousQuery.data, ownerAddress, marketId]);
   const refresh = useCallback(async () => {
-    if (!venueId || !marketId) { setError('This market link is missing its venue or market ID.'); setLoading(false); return; }
-    setLoading(true); setError('');
-    const from = Date.now() - RANGE[range].duration;
-    const to = Date.now();
-    const [directoryResult, detailResult, tradesResult, manualResult, autonomousResult] = await Promise.allSettled([
-      marketDirectoryApi.list(),
-      marketDirectoryApi.detail(venueId, marketId, {resolutionSeconds: RANGE[range].resolution, from, to}),
-      marketDirectoryApi.trades(venueId, marketId),
-      venueId.startsWith('perpl-') ? manualPerplApi.account() : Promise.resolve(null),
-      venueId.startsWith('perpl-') ? perplApi.current() : Promise.resolve(null),
-    ]);
-    const messages: string[] = [];
-    if (directoryResult.status === 'fulfilled') {
-      const found = directoryResult.value.markets.find(item => marketIdentity(item.venueId, item.marketId) === marketIdentity(venueId, marketId));
-      if (found) setMarket(found);
-    } else messages.push('Market list could not be refreshed.');
-    if (detailResult.status === 'fulfilled') { setDetail(detailResult.value); setMarket(detailResult.value.market); }
-    else messages.push(detailResult.reason instanceof Error ? detailResult.reason.message : 'Market quote and chart are unavailable.');
-    if (tradesResult.status === 'fulfilled') setTrades(tradesResult.value);
-    else messages.push('Market trade history is unavailable.');
-    if (manualResult.status === 'fulfilled' && manualResult.value) {
-      if (ownerAddress && manualResult.value.ownerAddress.toLowerCase() === ownerAddress.toLowerCase() && manualResult.value.chainId === 10143) setManualAccount(manualResult.value);
-      else messages.push('Manual Perpl account does not match the current Mera owner.');
-    } else if (manualResult.status === 'rejected') messages.push('Manual Perpl position is unavailable.');
-    if (autonomousResult.status === 'fulfilled' && autonomousResult.value?.current) {
-      const run = autonomousResult.value.current;
-      const position = run.position as Record<string, unknown> | null | undefined;
-      const sameOwner = Boolean(ownerAddress && run.ownerAddress.toLowerCase() === ownerAddress.toLowerCase());
-      const sameMarket = position && position.marketId !== undefined && String(position.marketId) === marketId;
-      setAutonomousPosition(sameOwner && sameMarket ? position : null);
-    } else if (autonomousResult.status === 'rejected') messages.push('Autonomous Perpl position is unavailable.');
-    setError(messages.join(' '));
-    setLoading(false);
-  }, [venueId, marketId, ownerAddress, range]);
-  useFocusEffect(useCallback(() => { void refresh(); const timer = setInterval(() => { void refresh(); }, 30_000); return () => clearInterval(timer); }, [refresh]));
+    if (!venueId || !marketId) return;
+    await Promise.allSettled([refetchDirectory(), refetchSnapshot(), refetchCandles(), refetchTrades(),
+      ...(isPerpl ? [refetchManual(), refetchAutonomous()] : [])]);
+  }, [venueId, marketId, refetchDirectory, refetchSnapshot, refetchCandles, refetchTrades,
+    isPerpl, refetchManual, refetchAutonomous]);
+  useFocusEffect(useCallback(() => { if (snapshotStale || candlesStale || tradesStale || directoryStale) void refresh(); },
+    [snapshotStale, candlesStale, tradesStale, directoryStale, refresh]));
 
-  const summaries = useMemo(() => (trades?.summaries ?? []).filter(item =>
+  const summaries = useMemo(() => (trades.data?.summaries ?? []).filter(item =>
     marketIdentity(item.venueId, item.marketId) === marketIdentity(venueId, marketId))
     .sort((left, right) => Number(right.summaryId === selectedSummaryId) - Number(left.summaryId === selectedSummaryId)),
-  [trades, venueId, marketId, selectedSummaryId]);
-  const marketActivity = useMemo(() => uniqueMarketTradeActivity(trades?.activity ?? []), [trades]);
+  [trades.data, venueId, marketId, selectedSummaryId]);
+  const marketActivity = useMemo(() => uniqueMarketTradeActivity(trades.data?.activity ?? []), [trades.data]);
   const quoteState = getQuoteState(market?.quote?.observedAt);
   const marketPrice = market?.kind === 'perpl' ? market.quote?.mark ?? market.quote?.last ?? market.quote?.mid : market?.quote?.price ?? market?.price;
   const displayPrice = market ? formatPrice(marketPrice, market.kind === 'perpl' ? market.priceDecimals ?? 0 : 0) : 'Loading…';
   const manualPosition = manualAccount?.positions.find(position => String(position.marketId) === marketId);
   const manualReady = manualAccount?.status === 'open' && (manualAccount.capabilities.marketOrders || manualAccount.capabilities.limitOrders);
   const marketCanTrade = Boolean(market?.available && market?.capabilities.manualLongShort);
+  const allQueries = [directory, snapshot, candles, trades, ...(isPerpl ? [manualQuery, autonomousQuery] : [])];
+  const anyStaleError = allQueries.some(query => query.isError && query.data !== undefined);
+  const refreshingStaleData = allQueries.some(query => query.isStale && query.data !== undefined && !query.isError);
+  const hasQueryError = allQueries.some(query => query.isError);
+  const errorMessages = [directory.isError ? 'The market directory could not be refreshed.' : '', snapshot.isError ? 'The latest quote or book could not be refreshed.' : '',
+    candles.isError ? 'Candle history could not be refreshed.' : '', trades.isError ? 'Trade history could not be refreshed.' : '',
+    isPerpl && manualQuery.isError ? 'Manual Perpl account data could not be refreshed.' : '',
+    isPerpl && autonomousQuery.isError ? 'Perpl position data could not be refreshed.' : ''].filter(Boolean);
+  const initialLoading = !market && (snapshot.isLoading || directory.isLoading);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
 
-  return <Screen refreshing={loading} onRefresh={() => { void refresh(); }} onBack={() => navigation.goBack()}>
+  return <Screen refreshing={pullRefreshing || initialLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker={`${market?.displayName ?? venueId} · Monad Testnet`} title={market?.symbol ?? 'Market detail'} copy={market?.name ?? `Venue ${venueId} · market ${marketId}`} />
-    {error ? <Notice live tone="orange" title="Market data is partial" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
-    {!market && !loading ? <Card><Text style={s.strong}>Market detail unavailable</Text><Text style={s.body}>The service did not return this venue and market pair. Reopen it from Markets to refresh the identity.</Text></Card> : null}
+    {hasQueryError ? <Notice live tone="orange" title={anyStaleError ? 'Showing last good market data' : 'Market data is unavailable'} message={errorMessages.join(' ') || 'Some market data could not be refreshed.'} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    {refreshingStaleData ? <Notice tone="orange" title="Refreshing stale market data" message="The last good quote, book, candles, and account history remain visible while the mobile service refreshes." /> : null}
+    {!market && !initialLoading ? <Card><Text style={s.strong}>Market detail unavailable</Text><Text style={s.body}>The service did not return this venue and market pair. Reopen it from Markets to refresh the identity.</Text></Card> : null}
     {market ? <>
       <Card>
         <View style={styles.quoteHeader}><Text style={s.heading}>{displayPrice}</Text><StatusBadge label={!market.quote ? 'Quote unavailable' : quoteState === 'fresh' ? 'Live quote' : quoteState === 'stale' ? 'Stale quote' : 'Quote time unavailable'} tone={quoteState === 'fresh' ? 'mint' : 'orange'} /></View>
+        {snapshot.isError && snapshot.data ? <StatusBadge label="Cached quote · refresh failed" tone="orange" /> : null}
         <DataRow label="Venue" value={market.displayName} />
         <DataRow label="Market ID" value={market.marketId} />
-        <DataRow label="Status" value={market.status === 'closed' || market.marketOpen === false ? 'Closed' : market.status === 'unavailable' ? 'Open · quote unavailable' : 'Open'} />
+        <DataRow label="Status" value={market.status === 'closed' || market.marketOpen === false ? 'Closed' : market.status === 'unavailable' || !market.available ? 'Listed · route unavailable' : 'Open'} />
         <DataRow label="Last observed" value={market.quote?.observedAt ? formatMonadTimestamp(market.quote.observedAt) : 'Not returned'} />
         {market.kind === 'perpl' && market.quote ? <DataRow label="Bid / ask" value={`${formatPrice(market.quote.bid, market.priceDecimals ?? 0)} / ${formatPrice(market.quote.ask, market.priceDecimals ?? 0)}`} /> : null}
         {market.kind === 'perpl' && market.fundingRateMicros !== null && market.fundingRateMicros !== undefined ? <DataRow label="Funding rate · micros" value={String(market.fundingRateMicros)} /> : null}
         {market.kind === 'spot' && market.baseAsset && market.quoteAsset ? <DataRow label="Pool" value={`${market.baseAsset.symbol} / ${market.quoteAsset.symbol}`} /> : null}
-        {market.testOnly ? <Text style={s.body}>{market.kind === 'perpl'
-          ? 'Perpl Testnet market · for Testnet verification.'
-          : 'Test only pool · this market is for Testnet verification.'}</Text> : null}
+        {market.poolId ? <DataRow label="Uniswap v4 Pool ID" value={market.poolId} /> : null}
+        {market.poolKey ? <DataRow label="Pool key" value={`fee ${market.poolKey.fee} · tick ${market.poolKey.tickSpacing} · hooks ${shortAddress(market.poolKey.hooks)}`} /> : null}
+        {market.kind === 'spot' && market.verified !== undefined ? <StatusBadge label={market.verified ? `Verified pool${market.verificationSource ? ` · ${market.verificationSource}` : ''}` : 'Unverified pool'} tone={market.verified ? 'mint' : 'orange'} /> : null}
+        {market.testOnly ? <Text style={s.body}>{market.kind === 'perpl' ? 'Perpl Testnet market · for Testnet verification.' : 'Testnet pool · for Testnet verification.'}</Text> : null}
         {market.reason ? <Text style={s.body}>{market.reason}</Text> : null}
       </Card>
-      {market.kind === 'perpl' ? <Card>
-        <Text style={s.strong}>Price history</Text>
-        {detail?.candles ? <MarketChart candles={detail.candles} priceDecimals={market.priceDecimals ?? 0} resolutionSeconds={detail.resolutionSeconds ?? undefined} range={range} onRangeChange={setRange} />
-          : <Text style={s.body}>Candle history is unavailable for this market.</Text>}
-      </Card> : <Card><Text style={s.strong}>Price history</Text><Text style={s.body}>{detail?.candles?.length ? 'Spot candles are available.' : 'Price history is unavailable for this spot pool. The current pool quote is shown above.'}</Text></Card>}
-      {detail?.book ? <OrderBook book={detail.book} priceDecimals={market.priceDecimals ?? 0} /> : null}
+      <Card><Text style={s.strong}>Price history</Text>
+        {candles.data?.candles.length ? <MarketChart candles={candles.data.candles} priceDecimals={market.priceDecimals ?? 0}
+          resolutionSeconds={candles.data.resolutionSeconds ?? undefined} candleTimeUnit={candles.data.candleTimeUnit}
+          observationLabel={market.kind === 'spot' ? 'Finalized spot observations' : 'Market observations'} range={range} onRangeChange={setRange} />
+          : <Text style={s.body}>{market.kind === 'spot' ? 'No finalized spot history was returned for this pool. Its current quote remains available above when the quote service responds.' : 'No candle history was returned for this market.'}</Text>}
+        {candles.isError && candles.data ? <Text style={styles.stale}>Cached candles · refresh failed</Text> : null}
+      </Card>
+      {snapshot.data?.book ? <OrderBook book={snapshot.data.book} priceDecimals={market.priceDecimals ?? 0} /> : null}
       {market.kind === 'perpl' ? <>
         <Card><Text style={s.strong}>Current positions</Text>
           {manualPosition ? <PositionCard title="Manual Mera account" position={manualPosition} sizeDecimals={market.sizeDecimals ?? 0} priceDecimals={market.priceDecimals ?? 0} /> : null}
@@ -146,15 +151,19 @@ export function MarketDetailScreen() {
 }
 
 function SpotActions({market, navigation}: {market: MarketDirectoryRow; navigation: any}) {
-  if (!market.baseAsset || !market.quoteAsset) return <Card><Text style={s.body}>This pool did not return the token contract details required for a reviewed swap.</Text></Card>;
-  return <Card><Text style={s.strong}>{market.testOnly ? 'Test-only spot pool' : 'Spot trading'}</Text>
-    {market.capabilities.buy ? <Button label={`Buy ${market.baseAsset.symbol}`} onPress={() => navigation.navigate('TradeReview', {marketId: market.marketId,
-      venue: market.venueId as MonadVenueId, accountScope: 'wallet', baseAsset: market.baseAsset as MonadMarketAsset,
-      quoteAsset: market.quoteAsset as MonadMarketAsset, side: 'buy'})} /> : null}
-    {market.capabilities.sell ? <Button label={`Sell ${market.baseAsset.symbol}`} variant="secondary" onPress={() => navigation.navigate('TradeReview', {marketId: market.marketId,
-      venue: market.venueId as MonadVenueId, accountScope: 'wallet', baseAsset: market.baseAsset as MonadMarketAsset,
-      quoteAsset: market.quoteAsset as MonadMarketAsset, side: 'sell'})} /> : null}
-    {!market.capabilities.buy && !market.capabilities.sell ? <Text style={s.body}>This pool is not executable through a Mera-reviewed spot route.</Text> : null}
+  const hooked = isHookedPool(market);
+  const routeReady = hasExecutableSpotRoute(market);
+  if (!market.baseAsset || !market.quoteAsset) return <Card><Text style={s.body}>This pool did not return token contract details required for a reviewed swap.</Text></Card>;
+  const params = {marketId: market.marketId, venue: market.venueId as MonadVenueId, accountScope: 'wallet' as const,
+    baseAsset: market.baseAsset as MonadMarketAsset, quoteAsset: market.quoteAsset as MonadMarketAsset,
+    poolId: market.poolId, poolKey: market.poolKey, verified: market.verified === true, verificationSource: market.verificationSource};
+  return <Card><Text style={s.strong}>{market.verified ? 'Verified spot pool' : 'Unverified spot pool'}</Text>
+    {market.verified === false ? <Text style={s.body}>This pool is outside the operator verified list. Review the Pool ID, tokens, fee, hooks, and minimum output before authorizing a wallet swap.</Text> : null}
+    {market.poolId ? <DataRow label="Exact Pool ID" value={market.poolId} /> : null}
+    {hooked ? <Text style={s.body}>This pool uses hooks. Its price and history are read only until its route is reviewed.</Text> : null}
+    {routeReady && market.capabilities.buy ? <Button label={`Buy ${market.baseAsset.symbol}`} onPress={() => navigation.navigate('TradeReview', {...params, side: 'buy'})} /> : null}
+    {routeReady && market.capabilities.sell ? <Button label={`Sell ${market.baseAsset.symbol}`} variant="secondary" onPress={() => navigation.navigate('TradeReview', {...params, side: 'sell'})} /> : null}
+    {!routeReady ? <Text style={s.body}>{market.reason ?? (hooked ? 'Hook pools are read only.' : 'This pool is listed, but its wallet route is not currently executable.')}</Text> : null}
   </Card>;
 }
 
@@ -169,7 +178,7 @@ function PositionCard({title, position, sizeDecimals, priceDecimals}: {title: st
   </Card>;
 }
 
-function OrderBook({book, priceDecimals}: {book: NonNullable<MarketDetailResponse['book']>; priceDecimals: number}) {
+function OrderBook({book, priceDecimals}: {book: MarketBook; priceDecimals: number}) {
   return <Card><Text style={s.strong}>Order book</Text>
     <DataRow label="Bid" value={book.bids[0] ? `${formatPrice(book.bids[0].price, priceDecimals)} · ${formatPrice(book.bids[0].size, 6)}` : 'Unavailable'} />
     <DataRow label="Ask" value={book.asks[0] ? `${formatPrice(book.asks[0].price, priceDecimals)} · ${formatPrice(book.asks[0].size, 6)}` : 'Unavailable'} />
@@ -180,7 +189,7 @@ function OrderBook({book, priceDecimals}: {book: NonNullable<MarketDetailRespons
 function formatPrice(value: unknown, decimals = 0) {
   if (value === null || value === undefined || value === '') return 'Unavailable';
   const number = Number(value) / (10 ** decimals);
-  return Number.isFinite(number) ? number.toLocaleString(undefined, {maximumFractionDigits: 6}) : 'Unavailable';
+  return Number.isFinite(number) ? number.toLocaleString(undefined, {maximumFractionDigits: 8}) : 'Unavailable';
 }
 function getQuoteState(value?: number | string | null): 'fresh' | 'stale' | 'unknown' {
   if (value === null || value === undefined) return 'unknown';
@@ -189,8 +198,10 @@ function getQuoteState(value?: number | string | null): 'fresh' | 'stale' | 'unk
   const age = Date.now() - time;
   return age < -5_000 || age > 90_000 ? 'stale' : 'fresh';
 }
+function shortAddress(value: string) { return value.length > 14 ? `${value.slice(0, 8)}…${value.slice(-5)}` : value; }
 
 const styles = StyleSheet.create({
   quoteHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, flexWrap: 'wrap'},
   activity: {gap: spacing.xs, paddingVertical: spacing.sm, borderTopWidth: 2, borderColor: colors.ink},
+  stale: {...s.meta, color: '#9B352C'},
 });

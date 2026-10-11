@@ -1,12 +1,13 @@
 import React, {useCallback, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, Field, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
 import {createMonadIdempotencyKey, monadApi} from '../services/monadApi';
 import {formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
 import {validatePreparedMonadOperation, isAddress} from '../services/monadValidation';
-import type {MonadAsset, MonadOperationKind, MonadWalletSnapshot} from '../types/monad';
+import type {MonadAsset, MonadOperationKind} from '../types/monad';
 import {useApp} from '../state/AppContext';
+import {useMonadWalletQuery} from '../services/useMarketQueries';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -15,24 +16,21 @@ const assets: MonadAsset[] = ['MON', 'USDC'];
 export function SendScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const [wallet, setWallet] = useState<MonadWalletSnapshot | null>(null);
+  const walletQuery = useMonadWalletQuery(ownerAddress, useIsFocused());
+  const {refetch} = walletQuery;
+  const wallet = walletQuery.data ?? null;
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const [asset, setAsset] = useState<MonadAsset>('MON');
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setChecking(true); setError('');
-    try {
-      const result = await monadApi.wallet();
-      if (result.chainId !== 10143 || result.ownerAddress.toLowerCase() !== ownerAddress?.toLowerCase()) throw new Error('Wallet data does not match this session.');
-      setWallet(result);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Wallet data is unavailable.'); }
-    finally { setChecking(false); }
-  }, [ownerAddress]);
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  const refresh = useCallback(async () => { setError(''); await refetch(); }, [refetch]);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
+  const walletError = walletQuery.error instanceof Error ? walletQuery.error.message : '';
 
   async function review() {
     setLoading(true); setError('');
@@ -53,10 +51,11 @@ export function SendScreen() {
     finally { setLoading(false); }
   }
 
-  return <Screen refreshing={checking} onRefresh={() => { void refresh(); }}>
+  return <Screen refreshing={pullRefreshing || walletQuery.isLoading} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Send" title="Review a transfer" copy="Moeazi prepares the exact Monad transaction first. Your Mera passkey signs only after you review it." />
-    {error ? <Notice live tone="rose" title="Transfer not prepared" message={error} actionLabel="Refresh balance" onAction={() => { void refresh(); }} /> : null}
-    {checking && !wallet ? <LoadingBlock label="Checking wallet balance" lines={2} /> : null}
+    {error ? <Notice live tone="rose" title="Transfer not prepared" message={error} actionLabel="Refresh balance" onAction={() => { void pullToRefresh(); }} /> : null}
+    {walletError ? <Notice live tone="orange" title={wallet ? 'Showing last good balance' : 'Wallet balance unavailable'} message={walletError} actionLabel="Refresh balance" onAction={() => { void pullToRefresh(); }} /> : null}
+    {walletQuery.isLoading ? <LoadingBlock label="Checking wallet balance" lines={2} /> : null}
     {wallet ? <Card>
       <Text style={s.meta}>{wallet.stale ? 'Balance may be out of date' : `Observed at block ${wallet.observedBlock}`}</Text>
       <View style={styles.assetChoices}>

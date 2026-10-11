@@ -17,6 +17,7 @@
     <script src="/autonomy-controls.js" defer></script>
     <script src="/perp-scenarios.js" defer></script>
     <script src="/perpl-scenarios.js" defer></script>
+    <script src="/manual-perpl-gate.js" defer></script>
   </head>
   <body>
     <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
@@ -41,6 +42,7 @@
         <a href="#health">Health &amp; monitoring</a><a href="#workspace-page">Programs &amp; teams</a>
         <a href="#testing-page">Experiments &amp; Test Center</a><a href="#credits-title">Credits &amp; providers</a>
         <a href="#config-page">Configuration</a><a href="#manual-sequence-page">Manual sequence</a>
+        <a href="#manual-perpl-page">Manual Perpl gate</a>
         <a href="#autonomy-page">Autonomy testnet</a><a href="#perp-scenarios-page">Mock perp scenarios</a>
         <a href="#perpl-scenarios-page">Perpl scenarios</a>
       </nav>
@@ -55,6 +57,16 @@
         <strong>Dedicated local operator identity</strong>
         <span>Console calls use a walletless, paused Monad-local workspace. Browser requests never receive Convex admin keys or service credentials.</span>
         <span class="scope">Customer identities and existing assignments are not used for operator-owned teams and programs.</span>
+      </section>
+
+      <section class="workspace" id="manual-perpl-page" aria-labelledby="manual-perpl-title">
+        <div class="panel-head"><div><p class="eyebrow">ONE GLOBAL TESTNET SWITCH</p><h2 id="manual-perpl-title">Manual Perpl gate</h2></div>
+          <div class="head-actions"><span id="manual-perpl-state" role="status">Not loaded</span><button id="manual-perpl-refresh" type="button">Refresh</button></div></div>
+        <p class="section-lead">This controls manual Perpl account changes and order preparation for the local Monad Testnet stack. Each user’s account and AUSD stay private in their app; every transaction still needs that user’s fresh Mera signature and exact review. The console cannot select an account or prepare, sign, or submit a trade.</p>
+        <div id="manual-perpl-gate-status" class="ops-grid" aria-live="polite"><p class="empty-state">Loading the global gate…</p></div>
+        <div class="config-actions"><button id="manual-perpl-enable" type="button">Enable manual Perpl</button><button id="manual-perpl-disable" type="button">Disable manual Perpl</button></div>
+        <div id="manual-perpl-readiness" class="ops-grid" aria-live="polite"><p class="empty-state">Checking Monad RPC and Perpl readiness…</p></div>
+        <div id="manual-perpl-audit" class="ops-grid" aria-live="polite"><p class="empty-state">Loading gate audit…</p></div>
       </section>
 
       <section class="workspace" id="perpl-scenarios-page" aria-labelledby="perpl-scenarios-title">

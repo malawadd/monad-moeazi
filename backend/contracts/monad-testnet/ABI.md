@@ -91,6 +91,21 @@ returns unavailable if that exact pool is uninitialized, the Quoter reverts, or
 there is no positive quote. `swap` settles directly through PoolManager unlock and
 does not use the Universal Router.
 
+`UniswapV4DynamicNoHookAdapter()` is the wallet-only path for indexed Monad v4
+pools that have no hooks. `quoteExactInput(bytes32 expectedPoolId, PoolKey key,
+address tokenIn, address tokenOut, uint256 amountIn)` and
+`swap(bytes32 expectedPoolId, PoolKey key, address tokenIn, address tokenOut,
+uint256 amountIn, uint256 minAmountOut)` recompute the PoolId from the exact key,
+reject hooks, and bind the selected input direction. The caller approves the
+adapter for the exact input; output returns to that caller. It is not added to the
+vault's mandate adapter list and cannot be used by autonomous execution.
+
+The deploy script writes its address and runtime code hash as
+`addresses.uniswapV4DynamicAdapter` and
+`codeHashes.uniswapV4DynamicAdapter`. The API remains read-only for PoolId-bound
+swaps until the supervisor verifies the deployment and configures
+`MONAD_TESTNET_UNISWAP_V4_DYNAMIC_ADAPTER_ADDRESS` on this local stack.
+
 `V4NoHookPoolSeeder(address owner)` can initialize once with
 `initializeAndSeed(uint160 sqrtPriceX96,uint256 usdcAmount,uint256 wmonAmount)`,
 add full-range liquidity with `seedExisting(uint256,uint256)`, or remove its

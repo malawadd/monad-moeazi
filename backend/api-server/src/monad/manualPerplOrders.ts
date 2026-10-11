@@ -1,54 +1,55 @@
-import { Contract, Interface, formatUnits, getAddress, parseUnits } from "ethers";
+import { Interface, formatUnits, parseUnits } from "ethers";
 import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import { operatorMutation } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
 import { MonadApiError } from "./config.js";
 import { buildEip1559Transaction, verifyExactSignedTransaction } from "./transactions.js";
-import { monadProvider, finalizedBlockNumber, requireContractCode } from "./provider.js";
+import { monadProvider, finalizedBlockNumber } from "./provider.js";
 import { PERPL_DIRECT_VENUE_ID, PERPL_CHAIN_ID, PERPL_TESTNET_AUSD, PERPL_TESTNET_EXCHANGE } from "./perplConfig.js";
 import { PerplApiClient } from "./perplApi.js";
 import { readPerplContext, readPerplMarkets } from "./perplContext.js";
-import { readDirectAccount, readDirectOrder } from "./perplDirectState.js";
+import { readDirectAccount, readDirectOrder, readDirectAccountId } from "./perplDirectState.js";
 import { buildDirectOrderDesc, PERPL_DIRECT_EXEC_ABI } from "./perplDirectOrders.js";
 import { decodeDirectReceipt } from "./perplDirectEvents.js";
 import { reconcileManualOperation } from "./manualPerplReconcile.js";
-import { storedAccount, storedOperation, persistPrepared, storedIdempotentOperation, sha256Json,
-  validateIdempotencyKey, manualOperationDto, requireManualPerplActions, requireManualPerplBroadcast,
-  manualPerplEnabled } from "./manualPerplShared.js";
+import { readLegacyManualState } from "./manualPerplState.js";
+import { storedManualAccounts, storedOperation, persistPrepared, storedIdempotentOperation, sha256Json,
+  validateIdempotencyKey, manualOperationDto, requireManualPerplActions, requireManualPerplBroadcast } from "./manualPerplShared.js";
 
-const DA = ["function owner() view returns(address)", "function exchange() view returns(address)",
-  "function accountId() view returns(uint256)"];
 const nowFresh = (value: number) => Number.isSafeInteger(value) && value > 0 && value <= Date.now() + 5_000 && Date.now() - value <= 60_000;
 const positiveUnits = (value: unknown, label: string) => {
   if (typeof value !== "string" || !/^[1-9]\d{0,20}$/.test(value)) throw new MonadApiError(`${label} must be a positive integer in Perpl base units.`, 400, "manual_perpl_amount_invalid");
   const parsed = BigInt(value); if (parsed > BigInt(Number.MAX_SAFE_INTEGER)) throw new MonadApiError(`${label} is above the safe Perpl size limit.`, 400, "manual_perpl_amount_invalid");
   return Number(parsed);
 };
+export function manualOrderIntentHash(ownerAddress: string, accountMode: "direct_wallet" | "legacy_delegated", body: any) {
+  return sha256Json({ owner: ownerAddress.toLowerCase(), accountMode, kind: String(body.kind), marketId: Number(body.marketId),
+    side: body.side ?? null, sizeUnits: body.sizeUnits ?? null, limitPrice: body.limitPrice ?? null,
+    leverage: body.leverage ?? 1, orderId: body.orderId ?? null, collateralAmountUnits: body.collateralAmountUnits ?? null });
+}
 function orderId(value: unknown) {
   if (typeof value !== "string" && typeof value !== "number" || !/^\d{1,12}$/.test(String(value))) throw new MonadApiError("A valid open Perpl order ID is required.", 400, "manual_perpl_order_id_invalid");
   const n = Number(value); if (!Number.isSafeInteger(n) || n <= 0) throw new MonadApiError("Perpl order ID is invalid.", 400, "manual_perpl_order_id_invalid");
   return n;
 }
 
-async function snapshot(provider: any, auth: any, marketId: number) {
-  const saved: any = await storedAccount(auth.token);
-  if (!saved?.accountAddress) throw new MonadApiError("Create a separate Mera-owned manual Perpl account first.", 409, "manual_perpl_account_missing");
+async function snapshot(provider: any, auth: any, marketId: number, accountMode: "direct_wallet" | "legacy_delegated") {
+  const saved: any = await storedManualAccounts(auth.token);
   const live = await readPerplContext(); const market = live.markets.find((row) => row.id === marketId);
   if (!market) throw new MonadApiError("Perpl market was not found on Testnet.", 404, "perpl_market_unknown");
-  const daAddress = getAddress(saved.accountAddress);
-  await requireContractCode(provider, daAddress, "Perpl manual delegated account");
-  const da = new Contract(daAddress, DA, provider);
-  const [owner, exchange, idRaw] = await Promise.all([da.owner(), da.exchange(), da.accountId()]);
-  const accountId = Number(idRaw);
-  if (String(owner).toLowerCase() !== auth.ownerAddress.toLowerCase()
-      || String(exchange).toLowerCase() !== PERPL_TESTNET_EXCHANGE.toLowerCase()
-      || !Number.isSafeInteger(accountId) || accountId <= 0) {
-    throw new MonadApiError("Manual Perpl account is not open or no longer matches its Mera owner.", 409, "manual_perpl_account_mismatch");
+  const checkpoint = await finalizedBlockNumber(provider);
+  if (accountMode === "legacy_delegated") {
+    const legacy: any = await readLegacyManualState(provider, auth.ownerAddress, saved?.legacy, live, checkpoint);
+    if (!legacy?.accountId || !legacy.account) throw new MonadApiError("Legacy Perpl recovery account is not open.", 409, "manual_perpl_account_not_open");
+    const account = legacy.account;
+    return { live, market, daAddress: legacy.accountAddress, accountMode, accountId: legacy.accountId, account };
   }
+  const accountId = await readDirectAccountId(provider, auth.ownerAddress, checkpoint);
+  if (!accountId) throw new MonadApiError("Create the direct Mera-owned Perpl account before trading.", 409, "manual_perpl_account_missing");
   const ids = live.markets.filter((row) => row.isOpen).map((row) => row.id);
-  const account = await readDirectAccount(provider, accountId, ids, daAddress);
-  return { live, market, daAddress, accountId, account };
+  const account = await readDirectAccount(provider, accountId, ids, auth.ownerAddress, 0, checkpoint);
+  return { live, market, daAddress: auth.ownerAddress, accountMode, accountId, account };
 }
 
 function ensureFreshMarket(market: any, needsBook: boolean) {
@@ -77,17 +78,23 @@ function checkDepth(action: any, market: any, maxSlippageBps: number) {
 async function prepareOrder(context: any) {
   const auth = await requireMera(context); requireManualPerplActions();
   const body = parseBody(await context.req.json()); const idempotencyKey = validateIdempotencyKey(body.idempotencyKey);
+  const accountMode = body.accountMode === undefined || body.accountMode === "direct_wallet" ? "direct_wallet"
+    : body.accountMode === "legacy_delegated" ? "legacy_delegated" : null;
+  if (!accountMode) throw new MonadApiError("Manual Perpl account mode is invalid.", 400, "manual_perpl_account_mode_invalid");
   const kind = String(body.kind); const supported = ["market_entry", "limit_entry", "close_position", "reduce_size", "cancel_limit", "add_margin", "amend_limit"];
   if (!supported.includes(kind)) throw new MonadApiError("Manual Perpl order kind is unsupported.", 400, "manual_perpl_action_invalid");
   const marketId = Number(body.marketId);
   if (!Number.isSafeInteger(marketId) || marketId <= 0) throw new MonadApiError("Perpl market ID is invalid.", 400, "perpl_market_unknown");
+  const intentHash = manualOrderIntentHash(auth.ownerAddress, accountMode, { ...body, kind, marketId });
+  const prior = await storedIdempotentOperation(auth.token, idempotencyKey, intentHash);
+  if (prior) return context.json(manualOperationDto(prior, kind, prior.actionDetails ?? {}));
   let side = body.side === "long" || body.side === "short" ? body.side : undefined;
   const marketAction = ["market_entry", "limit_entry", "close_position", "reduce_size"].includes(kind);
   if (marketAction && !side) throw new MonadApiError("Manual Perpl order side must be long or short.", 400, "manual_perpl_side_invalid");
   const provider = await monadProvider();
   try {
     if ((await provider.getNetwork()).chainId !== BigInt(PERPL_CHAIN_ID)) throw new MonadApiError("Manual Perpl orders require Monad Testnet.", 503, "perpl_wrong_chain");
-    const { live, daAddress, accountId, account } = await snapshot(provider, auth, marketId);
+    const { live, daAddress, accountId, account } = await snapshot(provider, auth, marketId, accountMode);
     const api = new PerplApiClient();
     const market = kind === "cancel_limit" ? live.markets.find((item) => item.id === marketId)
       : (await readPerplMarkets(api, [marketId], true))[0];
@@ -145,19 +152,18 @@ async function prepareOrder(context: any) {
     const checkpoint = await finalizedBlockNumber(provider);
     const orderDesc = buildDirectOrderDesc(action, market, requestId, checkpoint);
     const data = new Interface(PERPL_DIRECT_EXEC_ABI).encodeFunctionData("execOrder", [orderDesc]);
-    const built = await buildEip1559Transaction(provider, auth.ownerAddress, daAddress, data);
-    const review = { action: kind, kind, ownerAddress: auth.ownerAddress, chainId: PERPL_CHAIN_ID, venueId: PERPL_DIRECT_VENUE_ID,
+    const transactionTarget = accountMode === "direct_wallet" ? PERPL_TESTNET_EXCHANGE : daAddress;
+    const built = await buildEip1559Transaction(provider, auth.ownerAddress, transactionTarget, data);
+    const review = { action: kind, kind, accountMode, ownerAddress: auth.ownerAddress, chainId: PERPL_CHAIN_ID, venueId: PERPL_DIRECT_VENUE_ID,
+      exchangeAddress: PERPL_TESTNET_EXCHANGE,
       accountAddress: daAddress, accountId, marketId, symbol: market.symbol, priceDecimals: market.priceDecimals,
       sizeDecimals: market.sizeDecimals, ...(side ? { side, direction: side } : {}),
       sizeUnits: String(size), ...(limitPrice ? { limitPrice } : {}), leverage,
       quotedAUSDUnits: notional.toString(), maxOrderAUSDUnits: maxOrder.toString(), observedAt: market.price?.observedAt ?? null,
       quoteBlockNumber: market.price?.blockNumber ?? null, requestId, orderId: existingOrderId ?? null,
       ...(beforeOrder ? { existingOrder: beforeOrder } : {}), orderDescription: orderDesc,
-      target: daAddress, transactionValue: "0", method: "execOrder(OrderDesc)", gas: built.gas,
+      target: transactionTarget, transactionValue: "0", method: "execOrder(OrderDesc)", gas: built.gas,
       collateral: { symbol: "AUSD", address: PERPL_TESTNET_AUSD, decimals: 6 } };
-    const intentHash = sha256Json({ owner: auth.ownerAddress.toLowerCase(), review });
-    const prior = await storedIdempotentOperation(auth.token, idempotencyKey, intentHash);
-    if (prior) return context.json(manualOperationDto(prior, kind, prior.actionDetails ?? review));
     const operationId = randomUUID(); const expiresAt = Date.now() + 240_000;
     const row: any = await persistPrepared(auth.token, { operationId, idempotencyKey, intentHash,
       action: kind, actionJson: JSON.stringify({ ...review, prePositionSize: String(currentSize), preOrderCount: account.orders.length,
@@ -166,7 +172,7 @@ async function prepareOrder(context: any) {
         marketId, symbol: market.symbol,
         side: side ?? currentSide, sizeUnits: String(size), orderId: existingOrderId ?? null, orderDescription: orderDesc }),
       transactionJson: JSON.stringify(built.transaction), nonce: built.transaction.nonce, expiresAt,
-      accountAddress: daAddress, accountId, marketId, requestId });
+      accountAddress: daAddress, accountId, accountMode, marketId, requestId });
     return context.json(manualOperationDto(row, kind, review), 201);
   } finally { await provider.destroy(); }
 }

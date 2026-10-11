@@ -6,6 +6,7 @@ import type { VenueAccountSnapshot } from "./venueTypes.js";
 // Struct layouts are from Perpl's published IExchange interface. Read every
 // field at one finalized block so a decision never mixes account snapshots.
 export const PERPL_DIRECT_READ_ABI = [
+  "function getAccountByAddr(address accountAddress) view returns (uint256 accountId)",
   "function getAccountById(uint256 accountId) view returns ((uint256 accountId,uint256 balanceCNS,uint256 lockedBalanceCNS,uint8 frozen,address accountAddr,(uint256 bank1,uint256 bank2,uint256 bank3,uint256 bank4) positions))",
   "function getPositionV2(uint256 perpId,uint256 accountId) view returns ((uint256 accountId,uint256 nextNodeId,uint256 prevNodeId,uint8 positionType,uint256 depositCNS,uint256 pricePNS,uint256 lotLNS,uint256 entryBlock,int256 pnlCNS,int256 deltaPnlCNS,int256 premiumPnlCNS,uint256 priceResiduePNSQ16) positionInfo,uint256 markPricePNS,bool markPriceValid)",
   "function getOrderLocks(uint256 accountId) view returns ((uint32 orderLockId,uint32 nextOrderLockId,uint32 prevOrderLockId,uint8 orderType,uint40 lotLNS,uint80 amountCNS)[] orderLocks)",
@@ -13,10 +14,10 @@ export const PERPL_DIRECT_READ_ABI = [
 ];
 
 export async function readDirectAccount(provider: JsonRpcProvider, accountId: number,
-  marketIds: number[], expectedAccountAddress: string, lastRequestId = 0): Promise<VenueAccountSnapshot> {
+  marketIds: number[], expectedAccountAddress: string, lastRequestId = 0, blockOverride?: number): Promise<VenueAccountSnapshot> {
   if (!Number.isSafeInteger(accountId) || accountId <= 0 || !marketIds.length
     || marketIds.some((id) => !Number.isSafeInteger(id) || id <= 0)) throw new Error("Invalid Perpl direct account query.");
-  const blockNumber = await finalizedBlockNumber(provider);
+  const blockNumber = blockOverride ?? await finalizedBlockNumber(provider);
   const exchange = new Contract(PERPL_TESTNET_EXCHANGE, PERPL_DIRECT_READ_ABI, provider);
   const account = await exchange.getAccountById(accountId, { blockTag: blockNumber });
   if (Number(account.accountId) !== accountId
@@ -39,6 +40,18 @@ export async function readDirectAccount(provider: JsonRpcProvider, accountId: nu
     lockedUnits: String(account.lockedBalanceCNS), forwardingEnabled: false, lastRequestId,
     positions, orders: locks.map((lock) => ({ lockId: Number(lock.orderLockId),
       lot: String(lock.lotLNS), amountUnits: String(lock.amountCNS) })), observedAt: Date.now(), blockNumber };
+}
+
+export async function readDirectAccountId(provider: JsonRpcProvider, ownerAddress: string, blockNumber: number): Promise<number | null> {
+  const exchange = new Contract(PERPL_TESTNET_EXCHANGE, PERPL_DIRECT_READ_ABI, provider);
+  try {
+    const accountId = Number(await exchange.getAccountByAddr(ownerAddress, { blockTag: blockNumber }));
+    if (!Number.isSafeInteger(accountId) || accountId <= 0) return null;
+    return accountId;
+  } catch (error: any) {
+    if (error?.code === "CALL_EXCEPTION") return null;
+    throw error;
+  }
 }
 
 export async function readDirectOrder(provider: JsonRpcProvider, marketId: number, orderId: number, blockNumber: number) {

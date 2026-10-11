@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Text} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
@@ -8,6 +8,7 @@ import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormattin
 import {openMeraSigningSession} from '../services/wallet/meraAuth';
 import type {ManualPerplOperationStatus, ManualPerplPreparedOperation} from '../types/manualPerpl';
 import {useApp} from '../state/AppContext';
+import {invalidateAfterFinalizedOperation} from '../services/queryCache';
 import {screenStyles as s} from '../theme/screenStyles';
 
 export function ManualPerplReviewScreen() {
@@ -22,6 +23,12 @@ export function ManualPerplReviewScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [signed, setSigned] = useState(false);
+
+  useEffect(() => {
+    if (ownerAddress && ['finalized', 'failed', 'no_fill'].includes(result?.status ?? '')) {
+      void invalidateAfterFinalizedOperation(ownerAddress);
+    }
+  }, [ownerAddress, result?.status]);
 
   async function signAndSubmit() {
     if (!prepared || !expected || !ownerAddress || signed) return;
@@ -78,6 +85,7 @@ export function ManualPerplReviewScreen() {
     <PageHeader kicker="Final review · Mera signing" title="Check every transaction detail" copy="This exact action will be signed by your Mera owner on Monad Testnet. Each manual account or order action needs a fresh review and signature." />
     {error ? <Notice live tone="rose" title={signed ? 'Action may still be processing' : 'Review needs attention'} message={error} actionLabel={signed ? 'Check original operation' : undefined} onAction={signed ? () => { void checkStatus(); } : undefined} /> : null}
     {result ? <Notice live tone={tint} title={`Status · ${humanize(result.status)}`} message={result.message ?? statusMessage(result)} /> : null}
+    {result?.transactionHash ? <Card><DataRow label="Transaction hash" value={result.transactionHash} /></Card> : null}
     <Card>
       <DataRow label="Action" value={label} />
       <DataRow label="Operation ID" value={prepared.operationId} />
@@ -86,7 +94,8 @@ export function ManualPerplReviewScreen() {
       <DataRow label="Venue" value={String(prepared.venueId ?? prepared.review.venueId ?? 'Perpl Testnet')} />
       <DataRow label="Network" value="Monad Testnet · 10143" />
       <DataRow label="Prepared expiry" value={formatMonadTimestamp(prepared.expiresAt)} />
-      {Object.entries(prepared.review).filter(([key, value]) => !['ownerAddress', 'chainId', 'accountAddress', 'venueId', 'marketId'].includes(key)
+      {Object.entries(prepared.review).filter(([key, value]) => !['ownerAddress', 'chainId', 'accountAddress', 'venueId', 'marketId',
+        'transactionTarget', 'transactionData', 'transactionNonce', 'transactionValue', 'expiresAt'].includes(key)
           && value !== null && value !== undefined && typeof value !== 'object').map(([key, value]) => <DataRow key={key} label={humanize(key)} value={String(value)} />)}
       {expected?.collateralAmountUnits ? <DataRow label="AUSD margin to add" value={`${formatMonadUnits(expected.collateralAmountUnits, 6)} AUSD`} /> : null}
     </Card>
@@ -108,6 +117,7 @@ export function ManualPerplReviewScreen() {
       <Text style={s.meta}>Transaction data</Text><Text selectable style={s.body}>{normalized.data}</Text>
     </Card> : null}
     {result?.fill ? <Card><Text style={s.strong}>Finalized fill</Text><ScalarDetails record={result.fill} /></Card> : null}
+    {result?.result ? <Card><Text style={s.strong}>Finalized exchange result</Text><ScalarDetails record={result.result} /></Card> : null}
     {result?.receipt ? <Card><Text style={s.strong}>Receipt and state evidence</Text><ScalarDetails record={result.receipt} /></Card> : null}
     <Button label={signed ? 'Signature already submitted' : 'Sign exact action with Mera'} onPress={() => { void signAndSubmit(); }} loading={busy} disabled={signed || !normalized} />
     {signed && !terminal ? <Button label="Check original operation status" variant="secondary" onPress={() => { void checkStatus(); }} loading={busy} /> : null}

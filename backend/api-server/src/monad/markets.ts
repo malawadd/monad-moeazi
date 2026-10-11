@@ -12,6 +12,8 @@ import { PERPL_DIRECT_VENUE_ID, PERPL_CHAIN_ID, PERPL_TESTNET_AUSD, PERPL_TESTNE
   PerplApiError } from "./perplConfig.js";
 import { PerplApiClient } from "./perplApi.js";
 import { readPerplContext } from "./perplContext.js";
+import { listV4PoolRecords, scheduleV4PoolIndexScan, seedV4Pool } from "./v4PoolIndex.js";
+import { buildV4MarketRow, resolveV4Markets } from "./v4PoolMarkets.js";
 
 const MOCK_SPOT_VENUE = "moeazi_mock_pools_testnet";
 const RESOLUTIONS = new Set([60, 300, 900, 1800, 3600, 7200, 14400, 28800, 43200, 86400]);
@@ -81,7 +83,16 @@ function spotActionsEnabled() {
     && process.env.MONAD_TESTNET_BROADCAST_ENABLED?.trim().toLowerCase() === "true";
 }
 
+async function safeV4PoolRecords(verifiedOnly = false) {
+  try { return await listV4PoolRecords({ verifiedOnly }); }
+  catch {
+    return { pools: verifiedOnly ? [seedV4Pool()] : [seedV4Pool()],
+      index: { status: "unavailable", scannedThrough: 0, latestBlock: 0 } };
+  }
+}
+
 async function adapterSpotRows(provider: any) {
+  const seed = seedV4Pool();
   return await Promise.all((["uniswap_v4_testnet", "moeazi_test_amm"] as const).map(async (venueId) => {
     const displayName = venueId === "uniswap_v4_testnet" ? "Uniswap v4 Testnet" : "Moeazi Test AMM";
     const adapter = configuredAdapter(venueId);
@@ -102,6 +113,9 @@ async function adapterSpotRows(provider: any) {
       const available = fresh && Boolean(buy[1] && sell[1]) && BigInt(buy[0]) > 0n && BigInt(sell[0]) > 0n;
       return { kind: "spot", venueId, marketId: "WMON_USDC", displayName, symbol: "WMON/USDC", name: "Wrapped MON / USDC",
         status: available ? "open" : "unavailable", available, testOnly: true, chainId: MONAD_CHAIN_ID,
+        ...(venueId === "uniswap_v4_testnet" ? { poolId: seed.poolId, poolKey: { currency0: seed.currency0,
+          currency1: seed.currency1, fee: seed.fee, tickSpacing: seed.tickSpacing, hooks: seed.hooks }, verified: true,
+          verificationSource: seed.verificationSource, unverifiedPoolWarning: false } : {}),
         baseAsset, quoteAsset, capabilities: { marketData: true, buy: available && spotActionsEnabled(), sell: available && spotActionsEnabled(), manualLongShort: false },
         ...(available ? { quote: { price: formatUnits(BigInt(sell[0]), 6), basePerQuote: formatUnits(BigInt(buy[0]), 18),
           buy: { amountInUnits: "1000000", amountOutUnits: String(buy[0]), inputDecimals: 6, outputDecimals: 18 },
@@ -111,6 +125,9 @@ async function adapterSpotRows(provider: any) {
     } catch {
       return { kind: "spot", venueId, marketId: "WMON_USDC", displayName, symbol: "WMON/USDC", name: "Wrapped MON / USDC",
         status: "unavailable", available: false, testOnly: true, chainId: MONAD_CHAIN_ID, baseAsset, quoteAsset,
+        ...(venueId === "uniswap_v4_testnet" ? { poolId: seed.poolId, poolKey: { currency0: seed.currency0,
+          currency1: seed.currency1, fee: seed.fee, tickSpacing: seed.tickSpacing, hooks: seed.hooks }, verified: true,
+          verificationSource: seed.verificationSource, unverifiedPoolWarning: false } : {}),
         capabilities: { marketData: true, buy: false, sell: false, manualLongShort: false },
         reason: "Testnet adapter is unavailable or the pool has no executable quote." };
     }
@@ -170,8 +187,19 @@ async function readSpotDirectory() {
     let provider: any;
     try { provider = await monadProvider(); } catch { /* rows become unavailable per venue */ }
     try {
-      const [adapters, mockPools] = await Promise.all([adapterSpotRows(provider), mockPoolRows(provider)]);
-      const rows = [...adapters, ...mockPools]; spotCache = { expiresAt: Date.now() + 5_000, rows }; return rows;
+      scheduleV4PoolIndexScan();
+      const [adapters, mockPools, v4Records] = await Promise.all([
+        adapterSpotRows(provider), mockPoolRows(provider), safeV4PoolRecords(true),
+      ]);
+      const staticUniswap = adapters.find((row: any) => row.venueId === "uniswap_v4_testnet");
+      const verifiedPools = v4Records.pools.slice(0, 50);
+      let v4Rows: any[] = [];
+      if (provider) v4Rows = (await Promise.all(verifiedPools.map(async (record) => {
+        try { return await buildV4MarketRow(provider, record); } catch { return null; }
+      }))).filter(Boolean);
+      if (!v4Rows.some((row: any) => row.marketId === "WMON_USDC") && staticUniswap) v4Rows.unshift(staticUniswap);
+      const rows = [...adapters.filter((row: any) => row.venueId !== "uniswap_v4_testnet"), ...v4Rows, ...mockPools];
+      spotCache = { expiresAt: Date.now() + 5_000, rows }; return rows;
     } finally { await provider?.destroy(); }
   })();
   try { return await spotLoading; } finally { spotLoading = undefined; }
@@ -183,9 +211,20 @@ async function directory(context: any) {
   try { perpl = await readPerplDirectory(); }
   catch (error) { perplReason = error instanceof PerplApiError ? error.code : "perpl_context_unavailable"; }
   const spot = await readSpotDirectory();
+  const v4Index = (await safeV4PoolRecords()).index;
   return context.json({ observedAt: Date.now(), chainId: MONAD_CHAIN_ID,
+    v4PoolIndex: v4Index,
     ...(perplReason ? { sources: { perpl: { status: "unavailable", reason: perplReason } } } : {}),
     markets: [...perpl, ...spot] });
+}
+
+async function resolvePool(context: any) {
+  await requireMera(context);
+  const body = asObject(await context.req.json());
+  scheduleV4PoolIndexScan();
+  const provider = await monadProvider();
+  try { return context.json(await resolveV4Markets(provider, body.query)); }
+  finally { await provider.destroy(); }
 }
 
 function candlesQuery(context: any) {
@@ -200,12 +239,13 @@ function candlesQuery(context: any) {
 async function detail(context: any) {
   const auth = await requireMera(context);
   const venueId = context.req.param("venueId"); const marketId = context.req.param("marketId");
+  const includeCandles = context.req.query("includeCandles") !== "false";
   if (venueId === MOCK_SPOT_VENUE || venueId === "uniswap_v4_testnet" || venueId === "moeazi_test_amm") {
     const response: any = await directory(context);
     const payload = await response.json();
     const market = payload.markets.find((row: any) => row.venueId === venueId && row.marketId === marketId);
     if (!market) throw new MonadApiError("Market was not found.", 404, "market_not_found");
-    return spotMarketDetail(context, auth, market, venueId, marketId, candlesQuery(context));
+    return spotMarketDetail(context, auth, market, venueId, marketId, candlesQuery(context), includeCandles);
   }
   if (venueId !== PERPL_DIRECT_VENUE_ID || !/^\d{1,8}$/.test(marketId)) throw new MonadApiError("Market venue or ID is unsupported.", 404, "market_not_found");
   const api = new PerplApiClient(); const parsed = candlesQuery(context); const id = Number(marketId);
@@ -215,7 +255,8 @@ async function detail(context: any) {
   const row = perplDirectoryRow(base, ticker);
   const [bookResult, candleResult, funding] = await Promise.allSettled([
     api.publicGet(`/v1/market-data/${id}/book?levels=100`),
-    api.publicGet(`/v1/market-data/${id}/candles/${parsed.resolution}/${parsed.from}-${parsed.to}`),
+    includeCandles ? api.publicGet(`/v1/market-data/${id}/candles/${parsed.resolution}/${parsed.from}-${parsed.to}`)
+      : Promise.resolve(null),
     fundingFor(api, base),
   ]);
   const bookRaw: any = bookResult.status === "fulfilled" ? bookResult.value : null;
@@ -226,14 +267,40 @@ async function detail(context: any) {
   const book = bookRaw && bookFresh ? { bids: (Array.isArray(bookRaw.bid) ? bookRaw.bid : []).map((item: any) => ({ price: int(item.p), size: int(item.s) })),
     asks: (Array.isArray(bookRaw.ask) ? bookRaw.ask : []).map((item: any) => ({ price: int(item.p), size: int(item.s) })),
     observedAt: bookObservedAt, blockNumber: bookBlockNumber } : undefined;
-  const candles = Array.isArray(candleRaw?.d) ? candleRaw.d.filter((item: any) => [item.t, item.o, item.h, item.l, item.c].every((value) => Number.isFinite(Number(value))))
+  const candles = includeCandles && Array.isArray(candleRaw?.d) ? candleRaw.d.filter((item: any) => [item.t, item.o, item.h, item.l, item.c].every((value) => Number.isFinite(Number(value))))
     .map((item: any) => ({ t: int(item.t), o: int(item.o), h: int(item.h), l: int(item.l), c: int(item.c), v: String(item.v ?? "0"), n: int(item.n) })) : [];
   const market = { ...row, ...(funding.status === "fulfilled" && funding.value ? { fundingRateMicros: funding.value.rate,
     fundingObservedAt: funding.value.observedAt } : {}) };
-  return context.json({ market, ...(book ? { book } : { book: null }), candles, resolutionSeconds: parsed.resolution,
+  return context.json({ market, ...(book ? { book } : { book: null }), candles, candlesIncluded: includeCandles, resolutionSeconds: parsed.resolution,
     candleTimeUnit: "milliseconds",
     observedAt: Date.now(), unavailable: { book: !book, bookReason: bookRaw && !bookFresh ? "perpl_book_stale" : undefined,
-      candles: !candleRaw } });
+      ...(includeCandles ? { candles: !candleRaw } : {}) } });
+}
+
+async function candles(context: any) {
+  const auth = await requireMera(context);
+  const venueId = context.req.param("venueId"); const marketId = context.req.param("marketId");
+  const parsed = candlesQuery(context);
+  if ([MOCK_SPOT_VENUE, "uniswap_v4_testnet", "moeazi_test_amm"].includes(venueId)) {
+    const response: any = await directory(context); const payload = await response.json();
+    const market = payload.markets.find((row: any) => row.venueId === venueId && row.marketId === marketId);
+    if (!market) throw new MonadApiError("Market was not found.", 404, "market_not_found");
+    return spotMarketDetail(context, auth, market, venueId, marketId, parsed, true);
+  }
+  if (venueId !== PERPL_DIRECT_VENUE_ID || !/^\d{1,8}$/.test(marketId)) {
+    throw new MonadApiError("Market venue or ID is unsupported.", 404, "market_not_found");
+  }
+  const api = new PerplApiClient(); const id = Number(marketId); const venueContext = await readPerplContext(api);
+  const base = venueContext.markets.find((item) => item.id === id);
+  if (!base) throw new MonadApiError("Perpl Testnet market was not found.", 404, "market_not_found");
+  let raw: any = null;
+  try { raw = await api.publicGet(`/v1/market-data/${id}/candles/${parsed.resolution}/${parsed.from}-${parsed.to}`); }
+  catch { /* missing candle history remains explicit */ }
+  const rows = Array.isArray(raw?.d) ? raw.d.filter((item: any) => [item.t, item.o, item.h, item.l, item.c].every((value) => Number.isFinite(Number(value))))
+    .map((item: any) => ({ t: int(item.t), o: int(item.o), h: int(item.h), l: int(item.l), c: int(item.c), v: String(item.v ?? "0"), n: int(item.n) })) : [];
+  const market = perplDirectoryRow(base, {});
+  return context.json({ market, candles: rows, resolutionSeconds: parsed.resolution, candleTimeUnit: "milliseconds",
+    candlesUnavailable: rows.length === 0, observedAt: Date.now(), unavailable: { candles: !raw } });
 }
 
 async function trades(context: any) {
@@ -277,6 +344,8 @@ async function trades(context: any) {
 
 export function registerMarketRoutes(app: Hono<any>) {
   app.get("/api/mobile/markets", (c) => guard(c, directory));
+  app.post("/api/mobile/markets/resolve", (c) => guard(c, resolvePool));
+  app.get("/api/mobile/markets/:venueId/:marketId/candles", (c) => guard(c, candles));
   app.get("/api/mobile/markets/:venueId/:marketId", (c) => guard(c, detail));
   app.get("/api/mobile/trades", (c) => guard(c, trades));
 }

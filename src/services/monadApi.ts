@@ -4,6 +4,7 @@ import type {
   MonadMandate, MonadOperationKind, MonadOperationStatus, MonadQuote, MonadVenueId, MonadWalletSnapshot,
   PreparedMonadMandate, PreparedMonadOperation,
 } from '../types/monad';
+import type {V4PoolKey} from '../types/marketDirectory';
 
 const base = '/api/mobile/monad';
 
@@ -14,6 +15,8 @@ export type MonadQuoteInput = {
   tokenOut: string;
   amountIn: string;
   slippageBps: number;
+  poolId?: string;
+  poolKey?: V4PoolKey;
 };
 
 export type MonadPrepareInput = {
@@ -33,6 +36,8 @@ export type MonadPrepareInput = {
   venue?: string;
   quoteId?: string;
   accountScope?: 'wallet' | 'vault';
+  poolId?: string;
+  poolKey?: V4PoolKey;
 };
 
 export type MonadApprovalRequirement = {kind: 'approve_token'; tokenAddress: string; spender: string; amountUnits: string};

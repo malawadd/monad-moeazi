@@ -2,13 +2,16 @@
 
 This isolated Foundry project targets Monad Testnet (`10143`). It contains an
 owner-controlled USDC/WMON vault, a small owner-seeded constant-product test AMM,
-and a no-hook Uniswap v4 adapter for the community PoolManager registry.
+the fixed-pool Uniswap v4 adapter, and a wallet-only generic adapter for indexed
+no-hook pools on the community PoolManager.
 
 The executor has no withdrawal or arbitrary-call method. It can only submit a
 unique order ID through an enabled adapter while a signed, unexpired owner
 mandate permits that adapter, pair, per-trade input, and total input. The owner
-can revoke a mandate or stop trading at any time. Both adapters support manual
+can revoke a mandate or stop trading at any time. The fixed adapters support manual
 wallet swaps with exact input approval and send output to the caller.
+The dynamic v4 adapter is excluded from the vault's mandate allowlist; mobile
+owners sign its PoolId-bound transactions directly.
 
 ## Build and tests
 
@@ -57,11 +60,33 @@ After setting a secured Foundry signer and `MONAD_TESTNET_RPC_URL`, run:
   --rpc-url $env:MONAD_TESTNET_RPC_URL --broadcast
 ```
 
-The script creates the AMM adapter, v4 adapter, v4 seeder, and vault with both
-adapters enabled. It does not initialize a pool or seed the AMM. It writes a draft
+The script creates the AMM adapter, fixed v4 adapter, v4 seeder, and vault with
+only the two reviewed fixed adapters enabled. It does not initialize a pool or
+seed the AMM. It writes a draft
 manifest with addresses, onchain code hashes, source/toolchain pin, and observed
 v4 pool state. Deployment transaction hashes remain explicitly pending until the
 supervisor verifies Foundry receipts and updates the manifest status.
+
+The dynamic wallet adapter is deployed independently so a future update cannot
+replace the existing vault, adapters, seeder, or verified manifest. After review,
+use the dedicated script to deploy only `UniswapV4DynamicNoHookAdapter`:
+
+```powershell
+$env:MONAD_SOURCE_REVISION = (git rev-parse HEAD)
+& "../../.data/foundry-v1.8.4/bin/forge.exe" script script/DeployDynamicV4Adapter.s.sol `
+  --rpc-url $env:MONAD_TESTNET_RPC_URL
+```
+
+Review the simulation and its draft at
+`backend/.data/monad-v4-dynamic-adapter.addendum.draft.json`. The script records
+the predicted address, runtime code hash, source hash, and a pending receipt
+slot. After the supervising operator broadcasts the same script, verify the
+Foundry receipt and runtime code hash, then fill the addendum receipt fields and
+copy the verified address to `MONAD_TESTNET_UNISWAP_V4_DYNAMIC_ADAPTER_ADDRESS`.
+The draft is validated by
+`deployments/manifest.v4-dynamic.addendum.schema.json`; it does not edit
+`manifest.testnet.json`. Until the address and receipt are verified, indexed v4
+markets remain read-only.
 
 `SeedMoeaziAmm.s.sol` requires `MONAD_TESTNET_AMM_ADAPTER_ADDRESS`,
 `MONAD_USDC_SEED_AMOUNT`, and `MONAD_WMON_SEED_AMOUNT`. It must be broadcast by

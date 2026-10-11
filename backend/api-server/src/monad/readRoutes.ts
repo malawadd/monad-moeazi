@@ -3,12 +3,16 @@ import { Contract, formatUnits, getAddress, Interface } from "ethers";
 import { Hono } from "hono";
 import { meraQuery, operatorMutation } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
-import { chooseVenue, configuredAdapter, configuredVault, maxSlippageBps, MonadApiError, venueData, type MonadVenue } from "./config.js";
+import { chooseVenue, configuredAdapter, configuredDynamicV4Adapter, configuredVault, maxSlippageBps,
+  MonadApiError, venueData, type MonadVenue } from "./config.js";
 import { ADAPTER_ABI, ASSETS, MONAD_CHAIN_ID, USDC_ADDRESS, WMON_ADDRESS, VAULT_ABI } from "./constants.js";
-import { monadProvider, readTokenBalance, readWalletBalances, requireContractCode } from "./provider.js";
+import { finalizedBlockNumber, monadProvider, readTokenBalance, readWalletBalances, requireContractCode } from "./provider.js";
 import { amountUnits } from "./transactions.js";
 import { reconcileOwnerPendingOperations } from "./operations.js";
 import { MOCK_SPOT_VENUE, quoteMockPool, resolveMockPool } from "./mockSpot.js";
+import { findV4Pool, poolKeysEqual, v4MarketId, v4PoolKey, type V4PoolRecord } from "./v4PoolIndex.js";
+import { buildV4SwapCall, quoteV4Pool } from "./v4PoolSwap.js";
+import { v4TokenDecimals } from "./v4PoolMarkets.js";
 
 function jsonRecord(value: unknown) {
   if (typeof value !== "string") return {};
@@ -18,11 +22,12 @@ function jsonRecord(value: unknown) {
 
 export function monadQuoteId(input: { ownerAddress: string; scope: string; venue: string; tokenIn: string;
   tokenOut: string; amountIn: string; amountOut: string; minimumOut: string; slippageBps: number; expiresAt: number;
-  poolAddress?: string }) {
-  const digest = createHash("sha256").update([input.ownerAddress.toLowerCase(), input.scope, input.venue,
+  poolAddress?: string; poolId?: string; poolKeyJson?: string; gasCapJson?: string }) {
+  const digest = createHash("sha256").update([String(MONAD_CHAIN_ID), input.ownerAddress.toLowerCase(), input.scope, input.venue,
     input.tokenIn.toLowerCase(), input.tokenOut.toLowerCase(), input.amountIn, input.amountOut,
     input.minimumOut, String(input.slippageBps), String(input.expiresAt),
-    ...(input.poolAddress ? [input.poolAddress.toLowerCase()] : [])].join(":")).digest("hex");
+    ...(input.poolAddress ? [input.poolAddress.toLowerCase()] : []), ...(input.poolId ? [input.poolId.toLowerCase()] : []),
+    ...(input.poolKeyJson ? [input.poolKeyJson] : []), ...(input.gasCapJson ? [input.gasCapJson] : [])].join(":")).digest("hex");
   return `0x${digest}`;
 }
 
@@ -96,22 +101,43 @@ async function quote(context: any) {
   const scope = body.accountScope;
   if (scope !== "wallet" && scope !== "vault") throw new MonadApiError("Quote scope must be wallet or vault.");
   if (mockPool && scope !== "wallet") throw new MonadApiError("Mock pool swaps are Mera-wallet only.", 403, "operator_only");
+  const dynamicV4 = venue === "uniswap_v4_testnet" && body.poolId !== undefined;
+  if (dynamicV4 && scope !== "wallet") throw new MonadApiError("PoolId-bound v4 swaps are Mera-wallet only.", 403, "operator_only");
   const tokenIn = getAddress(body.tokenIn); const tokenOut = getAddress(body.tokenOut);
-  if (!mockPool && (tokenIn.toLowerCase() === tokenOut.toLowerCase()
+  if (!mockPool && !dynamicV4 && (tokenIn.toLowerCase() === tokenOut.toLowerCase()
       || ![tokenIn.toLowerCase(), tokenOut.toLowerCase()].every((token) => [USDC_ADDRESS, WMON_ADDRESS].some((a) => a.toLowerCase() === token)))) {
     throw new MonadApiError("Only the reviewed USDC/WMON testnet pair is supported.", 400, "pair_unsupported");
   }
   const provider = await monadProvider();
   let pool: Awaited<ReturnType<typeof resolveMockPool>> | undefined;
+  let v4Pool: V4PoolRecord | undefined;
   try {
-  if (mockPool) pool = await resolveMockPool(provider, tokenIn, tokenOut);
-  const inputDecimals = pool?.tokenInDecimals ?? (tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
-  const outputDecimals = pool?.tokenOutDecimals ?? (tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
-  const inputUnits = amountUnits(body.amountIn, inputDecimals);
-  const slippageBps = maxSlippageBps(body.slippageBps);
+    if (mockPool) pool = await resolveMockPool(provider, tokenIn, tokenOut);
+    if (dynamicV4) {
+      v4Pool = await findV4Pool(body.poolId) ?? undefined;
+      if (!v4Pool) throw new MonadApiError("PoolId was not found in the Monad v4 pool index.", 404, "v4_pool_not_found");
+    }
+    const checkpoint = dynamicV4 ? await finalizedBlockNumber(provider) : undefined;
+    const inputDecimals = pool?.tokenInDecimals ?? (dynamicV4
+      ? await v4TokenDecimals(provider, tokenIn, checkpoint!)
+      : tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
+    const outputDecimals = pool?.tokenOutDecimals ?? (dynamicV4
+      ? await v4TokenDecimals(provider, tokenOut, checkpoint!)
+      : tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? ASSETS.USDC.decimals : ASSETS.WMON.decimals);
+    const inputUnits = amountUnits(body.amountIn, inputDecimals);
+    const slippageBps = maxSlippageBps(body.slippageBps);
     let result: any;
     let adapter: string | null | undefined;
+    let v4Quote: Awaited<ReturnType<typeof quoteV4Pool>> | undefined;
     if (pool) result = [await quoteMockPool(provider, pool, inputUnits), true];
+    else if (v4Pool) {
+      v4Quote = await quoteV4Pool(provider, v4Pool, tokenIn, tokenOut, inputUnits);
+      result = [v4Quote.amountOut, true]; adapter = v4Quote.adapter;
+      const suppliedKey = body.poolKey;
+      if (suppliedKey !== undefined && !poolKeysEqual(suppliedKey, v4Quote.poolKey)) {
+        throw new MonadApiError("PoolKey differs from the indexed PoolId record.", 409, "v4_pool_key_mismatch");
+      }
+    }
     else {
       adapter = configuredAdapter(venue as MonadVenue);
       if (!adapter) throw new MonadApiError("Selected Monad Testnet venue is not configured.", 503, "venue_disabled");
@@ -125,23 +151,35 @@ async function quote(context: any) {
     const minOut = amountOut * BigInt(10_000 - slippageBps) / 10_000n;
     if (minOut <= 0n) throw new MonadApiError("Minimum output rounds to zero.");
     const expiresAt = Date.now() + 30_000;
+    const poolKey = v4Pool ? v4PoolKey(v4Pool) : undefined;
+    const poolKeyJson = poolKey ? JSON.stringify(poolKey) : undefined;
+    const v4Call = v4Pool ? buildV4SwapCall(v4Pool, tokenIn, tokenOut, inputUnits, minOut) : undefined;
+    const v4Gas = v4Call ? await estimateV4WalletGasCap(provider, auth.ownerAddress, v4Call) : undefined;
+    const gasCapJson = v4Gas?.gasCap ? JSON.stringify(v4Gas.gasCap) : undefined;
     const quoteId = monadQuoteId({ ownerAddress: auth.ownerAddress, scope, venue, tokenIn, tokenOut,
       amountIn: inputUnits.toString(), amountOut: amountOut.toString(), minimumOut: minOut.toString(), slippageBps, expiresAt,
-      ...(pool ? { poolAddress: pool.poolAddress } : {}) });
-    const response = { quoteId, accountScope: scope, venue, tokenIn, tokenOut,
+      ...(pool ? { poolAddress: pool.poolAddress } : {}), ...(v4Pool ? { poolId: v4Pool.poolId, poolKeyJson, gasCapJson } : {}) });
+    const response: any = { quoteId, accountScope: scope, venue, ownerAddress: auth.ownerAddress, chainId: MONAD_CHAIN_ID, tokenIn, tokenOut,
       amountInUnits: inputUnits.toString(), amountOutUnits: amountOut.toString(),
       minimumAmountOutUnits: minOut.toString(), expiresAt: new Date(expiresAt).toISOString(),
       feeProvenance: pool ? `${venue} finalized pool quote at block ${pool.checkpoint}; output includes pool fee`
+        : v4Quote ? `${venue} PoolId ${v4Quote.poolId} quote at finalized block ${v4Quote.checkpoint}; output includes pool fee`
         : `${venue} adapter quote; output amount includes venue pricing`, outputDecimals,
       ...(pool ? { poolAddress: pool.poolAddress, inputDecimals, tokenSymbol: pool.symbol } : {}),
-      ...(scope === "wallet" && adapter ? await estimateWalletSwapGas(provider, auth.ownerAddress,
-        adapter, tokenIn, tokenOut, inputUnits, minOut) : {}) };
-    const gas = (response as any).gas;
+      ...(v4Pool ? { poolId: v4Pool.poolId, poolKey, marketId: v4MarketId(v4Pool.poolId), inputDecimals,
+        verified: v4Pool.verified, unverifiedPoolWarning: !v4Pool.verified,
+        warning: !v4Pool.verified ? "This pool is not operator verified. Review its PoolId and PoolKey before signing." : undefined,
+        observedAt: v4Quote?.observedAt, blockNumber: v4Quote?.checkpoint,
+        gasCap: v4Gas?.gasCap, gas: v4Gas?.gas ?? null, gasEstimationAvailable: v4Gas?.gasEstimationAvailable } : {}),
+      ...(!v4Pool && scope === "wallet" && adapter
+        ? await estimateWalletSwapGas(provider, auth.ownerAddress, adapter, tokenIn, tokenOut, inputUnits, minOut) : {}) };
+    const storedGas = v4Pool ? v4Gas?.gasCap : (response as any).gas;
     await operatorMutation("monadQuotes", "recordQuote", { subject: auth.subject, ownerAddress: auth.ownerAddress,
       quoteId, accountScope: scope, venue, tokenIn, tokenOut, amountInUnits: inputUnits.toString(),
       amountOutUnits: amountOut.toString(), minimumAmountOutUnits: minOut.toString(), slippageBps,
       feeProvenance: response.feeProvenance, expiresAt, ...(pool ? { poolAddress: pool.poolAddress } : {}),
-      ...(gas ? { gasJson: JSON.stringify(gas) } : {}) });
+      ...(v4Pool ? { poolId: v4Pool.poolId, poolKeyJson, marketId: v4MarketId(v4Pool.poolId), inputDecimals, outputDecimals } : {}),
+      ...(storedGas ? { gasJson: JSON.stringify(storedGas) } : {}) });
     return context.json(response);
   } finally { await provider.destroy(); }
 }
@@ -223,8 +261,14 @@ async function estimateWalletSwapGas(provider: any, owner: string, adapter: stri
   tokenOut: string, amountIn: bigint, minOut: bigint) {
   try {
     const data = new Interface(ADAPTER_ABI).encodeFunctionData("swap", [tokenIn, tokenOut, amountIn, minOut, "0x"]);
+    return await estimateWalletCallGas(provider, owner, { to: adapter, data });
+  } catch { return {}; }
+}
+
+async function estimateWalletCallGas(provider: any, owner: string, call: { to: string; data: string }) {
+  try {
     const [estimate, fees, network] = await Promise.all([
-      provider.estimateGas({ from: owner, to: adapter, data, value: 0n, type: 2, chainId: MONAD_CHAIN_ID, accessList: [] }),
+      provider.estimateGas({ from: owner, to: call.to, data: call.data, value: 0n, type: 2, chainId: MONAD_CHAIN_ID, accessList: [] }),
       provider.getFeeData(), provider.getNetwork(),
     ]);
     if (network.chainId !== BigInt(MONAD_CHAIN_ID) || estimate <= 0n || fees.maxFeePerGas === null
@@ -234,6 +278,27 @@ async function estimateWalletSwapGas(provider: any, owner: string, adapter: stri
     return { gas: { gasLimit: gasLimit.toString(), maxFeePerGas: fees.maxFeePerGas.toString(),
       maxPriorityFeePerGas: fees.maxPriorityFeePerGas.toString(), maxCostWei: (gasLimit * fees.maxFeePerGas).toString() } };
   } catch { return {}; }
+}
+
+async function estimateV4WalletGasCap(provider: any, owner: string, call: { to: string; data: string }) {
+  const maxGas = 3_000_000n;
+  const [fees, network] = await Promise.all([provider.getFeeData(), provider.getNetwork()]);
+  if (network.chainId !== BigInt(MONAD_CHAIN_ID)) throw new MonadApiError("Gas quote is not on Monad Testnet.", 503, "wrong_chain");
+  if (fees.maxFeePerGas === null || fees.maxPriorityFeePerGas === null || fees.maxFeePerGas < fees.maxPriorityFeePerGas) {
+    throw new MonadApiError("Monad Testnet did not provide a usable EIP-1559 fee quote.", 503, "fee_unavailable");
+  }
+  let estimatedGasLimit: bigint | undefined;
+  try {
+    const estimate = await provider.estimateGas({ from: owner, to: call.to, data: call.data, value: 0n,
+      type: 2, chainId: MONAD_CHAIN_ID, accessList: [] });
+    const padded = (estimate * 115n + 99n) / 100n;
+    if (estimate > 0n && padded <= maxGas) estimatedGasLimit = padded;
+  } catch { /* approval may not exist yet; retain the explicit reviewed ceiling */ }
+  const gasCap = { gasLimit: maxGas.toString(), maxFeePerGas: fees.maxFeePerGas.toString(),
+    maxPriorityFeePerGas: fees.maxPriorityFeePerGas.toString(), maxCostWei: (maxGas * fees.maxFeePerGas).toString() };
+  const gas = estimatedGasLimit ? { gasLimit: estimatedGasLimit.toString(), maxFeePerGas: fees.maxFeePerGas.toString(),
+    maxPriorityFeePerGas: fees.maxPriorityFeePerGas.toString(), maxCostWei: (estimatedGasLimit * fees.maxFeePerGas).toString() } : null;
+  return { gasCap, gas, gasEstimationAvailable: Boolean(gas) };
 }
 
 export function registerMonadReadRoutes(app: Hono<any>) {
@@ -246,5 +311,8 @@ export function registerMonadReadRoutes(app: Hono<any>) {
 
 async function guard(context: any, handler: (context: any) => Promise<Response>) {
   try { return await handler(context); }
-  catch (error) { const mapped = routeError(error); return context.json(mapped.body, mapped.status as any); }
+  catch (error) {
+    process.stderr.write(`[api] Monad read ${context.req.path} failed: ${error instanceof Error ? `${error.name}: ${error.message.slice(0, 500)}` : "unknown error"}.\n`);
+    const mapped = routeError(error); return context.json(mapped.body, mapped.status as any);
+  }
 }

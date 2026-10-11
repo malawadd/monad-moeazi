@@ -1,42 +1,31 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback} from 'react';
 import {Text, View} from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
-import {monadApi} from '../services/monadApi';
 import {formatMonadUnits, shortenAddress} from '../services/monadFormatting';
-import type {MonadWalletSnapshot} from '../types/monad';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useApp} from '../state/AppContext';
+import {useMonadWalletQuery} from '../services/useMarketQueries';
 
 export function MonadHomeScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const [wallet, setWallet] = useState<MonadWalletSnapshot | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const walletQuery = useMonadWalletQuery(ownerAddress, useIsFocused());
+  const {refetch} = walletQuery;
+  const [pullRefreshing, setPullRefreshing] = React.useState(false);
+  const wallet = walletQuery.data ?? null;
+  const error = walletQuery.error instanceof Error ? walletQuery.error.message : '';
+  const refresh = useCallback(async () => { await refetch(); }, [refetch]);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
 
-  const refresh = useCallback(async () => {
-    setError('');
-    try {
-      const snapshot = await monadApi.wallet();
-      if (snapshot.chainId !== 10143 || snapshot.ownerAddress.toLowerCase() !== ownerAddress?.toLowerCase()) {
-        throw new Error('The wallet snapshot does not match this Monad Testnet session.');
-      }
-      setWallet(snapshot);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Wallet balances could not be loaded.');
-    } finally {
-      setLoading(false);
-    }
-  }, [ownerAddress]);
-
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
-
-  return <Screen refreshing={loading} onRefresh={() => { void refresh(); }}>
+  return <Screen refreshing={pullRefreshing || walletQuery.isLoading} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Monad Testnet · 10143" title="Your money, in view" copy="Balances come from the Monad API and include the block they were checked at." />
-    {error ? <Notice live tone="rose" title="Balances are unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
+    {error ? <Notice live tone="rose" title={wallet ? 'Showing last good balances' : 'Balances are unavailable'} message={error} actionLabel="Retry" onAction={() => { void pullToRefresh(); }} /> : null}
     {wallet?.stale ? <Notice tone="orange" title="Balance data may be out of date" message={`Last checked at block ${wallet.observedBlock}.`} /> : null}
-    {loading && !wallet ? <LoadingBlock label="Checking Monad balances" lines={3} /> : null}
+    {walletQuery.isLoading ? <LoadingBlock label="Checking Monad balances" lines={3} /> : null}
     {wallet ? <Card>
       <Text style={s.meta}>Mera wallet · {shortenAddress(wallet.ownerAddress)}</Text>
       {wallet.balances.length

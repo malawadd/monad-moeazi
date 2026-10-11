@@ -12,8 +12,17 @@ const VENUE = "perpl-direct-testnet-v1";
 
 export const getAccount = query({ args: {}, handler: async (ctx) => {
   const { user, owner } = await requireMeraViewer(ctx);
-  return await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
-    q.eq("userId", user._id).eq("ownerAddress", owner)).first();
+  const rows = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
+    q.eq("userId", user._id).eq("ownerAddress", owner)).collect();
+  return rows.find((row: any) => row.accountMode !== "direct_wallet") ?? null;
+} });
+
+export const getAccounts = query({ args: {}, handler: async (ctx) => {
+  const { user, owner } = await requireMeraViewer(ctx);
+  const rows = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
+    q.eq("userId", user._id).eq("ownerAddress", owner)).collect();
+  return { direct: rows.find((row: any) => row.accountMode === "direct_wallet") ?? null,
+    legacy: rows.find((row: any) => row.accountMode !== "direct_wallet") ?? null };
 } });
 
 export const getOperation = query({ args: { operationId: v.string() }, handler: async (ctx, args) => {
@@ -36,7 +45,8 @@ export const getOperationByIdempotency = query({ args: { idempotencyKey: v.strin
 export const prepareOperation = mutation({
   args: { operationId: v.string(), idempotencyKey: v.string(), intentHash: v.string(), action: v.string(),
     actionJson: v.string(), transactionJson: v.string(), nonce: v.number(), expiresAt: v.number(),
-    accountAddress: v.optional(v.string()), accountId: v.optional(v.number()), marketId: v.optional(v.number()),
+    accountAddress: v.optional(v.string()), accountId: v.optional(v.number()), accountMode: v.optional(v.union(
+      v.literal("direct_wallet"), v.literal("legacy_delegated"))), marketId: v.optional(v.number()),
     requestId: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const { user, owner } = await requireMeraViewer(ctx);
@@ -133,19 +143,29 @@ export const finalizeOperation = mutation({ args: { operationId: v.string(), own
       dataJson: JSON.stringify({ operationId: row.operationId, action: row.action, ...details,
         blockNumber: args.blockNumber, blockHash: args.blockHash, receiptStatus: args.receiptStatus, errorCode: args.errorCode }).slice(0, 20_000) });
     if (args.status === "finalized" && row.action === "create_account" && details.accountAddress) {
-      const existing = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
-        q.eq("userId", row.userId).eq("ownerAddress", owner)).first();
+      const accountMode: "direct_wallet" | "legacy_delegated" = row.accountMode === "direct_wallet" ? "direct_wallet" : "legacy_delegated";
+      const accounts = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
+        q.eq("userId", row.userId).eq("ownerAddress", owner)).collect();
+      const existing = accounts.find((item: any) => accountMode === "direct_wallet"
+        ? item.accountMode === "direct_wallet" : item.accountMode !== "direct_wallet");
       const account = { userId: row.userId, ownerAddress: owner, venueId: VENUE, chainId: MONAD_CHAIN_ID,
-        accountAddress: String(details.accountAddress).toLowerCase(), status: "created", createdAt: Date.now(), updatedAt: Date.now() };
+        accountAddress: String(details.accountAddress).toLowerCase(), accountMode, status: "created", createdAt: Date.now(), updatedAt: Date.now() };
       if (existing) await ctx.db.patch(existing._id, account); else await ctx.db.insert("monadManualAccounts", account);
     }
     if (args.status === "finalized" && row.accountAddress && Number.isSafeInteger(details.accountId)
-        && ["open_account", "deposit_collateral", "withdraw_collateral"].includes(row.action)) {
-      const existing = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
-        q.eq("userId", row.userId).eq("ownerAddress", owner)).first();
-      if (existing) await ctx.db.patch(existing._id, { accountId: details.accountId, status: "open",
-        balanceUnits: String(details.balanceUnits ?? existing.balanceUnits ?? "0"), lockedUnits: String(details.lockedUnits ?? existing.lockedUnits ?? "0"),
-        lastObservedBlock: args.blockNumber, updatedAt: Date.now() });
+        && ["open_account", "deposit_collateral", "withdraw_collateral", "legacy_withdraw_collateral"].includes(row.action)) {
+      const accountMode: "direct_wallet" | "legacy_delegated" = row.accountMode === "direct_wallet" ? "direct_wallet" : "legacy_delegated";
+      const accounts = await ctx.db.query("monadManualAccounts").withIndex("by_user_owner", (q: any) =>
+        q.eq("userId", row.userId).eq("ownerAddress", owner)).collect();
+      const existing = accounts.find((item: any) => accountMode === "direct_wallet"
+        ? item.accountMode === "direct_wallet" : item.accountMode !== "direct_wallet");
+      const now = Date.now();
+      const account = { userId: row.userId, ownerAddress: owner, venueId: VENUE, chainId: MONAD_CHAIN_ID,
+        accountAddress: String(row.accountAddress).toLowerCase(), accountMode, accountId: details.accountId, status: "open",
+        balanceUnits: String(details.balanceUnits ?? existing?.balanceUnits ?? "0"),
+        lockedUnits: String(details.lockedUnits ?? existing?.lockedUnits ?? "0"), lastObservedBlock: args.blockNumber,
+        createdAt: existing?.createdAt ?? now, updatedAt: now };
+      if (existing) await ctx.db.patch(existing._id, account); else await ctx.db.insert("monadManualAccounts", account);
     }
     if (args.status === "finalized" && row.marketId !== undefined && Array.isArray(details.fills) && details.fills.length) {
       await recordManualPosition(ctx, row, { ...details, finalizedAt: args.finalizedAt }, activityId, args.finalizedAt);

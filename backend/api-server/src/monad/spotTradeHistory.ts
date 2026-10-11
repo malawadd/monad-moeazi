@@ -1,10 +1,13 @@
 import { getAddress, Interface } from "ethers";
-import { ADAPTER_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, WMON_ADDRESS } from "./constants.js";
+import { ADAPTER_ABI, DYNAMIC_V4_ADAPTER_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, WMON_ADDRESS } from "./constants.js";
+import { configuredDynamicV4Adapter } from "./config.js";
 import { AUTONOMY_POOL_ABI } from "./autonomyChain.js";
 import { finalizedBlockNumber } from "./provider.js";
+import { isNoHook, poolKeysEqual, v4MarketId, v4PoolId, type PoolKey } from "./v4PoolIndex.js";
 
 const transfer = new Interface(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
-const adapters = new Interface(ADAPTER_ABI); const pools = new Interface(AUTONOMY_POOL_ABI);
+const adapters = new Interface(ADAPTER_ABI); const dynamicAdapters = new Interface(DYNAMIC_V4_ADAPTER_ABI);
+const pools = new Interface(AUTONOMY_POOL_ABI);
 const uint = (value: unknown) => /^\d+$/.test(String(value ?? "")) ? BigInt(String(value)) : null;
 const lower = (value: unknown) => String(value ?? "").toLowerCase();
 
@@ -35,17 +38,40 @@ export async function verifySpotSwapHistory(provider: any, ownerValue: string, c
   if (amountIn === null || minOut === null || amountIn <= 0n || minOut <= 0n) return null;
   const venue = String(candidate.venueId); if (intent.venue !== venue) return null;
   let expectedTo: string; try { expectedTo = getAddress(String(candidate.transaction.to ?? "")); } catch { return null; }
-  if (venue === "moeazi_mock_pools_testnet") {
+  const dynamicV4 = venue === "uniswap_v4_testnet" && typeof intent.poolId === "string";
+  let parsed: any; let marketId = "WMON_USDC"; let inputDecimals = tokenIn.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+  let outputDecimals = tokenOut.toLowerCase() === USDC_ADDRESS.toLowerCase() ? 6 : 18;
+  if (dynamicV4) {
+    let expectedAdapter: string;
+    try { expectedAdapter = getAddress(configuredDynamicV4Adapter() ?? ""); } catch { return null; }
+    if (expectedTo.toLowerCase() !== expectedAdapter.toLowerCase()) return null;
+    parsed = dynamicAdapters.parseTransaction({ data: String(candidate.transaction.data) });
+    if (parsed?.name !== "swap") return null;
+    const poolId = lower(parsed.args[0]); const keyArgs = parsed.args[1];
+    const key: PoolKey = { currency0: getAddress(keyArgs.currency0), currency1: getAddress(keyArgs.currency1),
+      fee: Number(keyArgs.fee), tickSpacing: Number(keyArgs.tickSpacing), hooks: getAddress(keyArgs.hooks) };
+    if (poolId !== lower(intent.poolId) || poolId !== v4PoolId(key) || !isNoHook(key)
+        || !poolKeysEqual(intent.poolKey, key) || ![key.currency0.toLowerCase(), key.currency1.toLowerCase()].includes(tokenIn.toLowerCase())
+        || ![key.currency0.toLowerCase(), key.currency1.toLowerCase()].includes(tokenOut.toLowerCase())
+        || v4MarketId(poolId) !== intent.marketId) return null;
+    inputDecimals = Number(intent.inputDecimals); outputDecimals = Number(intent.outputDecimals);
+    if (!Number.isSafeInteger(inputDecimals) || inputDecimals < 0 || inputDecimals > 36
+        || !Number.isSafeInteger(outputDecimals) || outputDecimals < 0 || outputDecimals > 36) return null;
+    marketId = String(intent.marketId);
+  } else if (venue === "moeazi_mock_pools_testnet") {
     if (!/^MZ[ABG]_USDC$/.test(String(intent.marketId)) || lower(intent.poolAddress) !== lower(expectedTo)) return null;
   } else {
     if (!new Set(["uniswap_v4_testnet", "moeazi_test_amm"]).has(venue)
         || !new Set([USDC_ADDRESS.toLowerCase(), WMON_ADDRESS.toLowerCase()]).has(tokenIn.toLowerCase())
         || !new Set([USDC_ADDRESS.toLowerCase(), WMON_ADDRESS.toLowerCase()]).has(tokenOut.toLowerCase())) return null;
   }
-  const parsedTx = (venue === "moeazi_mock_pools_testnet" ? pools : adapters).parseTransaction({ data: String(candidate.transaction.data) });
-  if (parsedTx?.name !== "swap" || lower(parsedTx.args[0]) !== tokenIn.toLowerCase()
-      || lower(parsedTx.args[1]) !== tokenOut.toLowerCase() || BigInt(parsedTx.args[2]) !== amountIn
-      || BigInt(parsedTx.args[3]) !== minOut) return null;
+  if (!dynamicV4) {
+    parsed = (venue === "moeazi_mock_pools_testnet" ? pools : adapters).parseTransaction({ data: String(candidate.transaction.data) });
+    if (parsed?.name !== "swap" || lower(parsed.args[0]) !== tokenIn.toLowerCase()
+        || lower(parsed.args[1]) !== tokenOut.toLowerCase() || BigInt(parsed.args[2]) !== amountIn
+        || BigInt(parsed.args[3]) !== minOut) return null;
+  } else if (lower(parsed.args[2]) !== tokenIn.toLowerCase() || lower(parsed.args[3]) !== tokenOut.toLowerCase()
+      || BigInt(parsed.args[4]) !== amountIn || BigInt(parsed.args[5]) !== minOut) return null;
   const [receipt, tx, finalized] = await Promise.all([provider.getTransactionReceipt(txHash), provider.getTransaction(txHash),
     checkpoint === undefined ? finalizedBlockNumber(provider) : Promise.resolve(checkpoint)]);
   if (!receipt || receipt.status !== 1 || receipt.blockNumber !== candidate.blockNumber
@@ -59,14 +85,22 @@ export async function verifySpotSwapHistory(provider: any, ownerValue: string, c
       || !Number.isSafeInteger(Number(canonical.timestamp)) || Number(canonical.timestamp) <= 0) return null;
   const input = transferTotals(receipt, tokenIn, owner); const output = transferTotals(receipt, tokenOut, owner);
   if (input.spent !== amountIn || output.received < minOut || output.received <= 0n) return null;
-  const marketId = venue === "moeazi_mock_pools_testnet" ? String(intent.marketId) : "WMON_USDC";
-  const symbol = marketId.replace("_USDC", ""); const buying = tokenOut.toLowerCase() !== USDC_ADDRESS.toLowerCase();
+  if (!dynamicV4) marketId = venue === "moeazi_mock_pools_testnet" ? String(intent.marketId) : "WMON_USDC";
+  const quoteToken = [tokenIn, tokenOut].some((token) => token.toLowerCase() === USDC_ADDRESS.toLowerCase())
+    ? USDC_ADDRESS : WMON_ADDRESS;
+  const symbol = dynamicV4 ? marketId : marketId.replace("_USDC", "");
+  const buying = tokenOut.toLowerCase() !== quoteToken.toLowerCase();
   const quoteUnits = buying ? input.spent : output.received; const baseUnits = buying ? output.received : input.spent;
+  const quoteDecimals = buying ? inputDecimals : outputDecimals; const baseDecimals = buying ? outputDecimals : inputDecimals;
+  const exponent = baseDecimals + 6 - quoteDecimals;
+  const priceNumerator = exponent >= 0 ? quoteUnits * 10n ** BigInt(exponent) : quoteUnits;
+  const priceDenominator = exponent >= 0 ? baseUnits : baseUnits * 10n ** BigInt(-exponent);
+  const priceUnits = priceNumerator / priceDenominator;
+  if (priceUnits <= 0n) return null;
   return { activityId: String(candidate.activityId), txHash, venueId: venue, marketId, symbol: `${symbol}/USDC`,
     kind: buying ? "buy" : "sell", quoteUnits: quoteUnits.toString(), baseUnits: baseUnits.toString(),
-    priceUnits: (quoteUnits * 10n ** 18n / baseUnits).toString(),
-    blockNumber: Number(receipt.blockNumber), transactionIndex: Number(receipt.index ?? 0),
-    occurredAt: Number(canonical.timestamp) * 1000, priceDecimals: 6, sizeDecimals: 18 };
+    priceUnits: priceUnits.toString(), blockNumber: Number(receipt.blockNumber), transactionIndex: Number(receipt.index ?? 0),
+    occurredAt: Number(canonical.timestamp) * 1000, priceDecimals: 6, sizeDecimals: baseDecimals };
 }
 
 /** Buckets actual finalized prices into OHLC candles; it never fills missing intervals. */
@@ -97,7 +131,8 @@ export function foldWalletSpotPositions(trades: any[]) {
     if (quantity === null || quote === null || quantity <= 0n || quote <= 0n) continue;
     if (trade.kind === "buy") {
       if (!row) row = { summaryId: `wallet:${key}:${trade.txHash}`, venueId: trade.venueId, marketId: trade.marketId,
-        symbol: trade.symbol, direction: "long", source: "manual", quantity: 0n, cost: 0n, entryQuantity: 0n,
+        symbol: trade.symbol, direction: "long", source: "manual", priceDecimals: trade.priceDecimals ?? 6,
+        sizeDecimals: trade.sizeDecimals ?? 18, quantity: 0n, cost: 0n, entryQuantity: 0n,
         entryQuote: 0n, exitQuantity: 0n, exitQuote: 0n, pricePnl: 0n, entryAt: trade.occurredAt,
         orderIds: [], transactionHashes: [], activityIds: [], runId: undefined };
       row.quantity += quantity; row.cost += quote; row.entryQuantity += quantity; row.entryQuote += quote;
@@ -116,7 +151,7 @@ export function foldWalletSpotPositions(trades: any[]) {
     marketId: row.marketId, symbol: row.symbol, direction: row.direction, source: row.source,
     status: row.quantity > 0n ? "open" : "closed", sizeUnits: row.entryQuantity.toString(),
     entrySizeUnits: row.entryQuantity.toString(), remainingSizeUnits: row.quantity.toString(),
-    exitSizeUnits: row.exitQuantity.toString(), priceDecimals: 6, sizeDecimals: 18,
+    exitSizeUnits: row.exitQuantity.toString(), priceDecimals: row.priceDecimals ?? 6, sizeDecimals: row.sizeDecimals ?? 18,
     weightedEntryPrice: (row.entryQuote * 10n ** 18n / row.entryQuantity).toString(),
     ...(row.exitQuantity > 0n ? { weightedExitPrice: (row.exitQuote * 10n ** 18n / row.exitQuantity).toString(),
       realizedPricePnlUnits: row.pricePnl.toString(), exitAt: row.exitAt } : {}),

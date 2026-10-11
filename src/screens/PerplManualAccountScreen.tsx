@@ -1,135 +1,274 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Text} from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, Field, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {manualPerplApi, createManualPerplIdempotencyKey} from '../services/manualPerplApi';
-import {marketDirectoryApi} from '../services/marketDirectoryApi';
-import {monadApi} from '../services/monadApi';
+import {perplApi} from '../services/perplApi';
 import {formatMonadUnits, formatMonadTimestamp, parseMonadAmount, shortenAddress} from '../services/monadFormatting';
-import {validateManualPerplPreparation} from '../services/manualPerplValidation';
-import type {ManualPerplAccount} from '../types/manualPerpl';
+import {validateManualPerplPreparation, type ManualReviewExpectation} from '../services/manualPerplValidation';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
+import {useManualPerplAccountQuery, useMarketDirectoryQuery} from '../services/useMarketQueries';
+import type {ManualPerplAccount, ManualPerplLegacyRecovery} from '../types/manualPerpl';
+
+type AccountAction = 'approve' | 'open' | 'deposit' | 'withdraw' | 'legacy_withdraw' | 'legacy_rescue';
 
 export function PerplManualAccountScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const [account, setAccount] = useState<ManualPerplAccount | null>(null);
-  const [markets, setMarkets] = useState<Array<{marketId: string; symbol: string; priceDecimals?: number; sizeDecimals?: number; maxLeverage?: number}>>([]);
-  const [walletAusd, setWalletAusd] = useState('Unavailable');
+  const focused = useIsFocused();
+  const accountQuery = useManualPerplAccountQuery(ownerAddress, focused);
+  const directoryQuery = useMarketDirectoryQuery(ownerAddress, focused);
+  const {refetch: refetchAccount} = accountQuery;
+  const {refetch: refetchDirectory} = directoryQuery;
+  const data = accountQuery.data;
+  const correctOwner = Boolean(data && ownerAddress && data.ownerAddress.toLowerCase() === ownerAddress.toLowerCase());
+  const directAddressMatches = data?.accountMode === 'not_created' ? data.accountAddress === null
+    : data?.accountMode === 'direct_wallet' ? data.accountAddress?.toLowerCase() === ownerAddress?.toLowerCase()
+      : data?.accountMode === 'unavailable' && data.accountAddress === null;
+  const statusMatchesMode = data?.accountMode === 'not_created' ? data.status === 'not_created'
+    : data?.accountMode === 'direct_wallet' ? data.status === 'open'
+      : data?.accountMode === 'unavailable' && data.status === 'unavailable';
+  const account = data && correctOwner && directAddressMatches && statusMatchesMode && data.chainId === 10143
+    && ADDRESS.test(data.exchangeAddress) && ADDRESS.test(data.collateral.address) && data.collateral.symbol === 'AUSD' && data.collateral.decimals === 6
+    ? data : null;
+  const markets = (directoryQuery.data?.markets ?? []).filter(item => item.kind === 'perpl');
   const [amount, setAmount] = useState('');
+  const [legacyAmount, setLegacyAmount] = useState('');
+  const [minimumOpenUnits, setMinimumOpenUnits] = useState<string | null>(null);
+  const [contextError, setContextError] = useState('');
+  const [contextLoading, setContextLoading] = useState(true);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const expectedTokenAddress = account?.collateral.address;
+
+  useEffect(() => {
+    if (!focused || !expectedTokenAddress) return;
+    let cancelled = false;
+    setContextLoading(true); setContextError(''); setMinimumOpenUnits(null);
+    void perplApi.venues().then(response => {
+      const venue = response.venues.find(item => item.venueId === 'perpl-direct-testnet-v1');
+      if (!venue || venue.chainId !== 10143 || !venue.collateral
+          || venue.collateral.address.toLowerCase() !== expectedTokenAddress.toLowerCase()) {
+        throw new Error('Live Perpl Testnet AUSD context does not match this manual account.');
+      }
+      const minimum = venue.limits?.minAccountOpenUnits ?? venue.collateral.minAccountOpenUnits ?? venue.limits?.minFundingUnits;
+      if (minimum && BigInt(minimum) > 0n && !cancelled) setMinimumOpenUnits(minimum);
+    }).catch(reason => {
+      if (!cancelled) { setMinimumOpenUnits(null); setContextError(reason instanceof Error ? reason.message : 'Live Perpl account limits are unavailable.'); }
+    }).finally(() => { if (!cancelled) setContextLoading(false); });
+    return () => { cancelled = true; };
+  }, [expectedTokenAddress, focused]);
 
   const refresh = useCallback(async () => {
-    setLoading(true); setError('');
-    const [accountResult, walletResult, marketResult] = await Promise.allSettled([manualPerplApi.account(), monadApi.wallet(), marketDirectoryApi.list()]);
-    if (marketResult.status === 'fulfilled') setMarkets(marketResult.value.markets.filter(item => item.kind === 'perpl'));
-    if (accountResult.status === 'fulfilled') {
-      const next = accountResult.value;
-      if (!ownerAddress || next.chainId !== 10143 || next.ownerAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
-        setError('The manual Perpl account does not match this Mera session on Monad Testnet.');
-        setAccount(null);
-      } else setAccount(next);
-    } else { setError(accountResult.reason instanceof Error ? accountResult.reason.message : 'Manual Perpl account is unavailable.'); }
-    if (walletResult.status === 'fulfilled' && ownerAddress && walletResult.value.ownerAddress.toLowerCase() === ownerAddress.toLowerCase()
-        && walletResult.value.chainId === 10143) {
-      const balance = walletResult.value.balances.find(item => item.asset === 'AUSD');
-      setWalletAusd(balance ? `${formatMonadUnits(balance.amountUnits, balance.decimals)} AUSD` : 'Not returned');
-    }
-    setLoading(false);
-  }, [ownerAddress]);
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+    setError('');
+    await Promise.allSettled([refetchAccount(), refetchDirectory()]);
+  }, [refetchAccount, refetchDirectory]);
+  const pullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try { await refresh(); } finally { setPullRefreshing(false); }
+  }, [refresh]);
+  const readError = accountQuery.data && !account
+    ? 'The manual Perpl account does not match this Mera session on Monad Testnet.'
+    : account?.status === 'unavailable' ? 'Perpl could not verify the account at a finalized block. Refresh before taking any action.'
+      : [accountQuery.error, directoryQuery.error].filter(Boolean)
+      .map(reason => reason instanceof Error ? reason.message : 'Account data could not be refreshed.').join(' ');
+  const manualGateOff = account && account.status !== 'unavailable' && Object.values(account.capabilities).every(enabled => !enabled);
 
-  async function prepare(action: 'create' | 'fund' | 'open' | 'deposit' | 'withdraw') {
+  async function prepare(action: AccountAction) {
     if (!account || !ownerAddress) return;
-    const allowed = action === 'create' ? account.capabilities.createAccount
-      : action === 'fund' ? account.capabilities.fundAccount
-      : action === 'open' ? account.capabilities.openAccount
-        : action === 'withdraw' ? account.capabilities.withdraw : account.capabilities.deposit;
-    if (!allowed) { setError('This action is disabled by the default-off manual Perpl Testnet gate.'); return; }
     setBusy(true); setError('');
     try {
-      const amountUnits = ['fund', 'open', 'deposit', 'withdraw'].includes(action) ? parseMonadAmount(amount, account.collateral.decimals) : undefined;
-      const prepared = await manualPerplApi.prepareAccount({action, ...(amountUnits ? {amountUnits} : {}), idempotencyKey: createManualPerplIdempotencyKey()});
-      const expected = {action, ownerAddress, venueId: 'perpl-direct-testnet-v1',
-        ...(account.accountAddress ? {accountAddress: account.accountAddress} : {}), ...(amountUnits ? {amountUnits} : {})};
+      const directUnits = action.startsWith('legacy_') ? parseAmount(legacyAmount, account.collateral.decimals) : parseAmount(amount, account.collateral.decimals);
+      const legacy = account.legacyRecovery;
+      if (!action.startsWith('legacy_') && account.status === 'unavailable') throw new Error('Perpl account state is unavailable; refresh before preparing an action.');
+      const capability = action === 'approve' ? account.capabilities.approve
+        : action === 'open' ? account.capabilities.open
+          : action === 'deposit' ? account.capabilities.deposit
+            : action === 'withdraw' ? account.capabilities.withdraw
+              : action === 'legacy_withdraw' ? legacy.capabilities.withdraw : legacy.capabilities.rescueTokens;
+      if (!capability) throw new Error('This action is disabled by the default-off manual Perpl Testnet gate.');
+      if (action === 'approve' || action === 'open') {
+        if (contextLoading || contextError || (account.status === 'not_created' && !minimumOpenUnits)) {
+          throw new Error(contextError || 'Live Perpl account setup limits are still loading. Refresh and try again.');
+        }
+        if (account.status === 'not_created' && minimumOpenUnits && BigInt(directUnits) < BigInt(minimumOpenUnits)) {
+          throw new Error(`Perpl requires at least ${formatMonadUnits(minimumOpenUnits, account.collateral.decimals)} AUSD to open an account.`);
+        }
+        if (action === 'open' && account.status !== 'not_created') throw new Error('This Mera wallet already has a Perpl exchange account.');
+        if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
+        if (action === 'open' && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)) throw new Error('Approve this exact AUSD amount first, then refresh the account.');
+      }
+      if (action === 'deposit') {
+        if (account.status !== 'open') throw new Error('Create your direct Mera-owned Perpl account first.');
+        if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
+        if (BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)) throw new Error('Approve this exact AUSD amount first, then refresh the account.');
+      }
+      if (action === 'withdraw' && (account.status !== 'open'
+          || BigInt(directUnits) > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits))) {
+        throw new Error('The withdrawal amount exceeds available AUSD in the direct Perpl account.');
+      }
+      if (action === 'legacy_withdraw' && (legacy.status === 'none'
+          || BigInt(directUnits) > freeCollateral(legacy.collateral.balanceUnits, legacy.collateral.lockedUnits))) {
+        throw new Error('The amount exceeds free collateral in the legacy delegated account.');
+      }
+      if (action === 'legacy_rescue' && (legacy.status === 'none' || BigInt(directUnits) > BigInt(legacy.collateral.tokenBalanceUnits))) {
+        throw new Error('The amount exceeds AUSD held by the legacy recovery contract.');
+      }
+      const prepared = await manualPerplApi.prepareAccount({action, amountUnits: directUnits, idempotencyKey: createManualPerplIdempotencyKey()});
+      const legacyAction = action.startsWith('legacy_');
+      const target = action === 'approve' ? account.collateral.address
+        : action === 'legacy_withdraw' || action === 'legacy_rescue' ? legacy.accountAddress : account.exchangeAddress;
+      if (!target) throw new Error('The expected Perpl transaction target is unavailable.');
+      const expected: ManualReviewExpectation = {action, ownerAddress, venueId: 'perpl-direct-testnet-v1', amountUnits: directUnits,
+        transactionTarget: target, ...(action === 'approve' ? {approvalSpender: account.exchangeAddress} : {}),
+        ...(legacyAction ? {accountMode: 'legacy_delegated', accountAddress: legacy.accountAddress}
+          : {accountMode: 'direct_wallet', accountAddress: ownerAddress})};
       validateManualPerplPreparation(prepared, expected);
-      navigation.navigate('ManualPerplReview', {prepared, expected, label: accountActionLabel(action), returnRoute: 'PerplManualAccount'});
+      navigation.navigate('ManualPerplReview', {prepared, expected, label: actionLabel(action), returnRoute: 'PerplManualAccount'});
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'A fresh account review could not be prepared.'); }
     finally { setBusy(false); }
   }
 
-  const manualGateOff = account && Object.values(account.capabilities).every(enabled => !enabled);
-  return <Screen refreshing={loading} onRefresh={() => { void refresh(); }} onBack={() => navigation.goBack()}>
-    <PageHeader kicker="Manual Perpl · Mera owner" title="Your separate AUSD account" copy="This account belongs to your Mera wallet. Its balance and positions stay separate from autonomous Perpl runs and have no trading operator." />
-    {error ? <Notice live tone="rose" title="Manual account needs attention" message={error} actionLabel="Refresh" onAction={() => { void refresh(); }} /> : null}
+  const directUnits = account ? maybeAmount(amount, account.collateral.decimals) : null;
+  const directCanApprove = Boolean(account && directUnits && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits)
+    && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits)
+    && (account.status === 'open' || (minimumOpenUnits !== null && BigInt(directUnits) >= BigInt(minimumOpenUnits))));
+  const directCanOpen = Boolean(account && directUnits && account.status === 'not_created' && minimumOpenUnits
+    && BigInt(directUnits) >= BigInt(minimumOpenUnits) && BigInt(account.collateral.allowanceUnits) >= BigInt(directUnits)
+    && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits));
+
+  return <Screen refreshing={pullRefreshing || accountQuery.isLoading || directoryQuery.isLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
+    <PageHeader kicker="Manual Perpl · Mera owner" title="Your direct AUSD account" copy="Your Mera wallet owns this Perpl exchange account. Every approval, deposit, withdrawal, and order gets a fresh review and signature." />
+    {readError ? <Notice live tone="orange" title={account ? 'Showing last good manual account' : 'Manual account needs attention'} message={readError} actionLabel="Refresh" onAction={() => { void pullToRefresh(); }} /> : null}
+    {contextError ? <Notice live tone="orange" title="Perpl setup context unavailable" message={contextError} actionLabel="Refresh" onAction={() => { void pullToRefresh(); }} /> : null}
+    {error ? <Notice live tone="rose" title="Manual account action unavailable" message={error} /> : null}
     {manualGateOff ? <Notice tone="orange" title="Manual Perpl gate is off" message="Account mutations and order preparation remain disabled until the Testnet manual-trading gate is explicitly enabled." /> : null}
     {account ? <>
       <Card>
         <StatusBadge label={humanize(account.status)} tone={account.status === 'open' ? 'mint' : 'orange'} />
         <DataRow label="Network" value={`Monad Testnet · ${account.chainId}`} />
         <DataRow label="Mera owner" value={shortenAddress(account.ownerAddress)} />
-        <DataRow label="Manual Perpl account" value={account.accountAddress ?? 'Not created'} />
-        <DataRow label="Account ID" value={account.accountId === null ? 'Not open on Perpl' : String(account.accountId)} />
-        <DataRow label="AUSD available" value={`${formatMonadUnits(account.collateral.balanceUnits, account.collateral.decimals)} AUSD`} />
-        <DataRow label="AUSD locked" value={`${formatMonadUnits(account.collateral.lockedUnits, account.collateral.decimals)} AUSD`} />
-        <DataRow label="Mera wallet AUSD" value={walletAusd} />
+        <DataRow label="Exchange account owner" value={account.status === 'unavailable' ? 'Unavailable' : account.accountAddress ? shortenAddress(account.accountAddress) : 'Not created'} />
+        <DataRow label="Exchange account ID" value={account.status === 'unavailable' ? 'Unavailable' : account.accountId === null ? 'Not open on Perpl' : String(account.accountId)} />
+        <DataRow label="Perpl Exchange" value={account.exchangeAddress} />
+        <DataRow label="AUSD in Perpl account" value={account.status === 'unavailable' ? 'Unavailable' : `${formatMonadUnits(account.collateral.balanceUnits, account.collateral.decimals)} AUSD`} />
+        <DataRow label="Free AUSD" value={account.status === 'unavailable' ? 'Unavailable' : `${formatMonadUnits(freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits).toString(), account.collateral.decimals)} AUSD`} />
+        <DataRow label="AUSD locked" value={account.status === 'unavailable' ? 'Unavailable' : `${formatMonadUnits(account.collateral.lockedUnits, account.collateral.decimals)} AUSD`} />
+        <DataRow label="Mera wallet AUSD" value={account.status === 'unavailable' ? 'Unavailable' : `${formatMonadUnits(account.collateral.walletBalanceUnits, account.collateral.decimals)} AUSD`} />
+        <DataRow label="AUSD allowance to Perpl" value={account.status === 'unavailable' ? 'Unavailable' : formatMonadUnits(account.collateral.allowanceUnits, account.collateral.decimals)} />
         <DataRow label="Snapshot" value={formatMonadTimestamp(account.observedAt)} />
       </Card>
-      <Card><Text style={s.strong}>Account setup and collateral</Text>
-        {account.status === 'not_created' ? <Button label="Review manual account creation" onPress={() => { void prepare('create'); }} disabled={!account.capabilities.createAccount} loading={busy} /> : null}
-        {account.status === 'created' ? <>
+      <Card><Text style={s.strong}>Direct account setup and collateral</Text>
+        {account.status === 'unavailable' ? <Text style={s.body}>Perpl could not verify the direct account state. Refresh before approving, opening, or managing collateral.</Text>
+          : account.status === 'not_created' ? <>
+          <Field label="AUSD amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter initial deposit" />
+          {minimumOpenUnits ? <DataRow label="Live minimum account deposit" value={`${formatMonadUnits(minimumOpenUnits, account.collateral.decimals)} AUSD`} /> : <DataRow label="Live minimum account deposit" value={contextLoading ? 'Loading Perpl context…' : 'Unavailable'} />}
+          {directCanApprove ? <Button label="Review exact AUSD approval" onPress={() => { void prepare('approve'); }} disabled={!account.capabilities.approve || contextLoading || Boolean(contextError)} loading={busy} /> : null}
+          <Button label="Review account creation and initial deposit" variant="secondary" onPress={() => { void prepare('open'); }} disabled={!directCanOpen || !account.capabilities.open || contextLoading || Boolean(contextError)} loading={busy} />
+          {directUnits && BigInt(account.collateral.allowanceUnits) < BigInt(directUnits) ? <Text style={s.body}>Approve the selected amount first. Account creation stays disabled until the finalized allowance covers it.</Text> : null}
+        </> : <>
           <Field label="AUSD amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter an amount" />
-          <Button label="Review AUSD funding" onPress={() => { void prepare('fund'); }} disabled={!account.capabilities.fundAccount} loading={busy} />
-          <Button label="Review Perpl account opening" variant="secondary" onPress={() => { void prepare('open'); }} disabled={!account.capabilities.openAccount} loading={busy} />
-        </> : null}
-        {account.status === 'open' ? <>
-          <Field label="AUSD amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter an amount" />
-          <Button label="Review AUSD funding" variant="secondary" onPress={() => { void prepare('fund'); }} disabled={!account.capabilities.fundAccount} loading={busy} />
-          <Button label="Review AUSD deposit" onPress={() => { void prepare('deposit'); }} disabled={!account.capabilities.deposit} loading={busy} />
-          <Button label="Review AUSD withdrawal" variant="secondary" onPress={() => { void prepare('withdraw'); }} disabled={!account.capabilities.withdraw} loading={busy} />
-        </> : null}
+          {directCanApprove ? <Button label="Review exact AUSD approval" variant="secondary" onPress={() => { void prepare('approve'); }} disabled={!account.capabilities.approve} loading={busy} /> : null}
+          <Button label="Review AUSD deposit" onPress={() => { void prepare('deposit'); }} disabled={!directUnits || BigInt(account.collateral.allowanceUnits) < BigInt(directUnits) || BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits) || !account.capabilities.deposit} loading={busy} />
+          <Button label="Review AUSD withdrawal" variant="secondary" onPress={() => { void prepare('withdraw'); }} disabled={!directUnits || BigInt(directUnits) > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits) || !account.capabilities.withdraw} loading={busy} />
+        </>}
       </Card>
-      <Card><Text style={s.strong}>Manual positions</Text>
-        {account.positions.length ? account.positions.map((position, index) => <Card key={`${position.marketId}:${index}`} tint="#F1EDFF">
-          <DataRow label="Market" value={`${position.symbol} · ${position.marketId}`} />
-          <DataRow label="Direction" value={humanize(position.side)} />
-          <DataRow label="Size" value={formatMonadUnits(position.sizeUnits, Number(position.sizeDecimals ?? 0))} />
-          <DataRow label="Entry / mark" value={`${formatMonadUnits(position.entryPrice, Number(position.priceDecimals ?? 0))} / ${formatMonadUnits(position.markPrice, Number(position.priceDecimals ?? 0))}`} />
-          <DataRow label="Leverage" value={`${position.leverage}×`} />
-          <DataRow label="Unrealized PnL" value={`${formatMonadUnits(position.unrealizedPnlUnits, 6)} AUSD`} />
-          {account.capabilities.marketOrders ? <Button label="Review AUSD margin addition" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {
-            marketId: String(position.marketId), symbol: position.symbol, priceDecimals: Number(position.priceDecimals ?? 0),
-            sizeDecimals: Number(position.sizeDecimals ?? 0), action: 'add_margin',
-          })} /> : null}
-          <Button label={`Manage ${position.symbol}`} variant="secondary" onPress={() => navigation.navigate('MarketDetail', {venueId: 'perpl-direct-testnet-v1', marketId: String(position.marketId)})} />
-        </Card>) : <Text style={s.body}>No manual positions are open.</Text>}
-      </Card>
-      <Card><Text style={s.strong}>Open manual orders</Text>
-        {account.orders.length ? account.orders.map(order => {
-          const market = markets.find(item => item.marketId === String(order.marketId));
-          const orderSize = market?.sizeDecimals === undefined ? `${order.sizeUnits} raw units` : formatMonadUnits(order.sizeUnits, market.sizeDecimals);
-          const orderPrice = order.price == null ? 'Market' : market?.priceDecimals === undefined ? `${order.price} raw units` : formatMonadUnits(order.price, market.priceDecimals);
-          return <Card key={String(order.orderId)} tint="#EEF7FF">
-          <DataRow label="Market" value={`${order.symbol ?? 'Perpl'} · ${order.marketId}`} />
-          <DataRow label="Order" value={String(order.orderId)} /><DataRow label="Side" value={humanize(order.side)} />
-          <DataRow label="Size / price" value={`${orderSize} / ${orderPrice}`} /><DataRow label="Status" value={humanize(order.status)} />
-          {account.capabilities.limitOrders && market ? <Button label="Review limit price amendment" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {
-            marketId: String(order.marketId), symbol: order.symbol ?? market.symbol ?? 'Perpl market', action: 'amend_limit',
-            orderId: String(order.orderId), side: order.side, priceDecimals: market.priceDecimals ?? 0, sizeDecimals: market.sizeDecimals ?? 0,
-          })} /> : null}
-          {account.capabilities.cancelOrders ? <Button label="Review cancellation" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {
-            marketId: String(order.marketId), symbol: order.symbol ?? 'Perpl market', action: 'cancel_limit', orderId: String(order.orderId),
-            side: order.side, priceDecimals: market?.priceDecimals ?? 0, sizeDecimals: market?.sizeDecimals ?? 0,
-          })} /> : null}
-          </Card>;
-        }) : <Text style={s.body}>No open manual orders were returned.</Text>}
-      </Card>
+      {account.status === 'open' ? <>
+        <PositionList positions={account.positions} accountMode="direct_wallet" navigation={navigation}
+          canClose={account.capabilities.closePosition} canReduce={account.capabilities.reducePosition} />
+        <OrderList orders={account.orders} markets={markets} accountMode="direct_wallet" navigation={navigation}
+          canCancel={account.capabilities.cancelOrders} canAmend={account.capabilities.limitOrders} />
+      </> : null}
+      <LegacyRecovery account={account.legacyRecovery} amount={legacyAmount} setAmount={setLegacyAmount} busy={busy}
+        onPrepare={action => { void prepare(action); }} navigation={navigation} />
     </> : null}
   </Screen>;
 }
 
-function accountActionLabel(action: string) { return `${humanize(action)} manual Perpl account`; }
+function LegacyRecovery({account, amount, setAmount, busy, onPrepare, navigation}: {account: ManualPerplLegacyRecovery; amount: string;
+  setAmount: (value: string) => void; busy: boolean; onPrepare: (action: 'legacy_withdraw' | 'legacy_rescue') => void; navigation: any}) {
+  if (account.status === 'none') return null;
+  return <Card tint="#FFF8E9">
+    <Text style={s.strong}>Legacy delegated account · recovery only</Text>
+    <Text style={s.body}>This older account stays separate. Recovery actions use fresh Mera signatures; funds are never moved automatically.</Text>
+    {account.status === 'unavailable' ? <>
+      <DataRow label="Delegated account" value={account.accountAddress ?? 'Unavailable'} />
+      <Text style={s.body}>{account.error ?? 'Legacy account state could not be verified. Refresh before attempting recovery.'}</Text>
+    </> : <>
+    <DataRow label="Delegated account" value={account.accountAddress ?? 'Unavailable'} />
+    <DataRow label="Legacy account ID" value={account.accountId === null ? 'Unavailable' : String(account.accountId)} />
+    <DataRow label="AUSD account balance" value={`${formatMonadUnits(account.collateral.balanceUnits, 6)} AUSD`} />
+    <DataRow label="Free AUSD in account" value={`${formatMonadUnits(freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits).toString(), 6)} AUSD`} />
+    <DataRow label="Locked AUSD" value={`${formatMonadUnits(account.collateral.lockedUnits, 6)} AUSD`} />
+    <DataRow label="AUSD held for recovery" value={`${formatMonadUnits(account.collateral.tokenBalanceUnits, 6)} AUSD`} />
+    <Field label="Legacy recovery amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="Enter an amount" />
+    <Button label="Review legacy AUSD withdrawal" variant="secondary" onPress={() => onPrepare('legacy_withdraw')}
+      disabled={!account.capabilities.withdraw || !maybeAmount(amount, 6)
+        || BigInt(maybeAmount(amount, 6) ?? '0') > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits)} loading={busy} />
+    <Button label="Recover legacy AUSD to Mera wallet" onPress={() => onPrepare('legacy_rescue')}
+      disabled={!account.capabilities.rescueTokens || !maybeAmount(amount, 6) || BigInt(maybeAmount(amount, 6) ?? '0') > BigInt(account.collateral.tokenBalanceUnits)} loading={busy} />
+    <PositionList positions={account.positions} accountMode="legacy_delegated" navigation={navigation}
+      canClose={account.capabilities.closePosition} canReduce={account.capabilities.reducePosition} />
+    <OrderList orders={account.orders} markets={[]} accountMode="legacy_delegated" navigation={navigation}
+      canCancel={account.capabilities.cancelOrders} canAmend={false} />
+    </>}
+  </Card>;
+}
+
+function PositionList({positions, accountMode, navigation, canClose, canReduce}: {positions: ManualPerplAccount['positions']; accountMode: 'direct_wallet' | 'legacy_delegated';
+  navigation: any; canClose: boolean; canReduce: boolean}) {
+  return <Card><Text style={s.strong}>{accountMode === 'direct_wallet' ? 'Manual positions' : 'Legacy positions to close'}</Text>
+    {positions.length ? positions.map((position, index) => <Card key={`${position.marketId}:${index}`} tint="#F1EDFF">
+      <DataRow label="Market" value={`${position.symbol} · ${position.marketId}`} /><DataRow label="Direction" value={humanize(position.side)} />
+      <DataRow label="Size" value={formatMonadUnits(position.sizeUnits, Number(position.sizeDecimals ?? 0))} />
+      <DataRow label="Entry / mark" value={`${formatMonadUnits(position.entryPrice, Number(position.priceDecimals ?? 0))} / ${formatMonadUnits(position.markPrice, Number(position.priceDecimals ?? 0))}`} />
+      <DataRow label="Leverage" value={`${position.leverage}×`} /><DataRow label="Unrealized PnL" value={`${formatMonadUnits(position.unrealizedPnlUnits, 6)} AUSD`} />
+      {accountMode === 'legacy_delegated' ? <>
+        {canClose ? <Button label={`Review legacy ${position.symbol} close`} onPress={() => navigation.navigate('PerplTrade', tradeParams(position, accountMode, 'close_position'))} /> : null}
+        {canReduce ? <Button label={`Review legacy ${position.symbol} reduction`} variant="secondary" onPress={() => navigation.navigate('PerplTrade', tradeParams(position, accountMode, 'reduce_size'))} /> : null}
+      </> : canClose || canReduce ? <Button label={`Manage ${position.symbol}`} variant="secondary" onPress={() => navigation.navigate('MarketDetail', {venueId: 'perpl-direct-testnet-v1', marketId: String(position.marketId)})} /> : null}
+    </Card>) : <Text style={s.body}>{accountMode === 'direct_wallet' ? 'No manual positions are open.' : 'No legacy positions are open.'}</Text>}
+  </Card>;
+}
+
+function OrderList({orders, markets, accountMode, navigation, canCancel, canAmend}: {orders: ManualPerplAccount['orders']; markets: Array<{marketId: string; symbol?: string; priceDecimals?: number; sizeDecimals?: number}>;
+  accountMode: 'direct_wallet' | 'legacy_delegated'; navigation: any; canCancel: boolean; canAmend: boolean}) {
+  return <Card><Text style={s.strong}>{accountMode === 'direct_wallet' ? 'Open manual orders' : 'Legacy orders to cancel'}</Text>
+    {orders.length ? orders.map(order => {
+      const market = markets.find(item => item.marketId === String(order.marketId));
+      const orderSize = market?.sizeDecimals === undefined ? `${order.sizeUnits} raw units` : formatMonadUnits(order.sizeUnits, market.sizeDecimals);
+      const orderPrice = order.price == null ? 'Market' : market?.priceDecimals === undefined ? `${order.price} raw units` : formatMonadUnits(order.price, market.priceDecimals);
+      return <Card key={String(order.orderId)} tint="#EEF7FF"><DataRow label="Market" value={`${order.symbol ?? 'Perpl'} · ${order.marketId}`} />
+        <DataRow label="Order" value={String(order.orderId)} /><DataRow label="Side" value={humanize(order.side)} />
+        <DataRow label="Size / price" value={`${orderSize} / ${orderPrice}`} /><DataRow label="Status" value={humanize(order.status)} />
+        {canAmend && accountMode === 'direct_wallet' && market ? <Button label={`Review limit amendment · ${order.orderId}`} variant="secondary"
+          onPress={() => navigation.navigate('PerplTrade', tradeParams({...order, ...market}, accountMode, 'amend_limit'))} /> : null}
+        {canCancel ? <Button label={`${accountMode === 'legacy_delegated' ? 'Review legacy cancellation' : 'Review cancellation'} · ${order.orderId}`} variant="secondary"
+          onPress={() => navigation.navigate('PerplTrade', tradeParams(order, accountMode, 'cancel_limit'))} /> : null}
+      </Card>;
+    }) : <Text style={s.body}>{accountMode === 'direct_wallet' ? 'No open manual orders were returned.' : 'No legacy orders remain.'}</Text>}
+  </Card>;
+}
+
+function tradeParams(item: Record<string, any>, accountMode: 'direct_wallet' | 'legacy_delegated', action: string) {
+  return {marketId: String(item.marketId), symbol: String(item.symbol ?? 'Perpl market'), accountMode, action, side: item.side,
+    orderId: item.orderId === undefined ? undefined : String(item.orderId), priceDecimals: Number(item.priceDecimals ?? 0), sizeDecimals: Number(item.sizeDecimals ?? 0)};
+}
+function parseAmount(value: string, decimals: number) { const units = maybeAmount(value, decimals); if (!units) throw new Error('Enter a positive AUSD amount.'); return units; }
+function freeCollateral(balanceUnits: string, lockedUnits: string) {
+  const free = BigInt(balanceUnits) - BigInt(lockedUnits);
+  return free > 0n ? free : 0n;
+}
+function maybeAmount(value: string, decimals: number): string | null {
+  try { const units = parseMonadAmount(value, decimals); return BigInt(units) > 0n ? units : null; } catch { return null; }
+}
+function actionLabel(action: AccountAction) {
+  const labels: Record<AccountAction, string> = {approve: 'Approve AUSD for direct Perpl', open: 'Open direct Perpl account and deposit AUSD',
+    deposit: 'Deposit AUSD to direct Perpl', withdraw: 'Withdraw AUSD from direct Perpl',
+    legacy_withdraw: 'Withdraw free AUSD from legacy Perpl', legacy_rescue: 'Recover legacy AUSD to Mera'};
+  return labels[action];
+}
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()); }
+const ADDRESS = /^0x[0-9a-f]{40}$/i;

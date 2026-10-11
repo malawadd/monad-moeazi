@@ -4,11 +4,14 @@ import type { JsonRpcProvider } from "ethers";
 import { Hono } from "hono";
 import { meraQuery, operatorMutation, operatorQuery } from "./convex.js";
 import { requireMera, parseBody, routeError } from "./auth.js";
-import { assertMonadActionsEnabled, assertMonadBroadcastEnabled, finalityBlocks, MonadApiError } from "./config.js";
-import { MONAD_CHAIN_ID, USDC_ADDRESS, VAULT_ABI, WMON_ADDRESS } from "./constants.js";
+import { assertMonadActionsEnabled, assertMonadBroadcastEnabled, configuredAdapter, finalityBlocks, MonadApiError,
+  venueData, type MonadVenue } from "./config.js";
+import { ADAPTER_ABI, MONAD_CHAIN_ID, USDC_ADDRESS, VAULT_ABI, WMON_ADDRESS } from "./constants.js";
 import { finalizedBlockNumber, monadProvider } from "./provider.js";
 import { amountUnits, buildWalletTransaction, verifyExactSignedTransaction } from "./transactions.js";
 import { verifiedAgoraAUsdTransferUnits } from "./faucetVerification.js";
+import { findV4Pool, poolKeysEqual, v4PoolKey } from "./v4PoolIndex.js";
+import { quoteV4Pool } from "./v4PoolSwap.js";
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 function canonicalKind(kind: unknown) {
@@ -76,7 +79,8 @@ function requestIntentHash(body: Record<string, any>, kind: string) {
       vaultAddress: typeof body.vaultAddress === "string" ? getAddress(body.vaultAddress).toLowerCase() : null }));
   }
   return sha256(JSON.stringify({ kind, accountScope: body.accountScope, quoteId: body.quoteId,
-    venue: body.venue, tokenIn: String(body.tokenIn ?? "").toLowerCase(), tokenOut: String(body.tokenOut ?? "").toLowerCase() }));
+    venue: body.venue, poolId: String(body.poolId ?? "").toLowerCase(), poolKey: body.poolKey ?? null,
+    tokenIn: String(body.tokenIn ?? "").toLowerCase(), tokenOut: String(body.tokenOut ?? "").toLowerCase() }));
 }
 
 async function ownerOperation(token: string, ownerAddress: string, operationId: string) {
@@ -103,6 +107,7 @@ async function prepare(context: any) {
   }
 
   let normalized: Record<string, any> = { ...body, kind };
+  let swapQuote: any;
   if (kind === "swap") {
     if (body.accountScope !== "wallet") throw new MonadApiError("Vault swap preparation is operator-bridge only.", 403, "operator_only");
     if (typeof body.quoteId !== "string") throw new MonadApiError("A live quote is required before preparing a swap.", 409, "quote_required");
@@ -113,18 +118,48 @@ async function prepare(context: any) {
         || quote.tokenOut.toLowerCase() !== String(body.tokenOut).toLowerCase()) {
       throw new MonadApiError("The reviewed quote is missing, expired, or differs from this wallet swap.", 409, "quote_mismatch");
     }
+    if (quote.poolId && (String(body.poolId ?? "").toLowerCase() !== quote.poolId.toLowerCase()
+        || body.poolKey !== undefined && !poolKeysEqual(body.poolKey, JSON.parse(quote.poolKeyJson)))) {
+      throw new MonadApiError("The reviewed PoolId or PoolKey differs from the executable quote.", 409, "quote_mismatch");
+    }
+    if (!quote.poolId && body.poolId !== undefined) throw new MonadApiError("PoolId differs from the reviewed quote.", 409, "quote_mismatch");
+    swapQuote = quote;
     normalized = { ...normalized, amountInUnits: quote.amountInUnits,
       minAmountOutUnits: quote.minimumAmountOutUnits, amountIn: body.amountIn,
-      accountScope: "wallet", ...(quote.poolAddress ? { poolAddress: quote.poolAddress } : {}) };
+      accountScope: "wallet", ...(quote.poolAddress ? { poolAddress: quote.poolAddress } : {}),
+      ...(quote.poolId ? { poolId: quote.poolId, poolKey: JSON.parse(quote.poolKeyJson), marketId: quote.marketId,
+        inputDecimals: quote.inputDecimals, outputDecimals: quote.outputDecimals,
+        gasCap: quote.gasJson ? JSON.parse(quote.gasJson) : undefined } : {}) };
   }
   const provider = await monadProvider();
   let built: Awaited<ReturnType<typeof buildWalletTransaction>>;
-  try { built = await buildWalletTransaction(provider, auth.ownerAddress, normalized); }
+  try {
+    if (kind === "swap" && swapQuote) {
+      const minimum = BigInt(swapQuote.minimumAmountOutUnits);
+      if (swapQuote.poolId) {
+        const record = await findV4Pool(swapQuote.poolId);
+        if (!record || !poolKeysEqual(JSON.parse(swapQuote.poolKeyJson), v4PoolKey(record))) {
+          throw new MonadApiError("The indexed PoolKey no longer matches the quote-bound PoolId.", 409, "v4_pool_key_mismatch");
+        }
+        const fresh = await quoteV4Pool(provider, record, swapQuote.tokenIn, swapQuote.tokenOut, BigInt(swapQuote.amountInUnits));
+        if (fresh.amountOut < minimum) throw new MonadApiError("The finalized v4 quote moved below the reviewed minimum; request a fresh quote.", 409, "quote_stale");
+        normalized = { ...normalized, freshAmountOutUnits: fresh.amountOut.toString(),
+          freshBlockNumber: fresh.checkpoint, freshObservedAt: fresh.observedAt };
+      } else if (normalized.venue !== "moeazi_mock_pools_testnet") {
+        const adapter = configuredAdapter(normalized.venue as MonadVenue);
+        if (!adapter) throw new MonadApiError("The selected Monad Testnet venue is not configured.", 503, "venue_disabled");
+        const fresh: any = await new Contract(adapter, ADAPTER_ABI, provider).quoteExactInput.staticCall(
+          swapQuote.tokenIn, swapQuote.tokenOut, BigInt(swapQuote.amountInUnits), venueData(normalized.venue as MonadVenue));
+        if (!fresh[1] || BigInt(fresh[0]) < minimum) throw new MonadApiError("The executable quote moved below the reviewed minimum; request a fresh quote.", 409, "quote_stale");
+      }
+    }
+    built = await buildWalletTransaction(provider, auth.ownerAddress, normalized);
+  }
   finally { await provider.destroy(); }
   const { transaction, gas, intent: builtIntent } = built;
   const intent = kind === "swap" ? { ...builtIntent, quoteId: body.quoteId,
     amount: body.amount, asset: body.asset, pair: body.venue === "moeazi_mock_pools_testnet"
-      ? String(builtIntent.marketId) : "WMON_USDC",
+      ? String(builtIntent.marketId) : String(builtIntent.marketId ?? "WMON_USDC"),
     accountScope: "wallet" } : builtIntent;
   const operationId = randomUUID();
   const now = Date.now();

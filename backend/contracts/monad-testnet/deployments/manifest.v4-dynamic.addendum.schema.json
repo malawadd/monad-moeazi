@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moeazi Monad dynamic v4 adapter deployment addendum",
+  "type": "object",
+  "required": ["schemaVersion", "network", "chainId", "deploymentStatus", "verified", "addresses", "codeHashes", "source", "deploymentReceipt", "poolManager"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "network": { "const": "monad-testnet" },
+    "chainId": { "const": 10143 },
+    "deploymentStatus": { "type": "string" },
+    "verified": { "type": "boolean" },
+    "addresses": { "type": "object", "required": ["uniswapV4DynamicAdapter"], "properties": { "uniswapV4DynamicAdapter": { "$ref": "#/$defs/address" } }, "additionalProperties": false },
+    "codeHashes": { "type": "object", "required": ["uniswapV4DynamicAdapter"], "properties": { "uniswapV4DynamicAdapter": { "$ref": "#/$defs/hash" } }, "additionalProperties": false },
+    "source": {
+      "type": "object",
+      "required": ["revision", "foundry", "solc", "evmVersion", "optimizer", "optimizerRuns", "contractSourceHash"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1 },
+        "foundry": { "const": "v1.8.4" },
+        "solc": { "const": "0.8.26" },
+        "evmVersion": { "const": "cancun" },
+        "optimizer": { "const": true },
+        "optimizerRuns": { "const": 10000 },
+        "contractSourceHash": { "$ref": "#/$defs/hash" }
+      },
+      "additionalProperties": false
+    },
+    "deploymentReceipt": {
+      "type": "object",
+      "required": ["status", "txHash", "blockNumber"],
+      "properties": {
+        "status": { "type": "string" },
+        "txHash": { "oneOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "blockNumber": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }
+      },
+      "additionalProperties": false
+    },
+    "poolManager": { "$ref": "#/$defs/address" }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" }
+  },
+  "additionalProperties": false
+}

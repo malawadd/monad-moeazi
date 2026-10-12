@@ -8,19 +8,23 @@ import type {PreparedPerpEnrollment} from '../types/perpAutonomy';
 import {perpAutonomyApi, createPerpIdempotencyKey} from '../services/perpAutonomyApi';
 import {validatePreparedPerp, validatePerpSignature} from '../services/perpAutonomyValidation';
 import {formatMonadTimestamp, formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {useSetupEnrollmentGuard} from '../navigation/useSetupEnrollmentGuard';
 
 export function PerpSetupScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const enrollmentGuard = useSetupEnrollmentGuard(ownerAddress, 'perp-run');
   const [amount, setAmount] = useState('1');
   const [duration, setDuration] = useState('10');
   const [prepared, setPrepared] = useState<PreparedPerpEnrollment | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState('');
+  usePreparedReviewGuard(Boolean(prepared));
 
   function terms() {
     const amountUnits = parseMonadAmount(amount, 6);
@@ -34,6 +38,12 @@ export function PerpSetupScreen() {
     setBusy(true); setError(''); setPrepared(null); setUncertain(false);
     try {
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      const guard = await enrollmentGuard.refresh();
+      if (guard.status !== 'clear') {
+        throw new Error(guard.status === 'unavailable'
+          ? 'The earlier Perp enrollment reference could not be checked. Review its saved ID before preparing another.'
+          : 'An earlier signed Perp enrollment is still being tracked. Review its saved ID before preparing another.');
+      }
       const requested = terms();
       const review = await perpAutonomyApi.prepare({...requested, idempotencyKey: createPerpIdempotencyKey()});
       validatePreparedPerp(review, {ownerAddress, ...requested});
@@ -45,19 +55,20 @@ export function PerpSetupScreen() {
   async function signAndEnroll() {
     if (!prepared || !ownerAddress) return;
     setBusy(true); setError('');
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     let signaturesSent = false;
     try {
       const requested = terms();
       validatePreparedPerp(prepared, {ownerAddress, ...requested});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
-      const usdcAuthorizationSignature = await session.signTypedData(10143, prepared.usdcAuthorizationTypedData as unknown as TypedDataDefinition);
-      const mandateSignature = await session.signTypedData(10143, prepared.mandateTypedData as unknown as TypedDataDefinition);
-      session.end(); session = undefined;
-      validatePerpSignature(usdcAuthorizationSignature); validatePerpSignature(mandateSignature);
-      setPrepared(null); setUncertain(true); signaturesSent = true;
-      const result = await perpAutonomyApi.enroll({runId: prepared.runId, usdcAuthorizationSignature, mandateSignature});
+      const result = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'perp-run', id: prepared.runId, action: 'enroll'},
+        sign: async session => ({usdcAuthorizationSignature: await session.signTypedData(10143,
+          prepared.usdcAuthorizationTypedData as unknown as TypedDataDefinition),
+        mandateSignature: await session.signTypedData(10143, prepared.mandateTypedData as unknown as TypedDataDefinition)}),
+        validateSigned: signatures => { validatePerpSignature(signatures.usdcAuthorizationSignature); validatePerpSignature(signatures.mandateSignature); },
+        onSubmissionStarting: () => { setPrepared(null); setUncertain(true); signaturesSent = true; },
+        submit: signatures => perpAutonomyApi.enroll({runId: prepared.runId,
+          usdcAuthorizationSignature: signatures.usdcAuthorizationSignature, mandateSignature: signatures.mandateSignature}),
+      });
       if (result.runId !== prepared.runId || result.vaultAddress.toLowerCase() !== prepared.vaultAddress.toLowerCase()) {
         throw new Error('The service returned an enrollment for a different run or vault.');
       }
@@ -66,20 +77,37 @@ export function PerpSetupScreen() {
       setError(signaturesSent
         ? `The signed enrollment may still be processing. Check Perp status and Activity before starting again. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The Perp enrollment could not be completed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { setBusy(false); }
   }
 
   return <Screen onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perp autonomy · test policy v1" title="Set your limits once" copy="Choose an amount and duration. One Mera session signs the exact Circle USDC transfer and separate Perp mandate. The operator runs within that policy without routine prompts." />
     {error ? <Notice live tone="rose" title="Setup could not continue" message={error} actionLabel={prepared ? 'Prepare again' : undefined} onAction={() => { void prepare(); }} /> : null}
-    {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>A signed request can still be processing. Check Perp status and Activity before preparing another run.</Text><Button label="Check Perp status" onPress={() => navigation.navigate('PerpStatus')} /></Card> : null}
-    {!prepared && !uncertain ? <Card>
+    {enrollmentGuard.state.status === 'checking' ? <Card>
+      <Text style={s.strong}>Checking saved Perp enrollment IDs</Text>
+      <Text style={s.body}>A read-only owner check runs before another setup can be prepared.</Text>
+    </Card> : null}
+    {enrollmentGuard.state.status === 'blocked' || enrollmentGuard.state.status === 'unavailable' ? <Card tint="#FFF1E5">
+      <Text style={s.strong}>{enrollmentGuard.state.status === 'blocked' ? 'Review the earlier Perp enrollment first' : 'Saved Perp status is unavailable'}</Text>
+      <Text style={s.body}>{enrollmentGuard.state.status === 'blocked'
+        ? 'The original signed setup is still pending or nonterminal. This screen will not prepare a replacement run ID.'
+        : 'The owner-scoped reference could not be confirmed. This screen will not prepare a replacement run ID.'}</Text>
+      {enrollmentGuard.state.references.map(({reference, status}) => <Text key={`${reference.kind}:${reference.id}`} selectable style={s.body}>
+        {reference.id} · {status}
+      </Text>)}
+      <Button label="Review saved operation IDs" onPress={() => navigation.navigate('PendingOperations', {
+        focusKind: 'perp-run', focusId: enrollmentGuard.state.references[0]?.reference.id,
+      })} />
+      <Button label="Refresh Perp status" variant="secondary" onPress={() => { void enrollmentGuard.refresh(); }} />
+    </Card> : null}
+    {uncertain ? <Card><Text style={s.strong}>Check enrollment status</Text><Text style={s.body}>A signed request can still be processing. Check Perp status and Activity before preparing another run.</Text><Button label="Check Perp status" onPress={() => navigation.navigate('PerpStatus')} /><Button label="Review saved operation IDs" variant="secondary" onPress={() => navigation.navigate('PendingOperations', {focusKind: 'perp-run'})} /></Card> : null}
+    {!prepared && !uncertain && enrollmentGuard.state.status === 'clear' ? <Card>
       <Text style={s.strong}>Choose your test collateral and duration</Text>
       <Field label="Circle testnet USDC · 0.1 to 10" value={amount} onChangeText={setAmount} placeholder="1" keyboardType="decimal-pad" />
       <Field label="Duration in minutes · 10 to 120" value={duration} onChangeText={setDuration} placeholder="10" keyboardType="number-pad" />
       <Button label="Prepare exact Perp review" onPress={() => { void prepare(); }} loading={busy} />
     </Card> : null}
-    {prepared ? <>
+    {prepared && enrollmentGuard.state.status === 'clear' ? <>
       <Card>
         <Text style={s.strong}>Exact Mera USDC transfer</Text>
         <DataRow label="Mera owner" value={prepared.ownerAddress} />

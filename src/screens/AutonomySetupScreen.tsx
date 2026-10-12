@@ -6,14 +6,17 @@ import {Button, Card, DataRow, Field, Notice, PageHeader, Screen} from '../compo
 import {autonomyApi} from '../services/autonomyApi';
 import {createAutonomyIdempotencyKey, validatePreparedAutonomyEnrollment} from '../services/autonomyValidation';
 import {formatMonadTimestamp, formatMonadUnits, parseMonadAmount, shortenAddress} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {useApp} from '../state/AppContext';
 import {MONAD_TESTNET_USDC, type PreparedAutonomyEnrollment} from '../types/autonomyTrading';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {useSetupEnrollmentGuard} from '../navigation/useSetupEnrollmentGuard';
 
 export function AutonomySetupScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const enrollmentGuard = useSetupEnrollmentGuard(ownerAddress, 'autonomy-enrollment');
   const [amount, setAmount] = useState('1');
   const [durationMinutes, setDurationMinutes] = useState('10');
   const [prepared, setPrepared] = useState<PreparedAutonomyEnrollment | null>(null);
@@ -21,6 +24,7 @@ export function AutonomySetupScreen() {
   const [awaitingReconciliation, setAwaitingReconciliation] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  usePreparedReviewGuard(Boolean(prepared));
 
   function requestedTerms() {
     const amountUnits = parseMonadAmount(amount, 6);
@@ -39,6 +43,12 @@ export function AutonomySetupScreen() {
     setBusy(true); setError(''); setMessage(''); setPrepared(null); setAwaitingReconciliation(false);
     try {
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      const guard = await enrollmentGuard.refresh();
+      if (guard.status !== 'clear') {
+        throw new Error(guard.status === 'unavailable'
+          ? 'The earlier enrollment reference could not be checked. Review its saved ID before preparing another.'
+          : 'An earlier signed enrollment is still being tracked. Review its saved ID before preparing another.');
+      }
       const terms = requestedTerms();
       const review = await autonomyApi.prepare({...terms, idempotencyKey: createAutonomyIdempotencyKey()});
       validatePreparedAutonomyEnrollment(review, {ownerAddress, ...terms});
@@ -52,32 +62,25 @@ export function AutonomySetupScreen() {
   async function signAndStart() {
     if (!prepared || !ownerAddress) return;
     setBusy(true); setError(''); setMessage('');
-    let authorizationSignature = '';
-    let mandateSignature = '';
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     let signed = false;
     try {
       const terms = requestedTerms();
       validatePreparedAutonomyEnrollment(prepared, {ownerAddress, ...terms});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) {
-        throw new Error('The passkey opened a different Mera wallet. No authorization was sent.');
-      }
-      authorizationSignature = await session.signTypedData(10143,
-        prepared.usdcAuthorizationTypedData as unknown as TypedDataDefinition);
-      mandateSignature = await session.signTypedData(10143,
-        prepared.mandateTypedData as unknown as TypedDataDefinition);
-      session.end();
-      session = undefined;
-      if (!/^0x[a-fA-F0-9]{130}$/.test(authorizationSignature)
-          || !/^0x[a-fA-F0-9]{130}$/.test(mandateSignature)) {
-        throw new Error('Mera returned an invalid signature. Funding and trading were not started.');
-      }
-      setPrepared(null);
-      setAwaitingReconciliation(true);
-      signed = true;
-      const result = await autonomyApi.enroll({enrollmentId: prepared.enrollmentId,
-        usdcAuthorizationSignature: authorizationSignature, mandateSignature});
+      const result = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'autonomy-enrollment', id: prepared.enrollmentId, action: 'enroll'},
+        sign: async session => ({authorizationSignature: await session.signTypedData(10143,
+          prepared.usdcAuthorizationTypedData as unknown as TypedDataDefinition),
+        mandateSignature: await session.signTypedData(10143, prepared.mandateTypedData as unknown as TypedDataDefinition)}),
+        validateSigned: signatures => {
+          if (!/^0x[a-fA-F0-9]{130}$/.test(signatures.authorizationSignature)
+              || !/^0x[a-fA-F0-9]{130}$/.test(signatures.mandateSignature)) {
+            throw new Error('Mera returned an invalid signature. Funding and trading were not started.');
+          }
+        },
+        onSubmissionStarting: () => { setPrepared(null); setAwaitingReconciliation(true); signed = true; },
+        submit: signatures => autonomyApi.enroll({enrollmentId: prepared.enrollmentId,
+          usdcAuthorizationSignature: signatures.authorizationSignature, mandateSignature: signatures.mandateSignature}),
+      });
       if (result.chainId !== 10143 || result.ownerAddress.toLowerCase() !== ownerAddress.toLowerCase()
           || result.enrollmentId !== prepared.enrollmentId
           || result.vaultAddress.toLowerCase() !== prepared.vaultAddress.toLowerCase()) {
@@ -90,7 +93,7 @@ export function AutonomySetupScreen() {
       setError(signed
         ? `The signed enrollment response may be pending. Check run status and history before preparing another run. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The passkey enrollment could not be completed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { setBusy(false); }
   }
 
   const canCreate = !busy;
@@ -99,17 +102,36 @@ export function AutonomySetupScreen() {
     {error ? <Notice live tone="rose" title="Setup could not continue" message={error} actionLabel={prepared ? 'Prepare again' : undefined} onAction={() => { void prepare(); }} /> : null}
     {message ? <Notice tone="mint" title="Review status" message={message} /> : null}
 
+    {enrollmentGuard.state.status === 'checking' ? <Card>
+      <Text style={s.strong}>Checking saved enrollment IDs</Text>
+      <Text style={s.body}>A read-only owner check runs before another setup can be prepared.</Text>
+    </Card> : null}
+    {enrollmentGuard.state.status === 'blocked' || enrollmentGuard.state.status === 'unavailable' ? <Card tint="#FFF1E5">
+      <Text style={s.strong}>{enrollmentGuard.state.status === 'blocked' ? 'Review the earlier enrollment first' : 'Saved enrollment status is unavailable'}</Text>
+      <Text style={s.body}>{enrollmentGuard.state.status === 'blocked'
+        ? 'The original signed setup is still pending or nonterminal. This screen will not prepare a replacement ID.'
+        : 'The owner-scoped reference could not be confirmed. This screen will not prepare a replacement ID.'}</Text>
+      {enrollmentGuard.state.references.map(({reference, status}) => <Text key={`${reference.kind}:${reference.id}`} selectable style={s.body}>
+        {reference.id} · {status}
+      </Text>)}
+      <Button label="Review saved operation IDs" onPress={() => navigation.navigate('PendingOperations', {
+        focusKind: 'autonomy-enrollment', focusId: enrollmentGuard.state.references[0]?.reference.id,
+      })} />
+      <Button label="Refresh owner status" variant="secondary" onPress={() => { void enrollmentGuard.refresh(); }} />
+    </Card> : null}
+
     {awaitingReconciliation ? <Card>
       <Text style={s.strong}>Check the signed enrollment status</Text>
       <Text style={s.body}>This request may still be processing. Review current status and history before preparing another enrollment.</Text>
       <Button label="Check run status and history" onPress={() => navigation.navigate('AutonomyStatus')} />
-    </Card> : !prepared ? <Card>
+      <Button label="Review saved operation IDs" variant="secondary" onPress={() => navigation.navigate('PendingOperations', {focusKind: 'autonomy-enrollment'})} />
+    </Card> : !prepared && enrollmentGuard.state.status === 'clear' ? <Card>
       <Text style={s.strong}>Choose the test position</Text>
       <Field label="USDC amount · 0.1 to 10" value={amount} onChangeText={setAmount} placeholder="1" keyboardType="decimal-pad" />
       <Field label="Duration in minutes · 10 to 120" value={durationMinutes} onChangeText={setDurationMinutes} placeholder="10" keyboardType="number-pad" />
       <Button label="Prepare exact setup review" onPress={() => { void prepare(); }} loading={busy} />
       <Text style={s.body}>MON is used for gas by the operator. Pool fees, slippage, and falling prices can reduce your USDC balance. Profit is not guaranteed.</Text>
-    </Card> : <>
+    </Card> : prepared ? <>
       <Card>
         <Text style={s.strong}>USDC funding authorization</Text>
         <DataRow label="Amount sent to your new vault" value={`${formatMonadUnits(prepared.amountUnits, 6)} USDC`} />
@@ -146,7 +168,7 @@ export function AutonomySetupScreen() {
       </Card>
       <Button label="Approve & start with one passkey" onPress={() => { void signAndStart(); }} loading={busy} />
       <Button label="Change amount or duration" variant="secondary" disabled={!canCreate} onPress={() => { setPrepared(null); setError(''); setMessage(''); }} />
-    </>}
+    </> : null}
     <Button label="View run status and history" variant="secondary" onPress={() => navigation.navigate('AutonomyStatus')} />
   </Screen>;
 }

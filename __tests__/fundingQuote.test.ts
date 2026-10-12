@@ -15,12 +15,15 @@ test('preview estimate is explicitly sandbox and input/version bound', () => {
   expect(() => validateFundingQuote(value, input, '2')).toThrow();
 });
 test('unknown fees are preserved and unavailable estimates allow deliberate checkout fallback', () => {
-  const value = previewQuote(input);
-  if (value.status !== 'ready') throw new Error('fixture');
-  expect(validateFundingQuote({...value, fees: [{label: 'Provider fee', amount: null}]}, input, '1')).toBeTruthy();
-  const unavailable: FundingQuote = {...value, status: 'unavailable', code: 'UNAVAILABLE', message: 'Fixture unavailable'};
-  expect(quoteBlocksCheckout(unavailable)).toBe(false);
-  expect(quoteBlocksCheckout({...unavailable, code: 'MINIMUM_AMOUNT'})).toBe(true);
-  expect(quoteBlocksCheckout({...unavailable, code: 'MAXIMUM_AMOUNT'})).toBe(true);
-  expect(quoteBlocksCheckout({...unavailable, code: 'INVALID'})).toBe(true);
+  jest.useFakeTimers();
+  try {
+    const value = previewQuote(input);
+    if (value.status !== 'ready') throw new Error('fixture');
+    expect(validateFundingQuote({...value, fees: [{label: 'Provider fee', amount: null}]}, input, '1')).toBeTruthy();
+    const unavailable: FundingQuote = {...value, status: 'unavailable', code: 'UNAVAILABLE', message: 'Fixture unavailable'};
+    expect(quoteBlocksCheckout(unavailable)).toBe(false);
+    expect(quoteBlocksCheckout({...unavailable, code: 'MINIMUM_AMOUNT'})).toBe(true);
+    expect(quoteBlocksCheckout({...unavailable, code: 'MAXIMUM_AMOUNT'})).toBe(true);
+    expect(quoteBlocksCheckout({...unavailable, code: 'INVALID'})).toBe(true);
+  } finally { jest.useRealTimers(); }
 });

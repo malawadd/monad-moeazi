@@ -9,15 +9,20 @@ import {validateManualPerplPreparation, type ManualReviewExpectation} from '../s
 import {manualPerplOpenDisabledReason} from '../services/manualPerplAccountSetup';
 import {useManualPerplAccountAmounts} from '../services/useManualPerplAccountAmounts';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useManualPerplAccountQuery, useMarketDirectoryQuery} from '../services/useMarketQueries';
 import type {ManualPerplAccount, ManualPerplLegacyRecovery} from '../types/manualPerpl';
+import {UserPerplManualAccountView} from './user-perpl/UserPerplManualAccountView';
 
 type AccountAction = 'approve' | 'open' | 'deposit' | 'withdraw' | 'legacy_withdraw' | 'legacy_rescue';
 
 export function PerplManualAccountScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
   const focused = useIsFocused();
   const accountQuery = useManualPerplAccountQuery(ownerAddress, focused);
   const directoryQuery = useMarketDirectoryQuery(ownerAddress, focused);
@@ -36,6 +41,8 @@ export function PerplManualAccountScreen() {
     ? data : null;
   const markets = (directoryQuery.data?.markets ?? []).filter(item => item.kind === 'perpl');
   const [minimumOpenUnits, setMinimumOpenUnits] = useState<string | null>(null);
+  const [minimumDepositUnits, setMinimumDepositUnits] = useState<string | null>(null);
+  const [minimumWithdrawalUnits, setMinimumWithdrawalUnits] = useState<string | null>(null);
   const [contextError, setContextError] = useState('');
   const [contextLoading, setContextLoading] = useState(true);
   const {amount, setAmount, legacyAmount, setLegacyAmount} = useManualPerplAccountAmounts(
@@ -48,7 +55,7 @@ export function PerplManualAccountScreen() {
   useEffect(() => {
     if (!focused || !expectedTokenAddress) return;
     let cancelled = false;
-    setContextLoading(true); setContextError(''); setMinimumOpenUnits(null);
+    setContextLoading(true); setContextError(''); setMinimumOpenUnits(null); setMinimumDepositUnits(null); setMinimumWithdrawalUnits(null);
     void perplApi.venues().then(response => {
       const venue = response.venues.find(item => item.venueId === 'perpl-direct-testnet-v1');
       if (!venue || venue.chainId !== 10143 || !venue.collateral
@@ -56,9 +63,18 @@ export function PerplManualAccountScreen() {
         throw new Error('Live Perpl Testnet AUSD context does not match this manual account.');
       }
       const minimum = venue.limits?.minAccountOpenUnits ?? venue.collateral.minAccountOpenUnits ?? venue.limits?.minFundingUnits;
-      if (minimum && BigInt(minimum) > 0n && !cancelled) setMinimumOpenUnits(minimum);
+      if (typeof minimum === 'string' && /^\d+$/.test(minimum) && BigInt(minimum) > 0n && !cancelled) setMinimumOpenUnits(minimum);
+      const minimumDeposit = venue.limits?.minDepositUnits;
+      if (typeof minimumDeposit === 'string' && /^\d+$/.test(minimumDeposit) && BigInt(minimumDeposit) > 0n && !cancelled) {
+        setMinimumDepositUnits(minimumDeposit);
+      }
+      const minimumWithdrawal = venue.limits?.minWithdrawalUnits;
+      if (typeof minimumWithdrawal === 'string' && /^\d+$/.test(minimumWithdrawal) && BigInt(minimumWithdrawal) > 0n && !cancelled) {
+        setMinimumWithdrawalUnits(minimumWithdrawal);
+      }
     }).catch(reason => {
-      if (!cancelled) { setMinimumOpenUnits(null); setContextError(reason instanceof Error ? reason.message : 'Live Perpl account limits are unavailable.'); }
+      if (!cancelled) { setMinimumOpenUnits(null); setMinimumDepositUnits(null); setMinimumWithdrawalUnits(null);
+        setContextError(reason instanceof Error ? reason.message : 'Live Perpl account limits are unavailable.'); }
     }).finally(() => { if (!cancelled) setContextLoading(false); });
     return () => { cancelled = true; };
   }, [expectedTokenAddress, focused]);
@@ -98,6 +114,10 @@ export function PerplManualAccountScreen() {
         if (account.status === 'not_created' && minimumOpenUnits && BigInt(directUnits) < BigInt(minimumOpenUnits)) {
           throw new Error(`Perpl requires at least ${formatMonadUnits(minimumOpenUnits, account.collateral.decimals)} AUSD to open an account.`);
         }
+        if (presentationMode === 'user' && action === 'approve' && account.status === 'open') {
+          if (!minimumDepositUnits) throw new Error('Perpl’s live deposit minimum is unavailable. Refresh account limits before approving.');
+          if (BigInt(directUnits) < BigInt(minimumDepositUnits)) throw new Error(`Perpl requires at least ${formatMonadUnits(minimumDepositUnits, account.collateral.decimals)} AUSD for a deposit.`);
+        }
         if (action === 'open' && account.status !== 'not_created') throw new Error('This Mera wallet already has a Perpl exchange account.');
         if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
         if (action === 'open' && BigInt(account.collateral.allowanceUnits) !== BigInt(directUnits)) {
@@ -106,6 +126,10 @@ export function PerplManualAccountScreen() {
       }
       if (action === 'deposit') {
         if (account.status !== 'open') throw new Error('Create your direct Mera-owned Perpl account first.');
+        if (presentationMode === 'user') {
+          if (!minimumDepositUnits) throw new Error('Perpl’s live deposit minimum is unavailable. Refresh account limits before depositing.');
+          if (BigInt(directUnits) < BigInt(minimumDepositUnits)) throw new Error(`Perpl requires at least ${formatMonadUnits(minimumDepositUnits, account.collateral.decimals)} AUSD for a deposit.`);
+        }
         if (BigInt(directUnits) > BigInt(account.collateral.walletBalanceUnits)) throw new Error('The selected amount exceeds the AUSD in your Mera wallet.');
         if (BigInt(account.collateral.allowanceUnits) !== BigInt(directUnits)) {
           throw new Error('Perpl requires the finalized AUSD allowance to equal the deposit amount exactly. Review an exact approval, then refresh.');
@@ -114,6 +138,18 @@ export function PerplManualAccountScreen() {
       if (action === 'withdraw' && (account.status !== 'open'
           || BigInt(directUnits) > freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits))) {
         throw new Error('The withdrawal amount exceeds available AUSD in the direct Perpl account.');
+      }
+      if (presentationMode === 'user' && action === 'withdraw') {
+        if (!minimumWithdrawalUnits) throw new Error('Perpl’s live withdrawal minimum is unavailable. Refresh account limits before withdrawing.');
+        if (BigInt(directUnits) < BigInt(minimumWithdrawalUnits)) {
+          throw new Error(`Perpl requires at least ${formatMonadUnits(minimumWithdrawalUnits, account.collateral.decimals)} AUSD for a withdrawal.`);
+        }
+      }
+      if (presentationMode === 'user' && action === 'legacy_withdraw') {
+        if (!minimumWithdrawalUnits) throw new Error('Perpl’s live withdrawal minimum is unavailable. Refresh account limits before withdrawing.');
+        if (BigInt(directUnits) < BigInt(minimumWithdrawalUnits)) {
+          throw new Error(`Perpl requires at least ${formatMonadUnits(minimumWithdrawalUnits, account.collateral.decimals)} AUSD for a withdrawal.`);
+        }
       }
       if (action === 'legacy_withdraw' && (legacy.status === 'none'
           || BigInt(directUnits) > freeCollateral(legacy.collateral.balanceUnits, legacy.collateral.lockedUnits))) {
@@ -143,9 +179,34 @@ export function PerplManualAccountScreen() {
   const directCanApprove = Boolean(account && directUnits && !allowanceMatches
     && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits)
     && (account.status === 'open' || (minimumOpenUnits !== null && BigInt(directUnits) >= BigInt(minimumOpenUnits))));
+  const userCanApprove = account?.status !== 'unavailable' && directCanApprove && (account?.status !== 'open'
+    || (minimumDepositUnits !== null && Boolean(directUnits) && BigInt(directUnits!) >= BigInt(minimumDepositUnits)));
   const openDisabledReason = account ? manualPerplOpenDisabledReason({account, amountUnits: directUnits, minimumUnits: minimumOpenUnits,
     contextLoading, contextError, allowanceMatches}) : null;
   const directCanOpen = openDisabledReason === null;
+  const directCanDeposit = Boolean(account && directUnits && allowanceMatches
+    && BigInt(directUnits) <= BigInt(account.collateral.walletBalanceUnits) && account.capabilities.deposit);
+  const userCanDeposit = account?.status === 'open' && directCanDeposit && minimumDepositUnits !== null && Boolean(directUnits)
+    && BigInt(directUnits!) >= BigInt(minimumDepositUnits);
+  const directCanWithdraw = Boolean(account && directUnits
+    && BigInt(directUnits) <= freeCollateral(account.collateral.balanceUnits, account.collateral.lockedUnits) && account.capabilities.withdraw);
+  const userCanWithdraw = directCanWithdraw && minimumWithdrawalUnits !== null && Boolean(directUnits)
+    && BigInt(directUnits!) >= BigInt(minimumWithdrawalUnits);
+
+  if (presentationMode === 'user') return <UserPerplManualAccountView theme={theme} account={account} markets={markets}
+    loading={accountQuery.isLoading || directoryQuery.isLoading} readError={readError || ''} contextError={contextError}
+    contextLoading={contextLoading} minimumOpenUnits={minimumOpenUnits} minimumDepositUnits={minimumDepositUnits}
+    minimumWithdrawalUnits={minimumWithdrawalUnits} amount={amount} setAmount={setAmount}
+    legacyAmount={legacyAmount} setLegacyAmount={setLegacyAmount} directUnits={directUnits} directCanApprove={userCanApprove}
+    directCanOpen={directCanOpen} directCanDeposit={userCanDeposit} directCanWithdraw={userCanWithdraw}
+    allowanceMatches={allowanceMatches} openDisabledReason={openDisabledReason} busy={busy} error={error}
+    manualGateOff={Boolean(manualGateOff)} onBack={() => navigation.goBack()} onRefresh={() => { void pullToRefresh(); }}
+    onPrepare={action => { void prepare(action); }}
+    onManagePosition={position => navigation.navigate('MarketDetail', {venueId: 'perpl-direct-testnet-v1', marketId: String(position.marketId)})}
+    onPositionAction={(position, action, legacy) => navigation.navigate('PerplTrade', tradeParams(position,
+      legacy ? 'legacy_delegated' : 'direct_wallet', action))}
+    onOrderAction={(order, market, action, legacy) => navigation.navigate('PerplTrade', tradeParams(
+      action === 'amend_limit' && market ? {...order, ...market} : order, legacy ? 'legacy_delegated' : 'direct_wallet', action))} />;
 
   return <Screen refreshing={pullRefreshing || accountQuery.isLoading || directoryQuery.isLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker="Manual Perpl · Mera owner" title="Your direct AUSD account" copy="Your Mera wallet owns this Perpl exchange account. Every approval, deposit, withdrawal, and order gets a fresh review and signature." />
@@ -266,8 +327,14 @@ function OrderList({orders, markets, accountMode, navigation, canCancel, canAmen
 }
 
 function tradeParams(item: Record<string, any>, accountMode: 'direct_wallet' | 'legacy_delegated', action: string) {
+  const priceDecimals = safePrecision(item.priceDecimals);
+  const sizeDecimals = safePrecision(item.sizeDecimals);
   return {marketId: String(item.marketId), symbol: String(item.symbol ?? 'Perpl market'), accountMode, action, side: item.side,
-    orderId: item.orderId === undefined ? undefined : String(item.orderId), priceDecimals: Number(item.priceDecimals ?? 0), sizeDecimals: Number(item.sizeDecimals ?? 0)};
+    orderId: item.orderId === undefined ? undefined : String(item.orderId),
+    ...(priceDecimals === null ? {} : {priceDecimals}), ...(sizeDecimals === null ? {} : {sizeDecimals})};
+}
+function safePrecision(value: unknown) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 30 ? value : null;
 }
 function parseAmount(value: string, decimals: number) { const units = maybeAmount(value, decimals); if (!units) throw new Error('Enter a positive AUSD amount.'); return units; }
 function freeCollateral(balanceUnits: string, lockedUnits: string) {

@@ -16,6 +16,7 @@ jest.mock('../src/services/perplApi', () => ({perplApi: {
   history: async () => ({runs: mockHistoryRuns, hasMore: false, nextCursor: null}),
 }}));
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'})}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: 'developer', effectiveTheme: 'original'})}));
 jest.mock('../src/components/Ui', () => {
   const ReactRuntime = require('react');
   const Native = require('react-native');

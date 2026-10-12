@@ -30,7 +30,8 @@ node docs/user-experience/verify-theme-contrast.mjs
 Current offline verification passes all 11 Node commands listed above:
 9 reducer fixtures, 16 view checks, 11 journey checks, 7 guard checks, consent,
 layout/consent, controller, the funding-and-required-strategy suite, two theme
-checks, and hub structure (61 text files ≤300 lines; 35 routes). The theme
+checks, and hub structure (62 text files ≤300 lines; 35 historical destinations;
+34 current stack bindings and five mode-aware tabs). The theme
 checks cover preference isolation, rendered SVG tokens, 40 used text-role pairs,
 and essential boundary pairs in the five palettes. These inspect local sources,
 simulated state and minimal DOM wiring; they do not launch a browser or native

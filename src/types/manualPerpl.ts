@@ -12,6 +12,8 @@ export type ManualPerplPosition = {
   sizeUnits: string;
   entryPrice: string;
   markPrice: string;
+  priceDecimals?: number | null;
+  sizeDecimals?: number | null;
   leverage: number;
   unrealizedPnlUnits: string;
   [field: string]: unknown;
@@ -24,6 +26,10 @@ export type ManualPerplOrder = {
   side: string;
   sizeUnits: string;
   price?: string | null;
+  /** Perpl order snapshots may expose both ONS (`price`) and normalized PNS. */
+  pricePNS?: string | null;
+  priceONS?: string | null;
+  priceUnitSystem?: 'PNS' | 'ONS' | string;
   status: string;
   [field: string]: unknown;
 };
@@ -77,10 +83,24 @@ export type ManualPerplPreparedOperation = {
 
 export type ManualPerplOperationStatus = {
   operationId: string;
-  status: 'prepared' | 'submitted' | 'uncertain' | 'finalized' | 'failed' | 'no_fill';
+  status: 'prepared' | 'submitted' | 'uncertain' | 'finalized' | 'failed' | 'no_fill' | 'expired';
+  chainId?: number;
+  venueId?: string;
+  expiresAt?: string | number;
+  action?: string;
+  review?: Record<string, unknown>;
   transactionHash?: string | null;
   receipt?: Record<string, unknown> | null;
-  fill?: Record<string, unknown> | null;
+  fill?: ManualPerplFill[] | null;
   result?: Record<string, unknown> | null;
   message?: string;
+};
+
+export type ManualPerplFill = {
+  kind?: string;
+  amountCNS?: string;
+  feeCNS?: string;
+  pricePNS?: string;
+  lotLNS?: string;
+  [field: string]: unknown;
 };

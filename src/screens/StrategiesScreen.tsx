@@ -7,17 +7,25 @@ import {perplApi} from '../services/perplApi';
 import {hasCompletedDeterministicEnrollment} from '../services/strategyEnrollmentHistory';
 import {validatePerplRunOwner} from '../services/perplValidation';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
 import type {PerplRun} from '../types/perpl';
 import type {StrategyCatalogEntry, StrategyCatalogResponse} from '../types/strategies';
 import {colors} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {UserStrategiesScreen} from './UserStrategiesScreen';
 
 const DEFAULT_STRATEGY_ID = 'perpl-deterministic';
 const OPEN_RUN_STATUSES = new Set(['activation_pending', 'active', 'stopping', 'settling', 'uncertain', 'incomplete_settlement']);
 
 export function StrategiesScreen() {
+  const {presentationMode} = usePresentation();
+  return presentationMode === 'user' ? <UserStrategiesScreen /> : <DeveloperStrategiesScreen />;
+}
+
+function DeveloperStrategiesScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode} = usePresentation();
   const [catalog, setCatalog] = useState<StrategyCatalogResponse | null>(null);
   const [currentRun, setCurrentRun] = useState<PerplRun | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +87,7 @@ export function StrategiesScreen() {
       <Text style={s.strong}>{activeRun ? 'Enrollment active · run status above' : enrollmentLabel(previouslyEnrolled)}</Text>
       <Text style={s.body}>Perpl deterministic is selected by default and has a 0% Moeazi fee. Perpl trading and funding fees are separate venue charges. Review its strategy details before deciding whether to open setup.</Text>
     </Card>
-    <Button label="Read legacy agent status" variant="secondary" onPress={() => navigation.navigate('AgentStatus')} />
+    {presentationMode === 'developer' ? <Button label="Read legacy agent status" variant="secondary" onPress={() => navigation.navigate('AgentStatus')} /> : null}
   </Screen>;
 }
 

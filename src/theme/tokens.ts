@@ -1,4 +1,4 @@
-import {TextStyle} from 'react-native';
+import {Platform, TextStyle} from 'react-native';
 
 export const colors = {
   paper: '#FFFDF5', paperAlt: '#FFF8E9', cream: '#FFF1CF', yellow: '#FFD23F',
@@ -12,6 +12,9 @@ export const spacing = {xs: 6, sm: 12, md: 16, lg: 22, xl: 30} as const;
 export const border = {quiet: 2, nested: 3, strong: 5} as const;
 export const motion = {press: 120, reveal: 180, screen: 220} as const;
 export const fonts = {display: 'Syne', body: 'PlusJakartaSans', mono: 'IBMPlexMono-Regular'} as const;
+export const userFonts = Platform.OS === 'android'
+  ? {display: 'MoeaziUserSyne', body: 'MoeaziUserJakarta', mono: 'MoeaziUserPlex'} as const
+  : fonts;
 
 export const type = {
   display: {fontFamily: fonts.display, fontWeight: '800'} as TextStyle,

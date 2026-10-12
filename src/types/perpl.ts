@@ -10,6 +10,8 @@ export type PerplCollateral = {
 };
 export type PerplLimits = {
   minAccountOpenUnits?: string;
+  minDepositUnits?: string;
+  minWithdrawalUnits?: string;
   minFundingUnits?: string;
   maxFundingUnits?: string;
   minDurationSeconds?: number;
@@ -125,6 +127,18 @@ export type PerplOrder = {
   price?: number | string;
   [key: string]: unknown;
 };
+export type PerplPositionSnapshot = {
+  status: 'finalized' | 'unavailable';
+  stateSource: string;
+  verified: boolean;
+  blockNumber?: number;
+  observedAt?: string | number;
+  balanceUnits?: string;
+  lockedUnits?: string;
+  positions?: PerplPosition[];
+  openOrders?: PerplOrder[];
+  reason?: string;
+};
 export type PerplRun = {
   runId: string;
   venueId: PerplVenueId;
@@ -165,6 +179,7 @@ export type PerplRun = {
   recoveryAvailable?: boolean;
   recoveryReason?: string;
   recoveryActions?: PerplRecoveryAction[];
+  positionSnapshot?: PerplPositionSnapshot;
   [key: string]: unknown;
 };
 export type PerplCurrentResponse = {current: PerplRun | null};

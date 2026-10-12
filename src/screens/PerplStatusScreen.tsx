@@ -1,24 +1,35 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {PerplStopReview, PerplRun, PerplRunsPage} from '../types/perpl';
-import type {TypedDataDefinition} from 'viem';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
+import {keccak256, type Hex} from 'viem';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {perplApi, createPerplIdempotencyKey} from '../services/perplApi';
 import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {validatePerplRawTransaction, validatePerplRunOwner, validatePerplStop} from '../services/perplValidation';
 import {PerplRecoveryPanel} from './PerplRecoveryPanel';
 import {PerplOptimizerCard} from '../components/PerplOptimizerCard';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {loadPendingOperationReferences} from '../services/pendingOperationJournal';
+import {useUserPerplStatus} from './user-perpl/useUserPerplStatus';
+import {UserPerplStatusView} from './user-perpl/UserPerplStatusView';
+import {userThemeTokens} from '../theme/userThemes';
 
 const TERMINAL = new Set(['stopped', 'settled', 'failed', 'expired', 'inactive', 'complete', 'completed']);
 
 export function PerplStatusScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
+  const selectedRunId = typeof route.params?.runId === 'string' ? route.params.runId : undefined;
+  const userStatus = useUserPerplStatus(ownerAddress, selectedRunId);
   const [current, setCurrent] = useState<PerplRun | null>(null);
   const [history, setHistory] = useState<PerplRunsPage>({runs: [], hasMore: false, nextCursor: null});
   const [stopReview, setStopReview] = useState<PerplStopReview | null>(null);
@@ -26,23 +37,60 @@ export function PerplStatusScreen() {
   const [stopUncertain, setStopUncertain] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentStatusFresh, setCurrentStatusFresh] = useState(false);
   const [busy, setBusy] = useState(false);
-  const inFlight = useRef(false);
+  const [recoveryReviewOpen, setRecoveryReviewOpen] = useState(false);
+  const ownerKey = ownerAddress?.toLowerCase() ?? '';
+  const hasOwner = Boolean(ownerAddress);
+  const refreshUserJournal = userStatus.refreshJournal;
+  const refreshSelectedRun = userStatus.refreshSelectedRun;
+  const ownerRef = useRef(ownerKey);
+  ownerRef.current = ownerKey;
+  const currentRef = useRef(current);
+  currentRef.current = current;
+  const requestGeneration = useRef(0);
+  const requestSequence = useRef(0);
+  const inFlight = useRef<number | null>(null);
+  const writeFlight = useRef(false);
+  usePreparedReviewGuard(Boolean(stopReview));
+
+  useEffect(() => {
+    requestGeneration.current += 1;
+    inFlight.current = null;
+    writeFlight.current = false;
+    setCurrent(null); setHistory({runs: [], hasMore: false, nextCursor: null});
+    setCurrentStatusFresh(false);
+    setStopReview(null); setStopResult(null); setStopUncertain(false); setRecoveryReviewOpen(false);
+    setError(''); setLoading(hasOwner); setBusy(false);
+  }, [ownerKey, hasOwner]);
 
   const refresh = useCallback(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true; setError('');
+    const requestOwner = ownerAddress;
+    const requestKey = requestOwner?.toLowerCase() ?? '';
+    if (!requestOwner) { setCurrent(null); setHistory({runs: [], hasMore: false, nextCursor: null}); setCurrentStatusFresh(false); setLoading(false); return; }
+    if (inFlight.current !== null) return;
+    const generation = requestGeneration.current;
+    const sequence = ++requestSequence.current;
+    inFlight.current = sequence;
+    const isCurrentRequest = () => generation === requestGeneration.current && ownerRef.current === requestKey;
+    setError('');
     try {
-      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
       const [currentResponse, historyPage] = await Promise.all([perplApi.current(), perplApi.history()]);
+      if (!isCurrentRequest()) return;
       const active = currentResponse.current?.venueId === 'perpl-testnet-v1' || currentResponse.current?.venueId === 'perpl-direct-testnet-v1' ? currentResponse.current : null;
-      if (active) validatePerplRunOwner(active, ownerAddress);
+      if (active) validatePerplRunOwner(active, requestOwner);
       const runs = historyPage.runs.filter(run => run.venueId === 'perpl-testnet-v1' || run.venueId === 'perpl-direct-testnet-v1');
-      runs.forEach(run => validatePerplRunOwner(run, ownerAddress));
-      setCurrent(active); setHistory({...historyPage, runs});
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Perpl status could not be loaded.'); }
-    finally { inFlight.current = false; setLoading(false); }
-  }, [ownerAddress]);
+      runs.forEach(run => validatePerplRunOwner(run, requestOwner));
+      if (presentationMode === 'user') await refreshUserJournal();
+      if (!isCurrentRequest()) return;
+      setCurrent(active); setHistory({...historyPage, runs}); setCurrentStatusFresh(true);
+    } catch (reason) { if (isCurrentRequest()) { setCurrentStatusFresh(false); setError(reason instanceof Error ? reason.message : 'Perpl status could not be loaded.'); } }
+    finally {
+      if (presentationMode === 'user' && selectedRunId && isCurrentRequest()) await refreshSelectedRun();
+      if (inFlight.current === sequence) inFlight.current = null;
+      if (isCurrentRequest()) setLoading(false);
+    }
+  }, [ownerAddress, presentationMode, refreshUserJournal, refreshSelectedRun, selectedRunId]);
 
   useFocusEffect(useCallback(() => {
     void refresh(); const timer = setInterval(() => { void refresh(); }, 15_000);
@@ -51,53 +99,118 @@ export function PerplStatusScreen() {
 
   async function loadMore() {
     if (!history.hasMore || !history.nextCursor || busy) return;
+    const requestOwner = ownerAddress;
+    const requestKey = requestOwner?.toLowerCase() ?? '';
+    const generation = requestGeneration.current;
+    const cursor = history.nextCursor;
     setBusy(true); setError('');
     try {
-      const page = await perplApi.history(20, history.nextCursor);
+      const page = await perplApi.history(20, cursor);
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current) return;
       const runs = page.runs.filter(run => run.venueId === 'perpl-testnet-v1' || run.venueId === 'perpl-direct-testnet-v1');
-      runs.forEach(run => validatePerplRunOwner(run, ownerAddress ?? ''));
+      runs.forEach(run => validatePerplRunOwner(run, requestOwner ?? ''));
       setHistory({runs: [...history.runs, ...runs], hasMore: page.hasMore, nextCursor: page.nextCursor});
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'More Perpl history could not be loaded.'); }
-    finally { setBusy(false); }
+    } catch (reason) { if (ownerRef.current === requestKey && generation === requestGeneration.current) setError(reason instanceof Error ? reason.message : 'More Perpl history could not be loaded.'); }
+    finally { if (ownerRef.current === requestKey && generation === requestGeneration.current) setBusy(false); }
   }
 
   async function prepareStop() {
-    if (!current) return;
+    const target = currentRef.current;
+    const requestOwner = ownerAddress;
+    const requestKey = requestOwner?.toLowerCase() ?? '';
+    const generation = requestGeneration.current;
+    if (!target || !requestOwner || writeFlight.current) return;
+    writeFlight.current = true;
     setBusy(true); setError(''); setStopResult(null); setStopUncertain(false);
     try {
-      const review = await perplApi.prepareStop({runId: current.runId, idempotencyKey: createPerplIdempotencyKey()});
-      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
-      validatePerplStop(review, ownerAddress, current.vaultAddress); setStopReview(review);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'A fresh Perpl stop review could not be prepared.'); }
-    finally { setBusy(false); }
+      const saved = await loadPendingOperationReferences(requestOwner);
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current) return;
+      if (hasUnresolvedRunAction(saved, target.runId)) {
+        if (presentationMode === 'user') await userStatus.refreshJournal();
+        throw new Error('A saved signed action for this run is still being checked. Refresh its status before preparing another action.');
+      }
+      const review = await perplApi.prepareStop({runId: target.runId, idempotencyKey: createPerplIdempotencyKey()});
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current || currentRef.current?.runId !== target.runId) return;
+      validatePerplStop(review, requestOwner, target.vaultAddress); setStopReview(review);
+    } catch (reason) { if (ownerRef.current === requestKey && generation === requestGeneration.current) setError(reason instanceof Error ? reason.message : 'A fresh Perpl stop review could not be prepared.'); }
+    finally { if (generation === requestGeneration.current) { writeFlight.current = false; if (ownerRef.current === requestKey) setBusy(false); } }
   }
 
   async function signStop() {
-    if (!stopReview || !current || !ownerAddress) return;
-    setBusy(true); setError(''); let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
+    const selectedReview = stopReview;
+    const target = currentRef.current;
+    const requestOwner = ownerAddress;
+    const requestKey = requestOwner?.toLowerCase() ?? '';
+    const generation = requestGeneration.current;
+    if (!selectedReview || !target || !requestOwner || writeFlight.current) return;
+    writeFlight.current = true;
+    setBusy(true); setError('');
     let signatureSent = false;
     try {
-      validatePerplStop(stopReview, ownerAddress, current.vaultAddress);
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
-      const signedTransaction = await session.signEip1559Transaction(10143, stopReview.stopTransaction);
-      session.end(); session = undefined;
-      validatePerplRawTransaction(signedTransaction);
-      signatureSent = true; setStopReview(null); setStopUncertain(true);
-      const result = await perplApi.stop({runId: stopReview.runId, signedTransaction});
-      if (result.runId !== stopReview.runId || result.venueId !== stopReview.venueId) throw new Error('The service returned a different Perpl stop request.');
+      const saved = await loadPendingOperationReferences(requestOwner);
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current) return;
+      if (hasUnresolvedRunAction(saved, selectedReview.runId)) {
+        if (presentationMode === 'user') await userStatus.refreshJournal();
+        throw new Error('A saved signed action for this run is still being checked. Refresh its status before signing another action.');
+      }
+      if (currentRef.current?.runId !== target.runId || selectedReview.runId !== target.runId) {
+        throw new Error('The selected Perpl run changed. Refresh its status and prepare a new review.');
+      }
+      validatePerplStop(selectedReview, requestOwner, target.vaultAddress);
+      const result = await signAndSubmitWithMera({ownerAddress: requestOwner,
+        reference: {kind: 'perpl-stop', id: selectedReview.runId, action: 'stop'},
+        sign: session => session.signEip1559Transaction(10143, selectedReview.stopTransaction),
+        validateSigned: validatePerplRawTransaction,
+        referenceTxHash: signedTransaction => keccak256(signedTransaction as Hex),
+        onSubmissionStarting: () => {
+          if (ownerRef.current !== requestKey || generation !== requestGeneration.current || currentRef.current?.runId !== target.runId) {
+            throw new Error('The selected run or Mera owner changed. The signed stop was not submitted.');
+          }
+          signatureSent = true; setStopReview(null); setStopUncertain(true);
+        },
+        submit: signedTransaction => perplApi.stop({runId: selectedReview.runId, signedTransaction}),
+      });
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current) return;
+      if (result.runId !== selectedReview.runId || result.venueId !== selectedReview.venueId) throw new Error('The service returned a different Perpl stop request.');
       setStopResult({status: result.status, phase: result.phase}); setStopUncertain(false); void refresh();
     } catch (reason) {
+      if (ownerRef.current !== requestKey || generation !== requestGeneration.current) return;
       if (signatureSent) setStopUncertain(true);
       setError(signatureSent
         ? `The signed stop may still be processing. Check this run and Activity before retrying. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The Perpl stop could not be signed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { if (generation === requestGeneration.current) { writeFlight.current = false; if (ownerRef.current === requestKey) setBusy(false); } }
   }
 
   const currentStatus = current?.status.toLowerCase() ?? '';
   const unsignedPrepared = currentStatus === 'prepared';
-  const canStop = Boolean(current && !unsignedPrepared && !TERMINAL.has(currentStatus) && currentStatus !== 'stopping' && !stopUncertain);
+  const currentPendingAction = current && userStatus.pendingActions.some(item => item.id === current.runId
+    && ['perpl-stop', 'perpl-recovery'].includes(item.kind));
+  const canStop = Boolean(currentStatusFresh && current && !unsignedPrepared && !TERMINAL.has(currentStatus) && currentStatus !== 'stopping'
+    && !stopUncertain && !currentPendingAction);
+  const selectedRun = userStatus.selectedRun;
+  const recoveryTarget = selectedRun ?? current;
+  const recoveryTargetFresh = Boolean(selectedRun ? userStatus.selectedRunFresh : currentStatusFresh);
+  const recoveryContent = recoveryTarget ? <PerplRecoveryPanel run={recoveryTarget} ownerAddress={ownerAddress}
+    userActionsFresh={presentationMode !== 'user' || recoveryTargetFresh}
+    disabled={busy || Boolean(stopReview) || stopUncertain || !userStatus.journalAvailable
+      || (presentationMode === 'user' && !recoveryTargetFresh)
+      || userStatus.pendingActions.some(item => item.id === recoveryTarget.runId && item.kind === 'perpl-recovery')}
+    onRefresh={() => { void refresh(); }} onReviewOpenChange={setRecoveryReviewOpen} /> : null;
+  if (presentationMode === 'user') return <UserPerplStatusView theme={theme} current={current} history={history.runs}
+    currentKnown={currentStatusFresh}
+    selectedRun={selectedRun} selectedRunLoading={userStatus.selectedRunLoading} selectedRunError={userStatus.selectedRunError}
+    historyHasMore={history.hasMore} loading={loading} error={error} journalAvailable={userStatus.journalAvailable}
+    busy={busy} canStop={canStop} stopReview={stopReview} stopResult={stopResult} stopUncertain={stopUncertain}
+    recoveryReviewOpen={recoveryReviewOpen} pendingActions={userStatus.pendingActions} recoveryContent={recoveryContent}
+    onBack={() => navigation.goBack()} onRefresh={() => { void refresh(); }} onPrepareStop={() => { void prepareStop(); }}
+    onSignStop={() => { void signStop(); }} onCancelStop={() => setStopReview(null)}
+    onSelectRun={runId => navigation.setParams({runId})} onClearSelection={() => {
+      userStatus.clearSelectedRun(); navigation.setParams({runId: undefined});
+    }} onLoadMore={() => { void loadMore(); }} onOpenPending={() => navigation.navigate('PendingOperations')}
+    onOpenSetup={() => navigation.navigate('PerplSetup')} onOpenStrategies={() => navigation.navigate('Main', {screen: 'Strategies'})}
+    onOpenActivity={() => navigation.navigate('Main', {screen: 'Activity'})}
+    onOpenHistory={runId => navigation.navigate('PerplHistory', {runId})} />;
   return <Screen refreshing={loading} onRefresh={() => { void refresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perpl · Monad Testnet" title="Positions and activity" copy="Status refreshes every 15 seconds. Direct runs show finalized onchain orders and account state; API runs remain labeled separately." />
     {error ? <Notice live tone="rose" title="Perpl status unavailable" message={error} actionLabel="Retry" onAction={() => { void refresh(); }} /> : null}
@@ -138,7 +251,7 @@ export function PerplStatusScreen() {
     </Card> : null}
     <Button label="Review Perpl markets" variant="secondary" onPress={() => navigation.navigate('PerplMarkets')} />
     <Button label="Open Activity" variant="secondary" onPress={() => navigation.navigate('Main', {screen: 'Activity'})} />
-    <Button label="Mock Spot and Perp" variant="secondary" onPress={() => navigation.navigate('AutonomyChoice')} />
+    {presentationMode === 'developer' ? <Button label="Mock Spot and Perp" variant="secondary" onPress={() => navigation.navigate('AutonomyChoice')} /> : null}
   </Screen>;
 }
 
@@ -229,5 +342,8 @@ function RecordRows({record}: {record: Record<string, unknown>}) {
     .map(([key, value]) => <DataRow key={key} label={humanize(key)} value={String(value)} />)}</>;
 }
 function maximumCost(gasLimit: string, maxFeePerGas: string) { try { return (BigInt(gasLimit) * BigInt(maxFeePerGas)).toString(); } catch { return 'Unavailable'; } }
+function hasUnresolvedRunAction(references: Awaited<ReturnType<typeof loadPendingOperationReferences>>, runId: string) {
+  return references.some(reference => reference.id === runId && ['perpl-stop', 'perpl-recovery'].includes(reference.kind));
+}
 function signedUnits(units: string, decimals: number) { try { const value = BigInt(units); return `${value > 0n ? '+' : value < 0n ? '−' : ''}${formatMonadUnits((value < 0n ? -value : value).toString(), decimals)}`; } catch { return 'Unavailable'; } }
 function humanize(value: string) { return value.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()); }

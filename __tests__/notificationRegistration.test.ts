@@ -4,10 +4,21 @@ const mockGetToken = jest.fn();
 const mockSetAutoInitEnabled = jest.fn();
 const mockDeleteToken = jest.fn();
 const mockRequestPermission = jest.fn();
+const mockStorageGetItem = jest.fn();
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: (...args: unknown[]) => mockStorageGetItem(...args),
+    setItem: jest.fn(async () => undefined),
+    removeItem: jest.fn(async () => undefined),
+  },
+}));
 
 jest.mock('../src/services/apiClient', () => ({apiRequest: (...args: unknown[]) => mockApiRequest(...args)}));
 
 import {FcmMessagingClient, FcmPushRegistrationAdapter} from '../src/services/notifications/NotificationClient';
+import {setNotificationLinksEnabled} from '../src/services/notifications/NotificationLinks';
 
 const mockMessaging: FcmMessagingClient = {
   setAutoInitEnabled: async enabled => {
@@ -32,9 +43,11 @@ const adapter = () => new FcmPushRegistrationAdapter({
 });
 
 beforeEach(() => {
+  setNotificationLinksEnabled(false);
   mockCalls.length = 0;
   jest.clearAllMocks();
   mockRequestPermission.mockResolvedValue('granted');
+  mockStorageGetItem.mockResolvedValue(null);
   mockSetAutoInitEnabled.mockResolvedValue(undefined);
   mockDeleteToken.mockResolvedValue(undefined);
   mockGetToken.mockResolvedValue('test-token');
@@ -76,7 +89,14 @@ test('turns auto-init back off and deletes the token when FCM is unavailable', a
   expect(mockCalls).toEqual(['capability', 'permission', 'autoInit:true', 'getToken', 'autoInit:false', 'deleteToken']);
 });
 
-test('unregistering disables auto-init and deletes the token before removing the backend registration', async () => {
+test('unregistering with push disabled avoids Firebase loading and removes backend registration', async () => {
+  await adapter().unregisterDevice();
+  expect(mockCalls).toEqual([]);
+  expect(mockApiRequest).toHaveBeenCalledWith('/api/mobile/notifications/device', {method: 'DELETE'});
+});
+
+test('unregistering a locally enabled registration disables auto-init and deletes its token', async () => {
+  setNotificationLinksEnabled(true);
   await adapter().unregisterDevice();
   expect(mockCalls).toEqual(['autoInit:false', 'deleteToken']);
   expect(mockApiRequest).toHaveBeenCalledWith('/api/mobile/notifications/device', {method: 'DELETE'});

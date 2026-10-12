@@ -6,11 +6,12 @@ import {Button, Card, DataRow, Field, LoadingBlock, Notice, PageHeader, Screen} 
 import {createMonadIdempotencyKey, getMonadApprovalRequirement, monadApi} from '../services/monadApi';
 import {formatMonadTimestamp, formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
 import {validatePreparedMonadMandate, validatePreparedMonadOperation} from '../services/monadValidation';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
-import type {MonadAccountScope, MonadMandate, MonadWalletSnapshot, PreparedMonadMandate} from '../types/monad';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
+import type {MonadMandate, MonadWalletSnapshot, PreparedMonadMandate} from '../types/monad';
 import {useApp} from '../state/AppContext';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
 
 const USDC_DECIMALS = 6;
 function typedValue(value: unknown) {
@@ -30,6 +31,7 @@ export function ManagedVaultScreen() {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  usePreparedReviewGuard(Boolean(preparedMandate));
 
   const refresh = useCallback(async () => {
     setChecking(true); setError('');
@@ -59,20 +61,20 @@ export function ManagedVaultScreen() {
   async function signMandate() {
     if (!preparedMandate || !ownerAddress) return;
     setLoading(true); setError(''); setMessage('');
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     try {
       const amountUnits = parseMonadAmount(amount, mandateAsset === 'USDC' ? USDC_DECIMALS : 18);
       validatePreparedMonadMandate(preparedMandate, ownerAddress, {amount: amount.trim(), amountUnits, asset: mandateAsset, durationDays: Number(durationDays)});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. The mandate was not signed.');
-      const signature = await session.signTypedData(10143, preparedMandate.typedData as unknown as TypedDataDefinition);
-      session.end(); session = undefined;
-      const saved = await monadApi.submitMandate(preparedMandate.mandateId, signature);
+      const saved = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'managed-spot-mandate', id: preparedMandate.mandateId, action: 'mandate'},
+        sign: session => session.signTypedData(10143, preparedMandate.typedData as unknown as TypedDataDefinition),
+        onSubmissionStarting: () => setPreparedMandate(null),
+        submit: signature => monadApi.submitMandate(preparedMandate.mandateId, signature),
+      });
       setMandate(saved); setPreparedMandate(null);
       setMessage('The EIP-712 signature was verified and stored. On-chain authorization is still required before deposits or trading.');
       await refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'The mandate signature could not be verified.'); }
-    finally { session?.end(); setLoading(false); }
+    finally { setLoading(false); }
   }
 
   async function prepareOnchain(kind: 'mandate_authorize' | 'mandate_revoke' | 'vault_stop' | 'vault_resume') {

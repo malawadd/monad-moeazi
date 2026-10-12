@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import {useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, Field, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
@@ -8,17 +8,21 @@ import type {ManualPerplAccount} from '../types/manualPerpl';
 import {formatMonadUnits, parseMonadAmount, shortenAddress} from '../services/monadFormatting';
 import {validateManualPerplPreparation, type ManualReviewExpectation} from '../services/manualPerplValidation';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserPerplTradeView, type ManualOrderKind} from './user-perpl/UserPerplTradeView';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useManualPerplAccountQuery, useMarketSnapshotQuery} from '../services/useMarketQueries';
 import {getManualPerplEntrySizing, timestampIsFresh} from '../services/manualPerplSizing';
 
 type OrderType = 'market' | 'limit';
-type ManualOrderKind = 'market_entry' | 'limit_entry' | 'close_position' | 'reduce_size' | 'cancel_limit' | 'add_margin' | 'amend_limit';
 
 export function PerplTradeScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
   const focused = useIsFocused();
   const accountQuery = useManualPerplAccountQuery(ownerAddress, focused);
   const marketId = String(route.params?.marketId ?? '');
@@ -30,8 +34,12 @@ export function PerplTradeScreen() {
   const legacyMode = accountMode === 'legacy_delegated';
   const action = route.params?.action as ManualOrderKind | undefined;
   const sideFromRoute = route.params?.side === 'short' ? 'short' : 'long';
-  const priceDecimals = Number(snapshotQuery.data?.market.priceDecimals ?? route.params?.priceDecimals ?? 0);
-  const sizeDecimals = Number(snapshotQuery.data?.market.sizeDecimals ?? route.params?.sizeDecimals ?? 0);
+  const rawPriceDecimals = snapshotQuery.data?.market.priceDecimals ?? route.params?.priceDecimals;
+  const rawSizeDecimals = snapshotQuery.data?.market.sizeDecimals ?? route.params?.sizeDecimals;
+  const pricePrecisionAvailable = safePrecision(rawPriceDecimals) !== null;
+  const sizePrecisionAvailable = safePrecision(rawSizeDecimals) !== null;
+  const priceDecimals = safePrecision(rawPriceDecimals) ?? 0;
+  const sizeDecimals = safePrecision(rawSizeDecimals) ?? 0;
   const orderId = route.params?.orderId ? String(route.params.orderId) : undefined;
   const isManagement = Boolean(action);
   const candidate = accountQuery.data;
@@ -52,6 +60,9 @@ export function PerplTradeScreen() {
   const [notionalAUsd, setNotionalAUsd] = useState(0);
   const [size, setSize] = useState('');
   const [limitPrice, setLimitPrice] = useState('');
+  const [userLimitPriceTouched, setUserLimitPriceTouched] = useState(false);
+  const [amendPriceTouched, setAmendPriceTouched] = useState(false);
+  const amendIdentityRef = useRef('');
   const [marginAmount, setMarginAmount] = useState('');
   const [leverage, setLeverage] = useState(1);
   const [error, setError] = useState('');
@@ -88,6 +99,37 @@ export function PerplTradeScreen() {
 
   const selectedKind = action ?? (orderType === 'market' ? 'market_entry' : 'limit_entry');
   const selectedOrder = orders.find(item => String(item.orderId) === orderId && String(item.marketId) === marketId);
+  const limitPriceContextRef = useRef('');
+  useEffect(() => {
+    if (presentationMode !== 'user' || action) return;
+    const context = `${ownerAddress?.toLowerCase() ?? ''}:${marketId}:${side}:${orderType}`;
+    if (limitPriceContextRef.current !== context) {
+      limitPriceContextRef.current = context;
+      setLimitPrice('');
+      setUserLimitPriceTouched(false);
+    }
+  }, [action, marketId, orderType, ownerAddress, presentationMode, side]);
+  useEffect(() => {
+    if (presentationMode !== 'user') {
+      amendIdentityRef.current = '';
+      setAmendPriceTouched(false);
+      return;
+    }
+    if (selectedKind !== 'amend_limit') {
+      amendIdentityRef.current = '';
+      setAmendPriceTouched(false);
+      return;
+    }
+    const identity = `${ownerAddress?.toLowerCase() ?? ''}:${marketId}:${orderId ?? ''}`;
+    const changedOrder = amendIdentityRef.current !== identity;
+    if (changedOrder) {
+      amendIdentityRef.current = identity;
+      setAmendPriceTouched(false);
+    }
+    if ((changedOrder || !amendPriceTouched) && pricePrecisionAvailable && typeof selectedOrder?.pricePNS === 'string') {
+      setLimitPrice(formatMonadUnits(selectedOrder.pricePNS, priceDecimals));
+    }
+  }, [amendPriceTouched, marketId, orderId, ownerAddress, presentationMode, priceDecimals, pricePrecisionAvailable, selectedKind, selectedOrder?.pricePNS]);
   const allowed = account ? legacyMode ? selectedKind === 'close_position' ? Boolean(legacyAccount?.capabilities.closePosition)
       : selectedKind === 'reduce_size' ? Boolean(legacyAccount?.capabilities.reducePosition)
         : selectedKind === 'cancel_limit' ? Boolean(legacyAccount?.capabilities.cancelOrders) : false
@@ -106,10 +148,19 @@ export function PerplTradeScreen() {
     setBusy(true); setError('');
     try {
       if (!marketId) throw new Error('The selected market ID is missing.');
+      if (presentationMode === 'user' && ['limit_entry', 'amend_limit'].includes(selectedKind) && !pricePrecisionAvailable) {
+        throw new Error('Price precision is unavailable. Refresh the market before preparing a limit price.');
+      }
+      if (presentationMode === 'user' && ['close_position', 'reduce_size'].includes(selectedKind) && !sizePrecisionAvailable) {
+        throw new Error('Position size precision is unavailable. Refresh this market before preparing a position action.');
+      }
       const entry = selectedKind === 'market_entry' || selectedKind === 'limit_entry';
       if (legacyMode && entry) throw new Error('Legacy delegated accounts allow recovery actions only.');
       if (legacyMode && !['close_position', 'reduce_size', 'cancel_limit'].includes(selectedKind)) throw new Error('This action is not available for legacy account recovery.');
       if (entry && !entrySizing.canReview) throw new Error(entrySizing.reason ?? 'The latest market and account data cannot support this order.');
+      if (presentationMode === 'user' && selectedKind === 'limit_entry' && userLimitPriceTouched && !limitPrice.trim()) {
+        throw new Error('Enter a limit price before reviewing this order.');
+      }
       const positionSide = ['close_position', 'reduce_size'].includes(selectedKind) ? manualSide(position?.side) : undefined;
       const orderSide = selectedKind === 'amend_limit' ? manualSide(selectedOrder?.side) : undefined;
       if (['close_position', 'reduce_size'].includes(selectedKind) && (!position || !positionSide)) throw new Error('No verified manual position and direction exists for this market.');
@@ -118,8 +169,9 @@ export function PerplTradeScreen() {
       const sizeUnits = entry ? entrySizing.sizeUnits
         : selectedKind === 'reduce_size' ? parseMonadAmount(size, sizeDecimals) : undefined;
       const marginUnits = selectedKind === 'add_margin' ? parseMonadAmount(marginAmount, account.collateral.decimals) : undefined;
+      const selectedLimitPrice = entry && presentationMode === 'user' && userLimitPriceTouched ? limitPrice : entry ? entrySizing.limitPrice : limitPrice;
       const limitPriceValue = ['limit_entry', 'amend_limit'].includes(selectedKind)
-        ? formatMonadUnits(parseMonadAmount(entry ? entrySizing.limitPrice : limitPrice, priceDecimals), priceDecimals) : undefined;
+        ? formatMonadUnits(parseMonadAmount(selectedLimitPrice, priceDecimals), priceDecimals) : undefined;
       const parsedLeverage = entry ? leverage : 1;
       if (entry && (!Number.isSafeInteger(parsedLeverage) || parsedLeverage < 1 || parsedLeverage > entrySizing.maxLeverage)) {
         throw new Error(`Choose whole-number leverage from 1× to ${entrySizing.maxLeverage}×.`);
@@ -138,7 +190,7 @@ export function PerplTradeScreen() {
         ...(positionSide ? {side: positionSide, sizeUnits: selectedKind === 'close_position' ? position?.sizeUnits : sizeUnits} : {}),
         ...(orderSide ? {side: orderSide, orderId, sizeUnits: selectedOrder?.sizeUnits} : {}),
         ...(selectedKind === 'cancel_limit' ? {orderId} : {}),
-        ...(limitPriceValue ? {limitPrice: limitPriceValue} : {}), ...(marginUnits ? {collateralAmountUnits: marginUnits} : {})};
+        ...(limitPriceValue ? {limitPrice: limitPriceValue, priceDecimals} : {}), ...(marginUnits ? {collateralAmountUnits: marginUnits} : {})};
       validateManualPerplPreparation(prepared, expected);
       navigation.navigate('ManualPerplReview', {prepared, expected, label: orderLabel(selectedKind, side, symbol), returnRoute: 'PerplTrade'});
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'A fresh order review could not be prepared.'); }
@@ -151,6 +203,27 @@ export function PerplTradeScreen() {
         : selectedKind === 'add_margin' ? `Add AUSD margin · ${symbol}`
           : selectedKind === 'amend_limit' ? `Amend ${symbol} limit`
             : `${side === 'long' ? 'Long' : 'Short'} ${symbol}`;
+  if (presentationMode === 'user') return <UserPerplTradeView theme={theme} title={pageTitle} symbol={symbol} marketId={marketId}
+    accountMode={accountMode} accountStatus={accountStatus} accountAddress={accountAddress}
+    freeAUsd={account ? formatMonadUnits(freeCollateral(legacyMode ? legacyAccount?.collateral.balanceUnits ?? '0' : account.collateral.balanceUnits,
+      legacyMode ? legacyAccount?.collateral.lockedUnits ?? '0' : account.collateral.lockedUnits), 6) : undefined}
+    freeAUsdUnits={account ? freeCollateral(legacyMode ? legacyAccount?.collateral.balanceUnits ?? '0' : account.collateral.balanceUnits,
+      legacyMode ? legacyAccount?.collateral.lockedUnits ?? '0' : account.collateral.lockedUnits) : undefined}
+    lockedAUsd={account ? formatMonadUnits(legacyMode ? legacyAccount?.collateral.lockedUnits ?? '0' : account.collateral.lockedUnits, 6) : undefined}
+    position={position} selectedOrder={selectedOrder} kind={selectedKind} side={side} orderType={orderType}
+    onSideChange={value => { setSide(value); setLimitPrice(''); setUserLimitPriceTouched(false); }}
+    onOrderTypeChange={value => { setOrderType(value); setLimitPrice(''); setUserLimitPriceTouched(false); }}
+    notionalAUsd={notionalAUsd} onNotionalChange={setNotionalAUsd} leverage={leverage} onLeverageChange={setLeverage}
+    limitPrice={selectedKind === 'limit_entry' && !userLimitPriceTouched ? entrySizing.limitPrice : limitPrice}
+    onLimitPriceChange={value => { setLimitPrice(value); if (selectedKind === 'limit_entry') setUserLimitPriceTouched(true);
+      if (selectedKind === 'amend_limit') setAmendPriceTouched(true); }} size={size} onSizeChange={setSize}
+    marginAmount={marginAmount} onMarginChange={setMarginAmount} sizing={entrySizing} priceDecimals={priceDecimals} sizeDecimals={sizeDecimals}
+    pricePrecisionAvailable={pricePrecisionAvailable} sizePrecisionAvailable={sizePrecisionAvailable}
+    allowed={Boolean(account && accountStatus === 'open' && allowed
+      && !(presentationMode === 'user' && selectedKind === 'limit_entry' && userLimitPriceTouched && !limitPrice.trim()))}
+    busy={busy} error={error} accountError={accountReadError}
+    onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()} onPrepare={() => { void prepareOrder(); }}
+    onOpenAccount={() => navigation.navigate('PerplManualAccount')} />;
   return <Screen refreshing={pullRefreshing || accountQuery.isLoading || snapshotQuery.isLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker={legacyMode ? 'Legacy recovery · Mera signs each action' : 'Manual Perpl · Mera signs each action'} title={pageTitle} copy={legacyMode
       ? 'Only close, reduce, and cancel actions are available for this older delegated account. A fresh exact review is required.'
@@ -217,5 +290,9 @@ function scaled(value: string | null | undefined, decimals: number, suffix = '')
 function freeCollateral(balanceUnits: string, lockedUnits: string) {
   const free = BigInt(balanceUnits) - BigInt(lockedUnits);
   return (free > 0n ? free : 0n).toString();
+}
+function safePrecision(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 30 ? parsed : null;
 }
 const ADDRESS = /^0x[0-9a-f]{40}$/i;

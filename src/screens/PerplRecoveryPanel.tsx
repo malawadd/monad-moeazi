@@ -1,12 +1,19 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import {Button, Card, DataRow, Notice} from '../components/Ui';
 import {perplApi, createPerplIdempotencyKey} from '../services/perplApi';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {validatePerplRawTransaction, validatePerplRecovery} from '../services/perplValidation';
+import {keccak256, type Hex} from 'viem';
 import type {PerplRecoveryAction, PerplRecoveryReview, PerplRun} from '../types/perpl';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserPerplRecoveryView} from './user-perpl/UserPerplRecoveryView';
+import {loadPendingOperationReferences} from '../services/pendingOperationJournal';
+import {canStartUserPerplRecovery} from '../services/userPerplPresentation';
 
 const VAULT_RECOVERY_STATES = new Set(['activation_failed', 'funding_failed', 'funding_uncertain', 'activation_uncertain', 'failed', 'uncertain', 'recovery_available']);
 const WITHDRAWAL_SETTLED_STATES = new Set(['stopped', 'settled', 'expired', 'complete', 'completed']);
@@ -17,56 +24,125 @@ export function canRecoverPerplAction(run: PerplRun, action: PerplRecoveryAction
   return WITHDRAWAL_SETTLED_STATES.has(run.status.toLowerCase()) && !run.position && !hasLiveOrders(run);
 }
 
-export function PerplRecoveryPanel({run, ownerAddress, disabled = false, onRefresh}: {
-  run: PerplRun; ownerAddress: string | null; disabled?: boolean; onRefresh: () => void;
+export function PerplRecoveryPanel({run, ownerAddress, disabled = false, userActionsFresh = false, onRefresh, onReviewOpenChange}: {
+  run: PerplRun; ownerAddress: string | null; disabled?: boolean; userActionsFresh?: boolean;
+  onRefresh: () => void; onReviewOpenChange?: (open: boolean) => void;
 }) {
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
+  const ownerKey = ownerAddress?.toLowerCase() ?? '';
+  const scopeRef = useRef({runId: run.runId, owner: ownerKey});
+  scopeRef.current = {runId: run.runId, owner: ownerKey};
+  const operationGeneration = useRef(0);
+  const actionFlight = useRef(false);
   const [review, setReview] = useState<PerplRecoveryReview | null>(null);
   const [result, setResult] = useState<{action: PerplRecoveryAction; status: string; phase: string} | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [error, setError] = useState('');
   const [requestedAction, setRequestedAction] = useState<PerplRecoveryAction | null>(null);
+  const [blockedReason, setBlockedReason] = useState('');
+  usePreparedReviewGuard(Boolean(review));
+  useEffect(() => { onReviewOpenChange?.(Boolean(review)); }, [review, onReviewOpenChange]);
+  useEffect(() => {
+    operationGeneration.current += 1; actionFlight.current = false;
+    setReview(null); setResult(null); setUncertain(false); setError(''); setRequestedAction(null); setBlockedReason(''); setBusy(false);
+  }, [run.runId, ownerKey]);
 
   async function prepare(action: PerplRecoveryAction) {
-    setBusy(true); setError(''); setResult(null); setUncertain(false); setReview(null); setRequestedAction(action);
+    const scope = {runId: run.runId, owner: ownerAddress?.toLowerCase() ?? ''};
+    if (!ownerAddress || actionFlight.current) return;
+    const generation = ++operationGeneration.current;
+    const isCurrent = () => generation === operationGeneration.current && scopeRef.current.runId === scope.runId && scopeRef.current.owner === scope.owner;
+    actionFlight.current = true;
+    setBusy(true); setError(''); setResult(null); setUncertain(false); setReview(null); setRequestedAction(action); setBlockedReason('');
     try {
+      const saved = await loadPendingOperationReferences(ownerAddress);
+      if (!isCurrent()) return;
+      if (presentationMode === 'user' && !canStartUserPerplRecovery(run, action, userActionsFresh, saved)) {
+        setBlockedReason('Refresh this run to confirm that this exact AUSD return is available and that no earlier return is pending.');
+        return;
+      }
+      if (hasUnresolvedRecovery(saved, run.runId)
+          || (presentationMode !== 'user' && hasPerplAction(saved, run.runId))) {
+        setBlockedReason('A signed action for this run is still being checked. Refresh status before preparing another action.');
+        return;
+      }
       const next = await perplApi.prepareRecovery({runId: run.runId, action, idempotencyKey: createPerplIdempotencyKey()});
-      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      if (!isCurrent()) return;
       validatePerplRecovery(next, ownerAddress, run); setReview(next);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'A fresh AUSD recovery review could not be prepared.'); }
-    finally { setBusy(false); }
+    } catch (reason) {
+      if (isCurrent()) {
+        setError(reason instanceof Error ? reason.message : 'A fresh AUSD recovery review could not be prepared.');
+      }
+    } finally { if (generation === operationGeneration.current) { actionFlight.current = false; setBusy(false); } }
   }
 
   async function signAndSubmit() {
-    if (!review || !ownerAddress) return;
-    setBusy(true); setError(''); let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
+    if (!review || !ownerAddress || actionFlight.current) return;
+    const selectedReview = review;
+    const scope = {runId: run.runId, owner: ownerAddress.toLowerCase()};
+    const generation = ++operationGeneration.current;
+    const isCurrent = () => generation === operationGeneration.current && scopeRef.current.runId === scope.runId && scopeRef.current.owner === scope.owner;
+    actionFlight.current = true;
+    setBusy(true); setError('');
     let signedRequestSent = false;
     try {
-      validatePerplRecovery(review, ownerAddress, run);
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
-      const signedTransaction = await session.signEip1559Transaction(10143, review.recoveryTransaction);
-      session.end(); session = undefined;
-      validatePerplRawTransaction(signedTransaction);
-      signedRequestSent = true; setReview(null); setUncertain(true);
-      const response = await perplApi.recovery({runId: review.runId, action: review.action, signedTransaction});
-      if (response.runId !== review.runId || response.venueId !== review.venueId || response.action !== review.action) {
+      const saved = await loadPendingOperationReferences(ownerAddress);
+      if (!isCurrent()) return;
+      if ((presentationMode === 'user' && !canStartUserPerplRecovery(run, selectedReview.action, userActionsFresh, saved))
+          || hasUnresolvedRecovery(saved, selectedReview.runId)
+          || (presentationMode !== 'user' && hasPerplAction(saved, selectedReview.runId))) {
+        setReview(null);
+        setBlockedReason('A signed action for this run is still being checked, or its availability needs a fresh check. Refresh status before signing another action.');
+        setError('');
+        onRefresh();
+        return;
+      }
+      validatePerplRecovery(selectedReview, ownerAddress, run);
+      const response = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'perpl-recovery', id: selectedReview.runId, action: selectedReview.action},
+        sign: session => session.signEip1559Transaction(10143, selectedReview.recoveryTransaction),
+        validateSigned: validatePerplRawTransaction,
+        referenceTxHash: signedTransaction => keccak256(signedTransaction as Hex),
+        onSubmissionStarting: () => {
+          if (!isCurrent()) {
+            throw new Error('The selected Perpl run or Mera owner changed. The signed recovery was not submitted.');
+          }
+          signedRequestSent = true; setReview(null); setUncertain(true);
+        },
+        submit: signedTransaction => perplApi.recovery({runId: selectedReview.runId, action: selectedReview.action, signedTransaction}),
+      });
+      if (!isCurrent()) return;
+      if (response.runId !== selectedReview.runId || response.venueId !== selectedReview.venueId || response.action !== selectedReview.action) {
         throw new Error('The service returned a different Perpl recovery request.');
       }
       setResult({action: response.action, status: response.status, phase: response.phase}); setUncertain(false); onRefresh();
     } catch (reason) {
+      if (!isCurrent()) return;
       if (signedRequestSent) setUncertain(true);
       setError(signedRequestSent
         ? `The signed recovery may still be processing. Check this run and Activity before retrying. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The AUSD recovery could not be signed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { if (generation === operationGeneration.current) { actionFlight.current = false; setBusy(false); } }
   }
 
-  const canRecoverFunding = canRecoverPerplAction(run, 'recover_vault_funding');
-  const canRecoverAvailable = canRecoverPerplAction(run, 'recover_available_ausd');
-  if (!canRecoverFunding && !canRecoverAvailable && !result && !uncertain && !error) return null;
+  const canRecoverFunding = presentationMode === 'user'
+    ? canStartUserPerplRecovery(run, 'recover_vault_funding', userActionsFresh, [])
+    : canRecoverPerplAction(run, 'recover_vault_funding');
+  const canRecoverAvailable = presentationMode === 'user'
+    ? canStartUserPerplRecovery(run, 'recover_available_ausd', userActionsFresh, [])
+    : canRecoverPerplAction(run, 'recover_available_ausd');
+  if (!canRecoverFunding && !canRecoverAvailable && !result && !uncertain && !error && !blockedReason) return null;
+
+  if (presentationMode === 'user') return <UserPerplRecoveryView theme={theme} ownerAddress={ownerAddress}
+    canRecoverFunding={canRecoverFunding} canRecoverAvailable={canRecoverAvailable} review={review} result={result}
+    busy={busy} uncertain={uncertain} error={error} disabled={disabled || Boolean(blockedReason)} blockedReason={blockedReason}
+    onPrepare={action => { void prepare(action); }} onSign={() => { void signAndSubmit(); }}
+    onCancel={() => setReview(null)} onRefresh={() => { setBlockedReason(''); onRefresh(); }} />;
 
   return <>
+    {blockedReason ? <Notice live tone="orange" title="Another signed action is still being checked" message={blockedReason} actionLabel="Refresh Perpl status" onAction={onRefresh} /> : null}
     {error ? <Notice live tone="rose" title="AUSD recovery unavailable" message={error} actionLabel={requestedAction && !uncertain ? 'Try again' : undefined} onAction={() => { if (requestedAction) void prepare(requestedAction); }} /> : null}
     {run.recoveryReason && (canRecoverFunding || canRecoverAvailable) ? <Notice tone="orange" title="Recovery status" message={run.recoveryReason} /> : null}
     {result ? <Card tint="#DDF4E7"><Text style={s.strong}>{actionLabel(result.action)} request recorded</Text><DataRow label="Status" value={humanize(result.status)} /><DataRow label="Phase" value={humanize(result.phase)} /><Text style={s.body}>The service will reconcile this owner recovery with the Perpl vault and update run history.</Text></Card> : null}
@@ -95,6 +171,12 @@ function hasLiveOrders(run: PerplRun) {
   const terminal = new Set(['filled', 'finalized', 'canceled', 'cancelled', 'failed', 'rejected', 'expired']);
   return (run.orders ?? []).some(order => !order.status && !order.phase
     || !terminal.has(String(order.phase ?? order.status).toLowerCase()));
+}
+function hasPerplAction(references: Awaited<ReturnType<typeof loadPendingOperationReferences>>, runId: string) {
+  return references.some(reference => reference.id === runId && ['perpl-stop', 'perpl-recovery'].includes(reference.kind));
+}
+function hasUnresolvedRecovery(references: Awaited<ReturnType<typeof loadPendingOperationReferences>>, runId: string) {
+  return references.some(reference => reference.id === runId && reference.kind === 'perpl-recovery');
 }
 function actionLabel(action: PerplRecoveryAction) { return action === 'recover_vault_funding' ? 'Stuck vault AUSD recovery' : 'Available AUSD return'; }
 function methodLabel(action: PerplRecoveryAction) { return action === 'recover_vault_funding' ? 'recoverVaultFunding()' : 'recoverWithdrawCollateral(amount)'; }

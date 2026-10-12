@@ -12,8 +12,15 @@ import {PerplOptimizerCard} from '../components/PerplOptimizerCard';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
 import {marketDirectoryApi} from '../services/marketDirectoryApi';
 import type {MarketTradeSummary} from '../types/marketDirectory';
+import {usePresentation} from '../state/PresentationContext';
+import {UserPerplHistoryScreen} from './UserPerplHistoryScreen';
 
 export function PerplHistoryScreen() {
+  const {presentationMode} = usePresentation();
+  return presentationMode === 'user' ? <UserPerplHistoryScreen /> : <DeveloperPerplHistoryScreen />;
+}
+
+function DeveloperPerplHistoryScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const runId = route.params?.runId as string | undefined;

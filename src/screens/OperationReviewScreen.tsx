@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Pressable, Text} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {monadApi} from '../services/monadApi';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
 import {validatePreparedMonadOperation, type MonadOperationExpectation} from '../services/monadValidation';
@@ -10,6 +10,11 @@ import type {PreparedMonadOperation} from '../types/monad';
 import {useApp} from '../state/AppContext';
 import {invalidateAfterFinalizedOperation} from '../services/queryCache';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserButton, UserHeading, UserPage} from '../components/user/UserPrimitives';
+import {UserOperationReviewView} from './UserOperationReviewView';
 
 type OperationResult = {message: string; transactionHash?: string | null; status?: string;
   faucetTransferVerified?: boolean; verifiedAmountUnits?: string};
@@ -18,10 +23,14 @@ export function OperationReviewScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const prepared = route.params?.prepared as PreparedMonadOperation | undefined;
   const expected = route.params?.expected as MonadOperationExpectation | undefined;
   const afterApproval = route.params?.afterApproval as {returnRoute?: string; returnParams?: unknown} | undefined;
-  const approvalDecimals = Number(route.params?.approvalDecimals ?? 0);
+  const rawApprovalDecimals = route.params?.approvalDecimals;
+  const approvalDecimals = Number.isSafeInteger(rawApprovalDecimals) && rawApprovalDecimals >= 0 && rawApprovalDecimals <= 36
+    ? rawApprovalDecimals as number : undefined;
   const approvalSymbol = String(route.params?.approvalSymbol ?? 'token');
   const inputSymbol = String(route.params?.inputSymbol ?? 'input token');
   const outputSymbol = String(route.params?.outputSymbol ?? 'output token');
@@ -30,6 +39,8 @@ export function OperationReviewScreen() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<OperationResult | null>(null);
   const [unverifiedPoolReviewed, setUnverifiedPoolReviewed] = useState(false);
+  const [submissionJournaled, setSubmissionJournaled] = useState(false);
+  usePreparedReviewGuard(Boolean(prepared) && !submissionJournaled);
 
   useEffect(() => {
     if (ownerAddress && ['finalized', 'failed', 'reverted'].includes(result?.status ?? '')) {
@@ -37,6 +48,7 @@ export function OperationReviewScreen() {
     }
   }, [ownerAddress, result?.status]);
   useEffect(() => { setUnverifiedPoolReviewed(false); }, [expected?.poolId, expected?.quoteId]);
+  useEffect(() => { setSubmissionJournaled(false); }, [prepared?.operationId]);
 
   async function signAndBroadcast() {
     if (!prepared || !expected || !ownerAddress) return;
@@ -46,38 +58,35 @@ export function OperationReviewScreen() {
     }
     setBusy(true); setAttempted(true); setError(''); setResult(null);
     let submitStarted = false;
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     try {
       validatePreparedMonadOperation(prepared, {...expected, ownerAddress});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
-      const signedTransaction = await session.signEip1559Transaction(prepared.chainId, prepared.transaction);
-      session.end(); session = undefined;
-      submitStarted = true;
-      const verified = await monadApi.submit(prepared.operationId, signedTransaction);
-      if (['failed', 'expired'].includes(verified.status)) throw new Error(verified.message ?? `The signed transaction was ${verified.status}.`);
-      const broadcast = await monadApi.broadcast(prepared.operationId);
-      let latest = broadcast;
-      const isApproval = prepared.kind === 'approve_token';
-      const isAusdClaim = prepared.kind === 'claim_ausd_faucet';
-      if ((isApproval || isAusdClaim) && !['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) {
-        for (let attempt = 0; attempt < 8; attempt += 1) {
-          await new Promise<void>(resolve => setTimeout(resolve, 1500));
-          try { latest = await monadApi.operation(prepared.operationId); } catch { break; }
-          if (['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) break;
-        }
-      }
-      const isFinalApproval = isApproval && latest.status === 'finalized';
-      setResult({
-        message: isFinalApproval
-          ? 'The exact token approval is finalized. The server will recheck allowance before preparing the original action.'
-          : latest.message ?? `The transaction is ${latest.status}. Check Activity for the recorded result.`,
-        transactionHash: latest.transactionHash ?? broadcast.transactionHash ?? verified.transactionHash,
-        status: latest.status,
-        faucetTransferVerified: latest.faucetTransferVerified,
-        verifiedAmountUnits: latest.verifiedAmountUnits,
+      const outcome = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'monad-operation', id: prepared.operationId, action: 'submit'},
+        sign: session => session.signEip1559Transaction(prepared.chainId, prepared.transaction),
+        onSubmissionStarting: () => { submitStarted = true; setSubmissionJournaled(true); },
+        submit: async signedTransaction => {
+          const verified = await monadApi.submit(prepared.operationId, signedTransaction);
+          if (['failed', 'expired'].includes(verified.status)) throw new Error(verified.message ?? `The signed transaction was ${verified.status}.`);
+          const broadcast = await monadApi.broadcast(prepared.operationId);
+          let latest = broadcast;
+          const isApproval = prepared.kind === 'approve_token';
+          const isAusdClaim = prepared.kind === 'claim_ausd_faucet';
+          if ((isApproval || isAusdClaim) && !['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) {
+            for (let attempt = 0; attempt < 8; attempt += 1) {
+              await new Promise<void>(resolve => setTimeout(resolve, 1500));
+              try { latest = await monadApi.operation(prepared.operationId); } catch { break; }
+              if (['finalized', 'failed', 'reverted', 'expired'].includes(latest.status)) break;
+            }
+          }
+          return {message: prepared.kind === 'approve_token' && latest.status === 'finalized'
+            ? 'The exact token approval is finalized. The server will recheck allowance before preparing the original action.'
+            : latest.message ?? `The transaction is ${latest.status}. Check Activity for the recorded result.`,
+          transactionHash: latest.transactionHash ?? broadcast.transactionHash ?? verified.transactionHash,
+          status: latest.status, faucetTransferVerified: latest.faucetTransferVerified, verifiedAmountUnits: latest.verifiedAmountUnits};
+        },
       });
-      if (['failed', 'reverted'].includes(latest.status)) setError(latest.message ?? 'The transaction failed on Monad Testnet.');
+      setResult(outcome);
+      if (['failed', 'reverted'].includes(outcome.status ?? '')) setError(outcome.message ?? 'The transaction failed on Monad Testnet.');
     } catch (reason) {
       if (!submitStarted) setAttempted(false);
       const message = reason instanceof Error ? reason.message : 'The transaction could not be signed or submitted.';
@@ -92,12 +101,14 @@ export function OperationReviewScreen() {
         } catch { /* The original error remains visible when status cannot be reached. */ }
       }
     } finally {
-      session?.end();
       setBusy(false);
     }
   }
 
-  if (!prepared || !expected) return <FlowScreen><PageHeader kicker="Review" title="Request unavailable" copy="Return to the action and prepare a new server-reviewed request." /></FlowScreen>;
+  if (!prepared || !expected) return presentationMode === 'user'
+    ? <UserPage theme={userTheme}><UserButton label="Back" onPress={() => navigation.goBack()} theme={userTheme} secondary />
+      <UserHeading theme={userTheme} kicker="REVIEW" title="Request unavailable" copy="Return to the action and request a fresh review." /></UserPage>
+    : <FlowScreen><PageHeader kicker="Review" title="Request unavailable" copy="Return to the action and prepare a new server-reviewed request." /></FlowScreen>;
   const tx = prepared.transaction;
   const maxFeeWei = BigInt(tx.gasLimit) * BigInt(tx.maxFeePerGas);
   const feeInMon = formatMonadUnits(maxFeeWei.toString(), 18);
@@ -115,6 +126,23 @@ export function OperationReviewScreen() {
         status: current.status, faucetTransferVerified: current.faucetTransferVerified, verifiedAmountUnits: current.verifiedAmountUnits});
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Operation status is unavailable.'); }
     finally { setBusy(false); }
+  }
+
+  if (presentationMode === 'user') {
+    const onReturn = prepared.kind === 'approve_token' && result?.status === 'finalized'
+      && ['TradeReview', 'ManagedVault'].includes(afterApproval?.returnRoute ?? '')
+      ? {label: 'Return to original action', press: () => navigation.navigate(afterApproval?.returnRoute, afterApproval?.returnParams)}
+      : prepared.kind === 'autonomy_recovery' && result
+        ? {label: 'Return to run status', press: () => navigation.navigate('AutonomyStatus')}
+        : prepared.kind === 'claim_ausd_faucet' && result?.status === 'finalized'
+          ? {label: 'Return to AUSD balance', press: () => navigation.navigate('Funding')}
+          : undefined;
+    return <UserOperationReviewView theme={userTheme} prepared={prepared} expected={expected} amount={amount} asset={asset}
+      inputSymbol={inputSymbol} outputSymbol={outputSymbol} approvalSymbol={approvalSymbol} approvalDecimals={approvalDecimals}
+      result={result} error={error} busy={busy} attempted={attempted} unverifiedPoolReviewed={unverifiedPoolReviewed}
+      terminal={terminal} onBack={() => navigation.goBack()} onAcknowledge={() => setUnverifiedPoolReviewed(value => !value)}
+      onSign={() => { void signAndBroadcast(); }} onCheck={() => { void checkStatus(); }}
+      onOpenActivity={() => navigation.navigate('Main', {screen: 'Activity'})} onReturn={onReturn} />;
   }
 
   return <FlowScreen>
@@ -155,7 +183,7 @@ export function OperationReviewScreen() {
       {prepared.kind === 'approve_token' ? <>
         <DataRow label="Approval token" value={String(prepared.review?.tokenAddress ?? expected.tokenAddress ?? 'Missing token address')} />
         <DataRow label="Approval spender" value={String(prepared.review?.spender ?? expected.spender ?? 'Missing spender')} />
-        <DataRow label="Exact allowance" value={`${formatMonadUnits(String(prepared.review?.amountUnits ?? expected.amountUnits ?? '0'), approvalDecimals)} ${approvalSymbol}`} />
+        <DataRow label="Exact allowance" value={`${formatMonadUnits(String(prepared.review?.amountUnits ?? expected.amountUnits ?? '0'), approvalDecimals ?? 0)} ${approvalSymbol}`} />
         <DataRow label="Exact allowance · base units" value={String(prepared.review?.amountUnits ?? expected.amountUnits ?? 'Missing amount')} />
       </> : null}
       {prepared.kind === 'claim_ausd_faucet' ? <>

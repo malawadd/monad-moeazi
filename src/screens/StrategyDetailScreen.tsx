@@ -8,13 +8,20 @@ import {hasCompletedDeterministicEnrollment} from '../services/strategyEnrollmen
 import {validatePerplRunOwner} from '../services/perplValidation';
 import {useApp} from '../state/AppContext';
 import type {PerplRun} from '../types/perpl';
-import type {StrategyCatalogEntry, StrategyCatalogResponse} from '../types/strategies';
+import type {StrategyCatalogResponse} from '../types/strategies';
 import {colors} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePresentation} from '../state/PresentationContext';
+import {UserStrategyDetailScreen} from './UserStrategyDetailScreen';
 
 const OPEN_RUN_STATUSES = new Set(['activation_pending', 'active', 'stopping', 'settling', 'uncertain', 'incomplete_settlement']);
 
 export function StrategyDetailScreen() {
+  const {presentationMode} = usePresentation();
+  return presentationMode === 'user' ? <UserStrategyDetailScreen /> : <DeveloperStrategyDetailScreen />;
+}
+
+function DeveloperStrategyDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const {ownerAddress} = useApp();

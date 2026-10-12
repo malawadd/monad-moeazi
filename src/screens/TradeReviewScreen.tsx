@@ -1,6 +1,6 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, Field, FlowScreen, Notice, PageHeader} from '../components/Ui';
 import {createMonadIdempotencyKey, getMonadApprovalRequirement, monadApi} from '../services/monadApi';
 import {formatMonadTimestamp, formatMonadUnits, monadTimestampMillis, parseMonadAmount} from '../services/monadFormatting';
@@ -10,20 +10,32 @@ import type {V4PoolKey} from '../types/marketDirectory';
 import {useApp} from '../state/AppContext';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserSpotTradeReviewView} from './UserSpotTradeReviewView';
+import {useMonadWalletQuery} from '../services/useMarketQueries';
+import {UserButton, UserHeading, UserPage} from '../components/user/UserPrimitives';
+import {spotTradeApprovalReturnParams, spotTradeDraftFromParams} from '../services/marketTradeRoutes';
 
 export function TradeReviewScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const focused = useIsFocused();
+  const userTheme = userThemeTokens(effectiveTheme);
   const {marketId, accountScope, baseAsset, quoteAsset} = route.params ?? {};
   const venue = route.params?.venue as MonadVenueId | undefined;
   const poolId = route.params?.poolId as string | undefined;
   const poolKey = route.params?.poolKey as V4PoolKey | undefined;
+  const swapDraftParam = route.params?.swapDraft;
   const verified = route.params?.verified === true;
   const poolReadOnly = route.params?.readOnly === true;
-  const [side, setSide] = useState<'buy' | 'sell'>(route.params?.side === 'sell' ? 'sell' : 'buy');
-  const [amount, setAmount] = useState('');
-  const [slippage, setSlippage] = useState('50');
+  const initialDraft = spotTradeDraftFromParams(route.params);
+  const [side, setSide] = useState<'buy' | 'sell'>(initialDraft.side);
+  const [amount, setAmount] = useState(initialDraft.amount);
+  const [slippage, setSlippage] = useState(initialDraft.slippage);
   const [quote, setQuote] = useState<MonadQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +43,13 @@ export function TradeReviewScreen() {
   const tokenIn = (side === 'buy' ? quoteAsset : baseAsset) as MonadMarketAsset | undefined;
   const tokenOut = (side === 'buy' ? baseAsset : quoteAsset) as MonadMarketAsset | undefined;
   const scope = accountScope as MonadAccountScope | undefined;
+  const walletQuery = useMonadWalletQuery(ownerAddress, presentationMode === 'user' && scope === 'wallet' && focused);
+  const walletInputBalance = walletQuery.data && !walletQuery.data.stale && ownerAddress
+    && walletQuery.data.ownerAddress.toLowerCase() === ownerAddress.toLowerCase() && walletQuery.data.chainId === 10143 && tokenIn
+    ? walletQuery.data.balances.find(balance => balance.decimals === tokenIn.decimals
+      && (tokenIn.symbol === 'MON' ? balance.asset === 'MON' && balance.tokenAddress === null
+        : balance.tokenAddress?.toLowerCase() === tokenIn.address.toLowerCase())) : undefined;
+  const inputBalance = walletInputBalance ? {amountUnits: walletInputBalance.amountUnits, decimals: walletInputBalance.decimals} : undefined;
   const scopeLabel = scope === 'vault' ? 'Managed vault' : 'Mera wallet';
   const venueLabel = venue === 'uniswap_v4_testnet' ? 'Uniswap v4 Testnet'
     : venue === 'moeazi_test_amm' ? 'Moeazi Test AMM'
@@ -47,6 +66,7 @@ export function TradeReviewScreen() {
   const needsUnverifiedWarning = Boolean(isV4 && quote?.unverifiedPoolWarning);
   const approvalCheckQuote = Boolean(isV4 && quote?.gasEstimationAvailable === false);
   const quoteReady = Boolean(quote && quoteFresh && quoteMatches && (!needsUnverifiedWarning || unverifiedAcknowledged));
+  usePreparedReviewGuard(quoteReady, focused);
   const prepareLabel = useMemo(() => `Prepare ${side} review`, [side]);
   const feeDecimals = quote?.feeAsset === 'MON' ? 18
     : tokenIn && quote?.feeAsset === tokenIn.symbol ? tokenIn.decimals
@@ -55,6 +75,12 @@ export function TradeReviewScreen() {
     ? `${feeDecimals === undefined ? `${quote.feeAmountUnits} base units` : formatMonadUnits(quote.feeAmountUnits, feeDecimals)} ${quote.feeAsset}`
     : null;
   useFocusEffect(useCallback(() => { setQuote(null); setUnverifiedAcknowledged(false); }, []));
+  useEffect(() => {
+    if (!swapDraftParam) return;
+    const draft = spotTradeDraftFromParams({swapDraft: swapDraftParam});
+    setSide(draft.side); setAmount(draft.amount); setSlippage(draft.slippage);
+    setQuote(null); setUnverifiedAcknowledged(false);
+  }, [swapDraftParam]);
 
   async function getQuote() {
     setLoading(true); setError(''); setQuote(null); setUnverifiedAcknowledged(false);
@@ -111,13 +137,31 @@ export function TradeReviewScreen() {
       const approval = getMonadApprovalRequirement(reason);
       if (approval) {
         navigation.navigate('TokenApprovalReview', {approval, tokenSymbol: tokenIn.symbol, tokenDecimals: tokenIn.decimals,
-          returnRoute: 'TradeReview', returnParams: route.params});
+          returnRoute: 'TradeReview', returnParams: spotTradeApprovalReturnParams(route.params, {side, amount, slippage})});
       } else setError(reason instanceof Error ? reason.message : 'The trade could not be prepared.');
     }
     finally { setLoading(false); }
   }
 
-  if (!tokenIn || !tokenOut || !scope || !venue) return <FlowScreen><PageHeader kicker="Trade review" title="Market route unavailable" copy="Return to Markets and choose a route supplied by the Monad service." /></FlowScreen>;
+  if (!tokenIn || !tokenOut || !scope || !venue) {
+    if (presentationMode === 'user') return <UserPage theme={userTheme}>
+      <UserButton label="Back to Markets" onPress={() => navigation.navigate('Main', {screen: 'Markets'})} theme={userTheme} secondary />
+      <UserHeading theme={userTheme} kicker="SPOT · TRADE REVIEW" title="Market route unavailable"
+        copy="Return to Markets and choose a route supplied by the service." />
+    </UserPage>;
+    return <FlowScreen><PageHeader kicker="Trade review" title="Market route unavailable" copy="Return to Markets and choose a route supplied by the Monad service." /></FlowScreen>;
+  }
+
+  if (presentationMode === 'user') return <UserSpotTradeReviewView theme={userTheme} marketId={String(marketId)} accountScope={scope}
+    baseAsset={baseAsset} quoteAsset={quoteAsset} venue={venue} venueLabel={venueLabel} poolId={poolId} poolKey={poolKey}
+    side={side} amount={amount} inputBalance={inputBalance} slippage={slippage} quote={quote} quoteReady={quoteReady}
+    needsUnverifiedWarning={needsUnverifiedWarning} unverifiedAcknowledged={unverifiedAcknowledged}
+    approvalCheckQuote={approvalCheckQuote} feeLabel={feeLabel} loading={loading} error={error}
+    onBack={() => navigation.goBack()} onSideChange={next => { setSide(next); setQuote(null); setUnverifiedAcknowledged(false); }}
+    onAmountChange={next => { setAmount(next); setQuote(null); setUnverifiedAcknowledged(false); }}
+    onSlippageChange={next => { setSlippage(next); setQuote(null); setUnverifiedAcknowledged(false); }}
+    onGetQuote={() => { void getQuote(); }} onAcknowledge={() => setUnverifiedAcknowledged(value => !value)}
+    onPrepare={() => { void prepareTrade(); }} />;
 
   return <FlowScreen>
     <PageHeader kicker="Trade review" title={`${tokenIn.symbol} → ${tokenOut.symbol}`}

@@ -39,7 +39,7 @@ outcomes are simulated and do not represent production transactions.
 | `verify-v3-funding-workflow.mjs` | Pass | Initial Home and repeat Settings entrypoints, receipt progress/idempotency, required non-toggleable base and disabled optional modules; reducer/render checks only. |
 | `verify-theme.mjs` | Pass | Theme storage/bootstrap, native-radio markup, state isolation, SVG token hooks, hardcoded-paint scan and phone-only palette scoping; no actual browser/native interaction. |
 | `verify-theme-contrast.mjs` | Pass · 5 palettes | 40 actual-use text pairs at 4.5:1; seven graphic pairs, five accent-boundary alternatives and two layered-focus contexts at 3:1. Static token checks, not rendered/composited pixel measurements. |
-| `verify-hub.mjs` | Pass · 61 text files ≤300 lines | 35 routes, local links/assets/imports/fonts and no live service/network hooks. Structural only. |
+| `verify-hub.mjs` | Pass · 62 text files ≤300 lines | Checks the 35-destination historical audit separately from 34 current stack bindings, five mode-aware tabs, User branch screens, screen-file coverage, local links/assets/imports/fonts and the prototype no-network guard. Structural only. |
 
 
 ## Historical V1 build and browser checks

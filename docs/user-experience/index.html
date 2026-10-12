@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#fffdf5">
-  <meta name="description" content="Local Moeazi user experience research, current route audit, prototype, and implementation handoff.">
+  <meta name="description" content="Local Moeazi user experience research, historical route audit, current native route inventory, prototype, and implementation handoff.">
   <title>Moeazi UX Field Notes</title>
   <link rel="stylesheet" href="hub.css">
 </head>
@@ -50,8 +50,8 @@
         <p class="note"><b>Scope:</b> read-only navigation. No signing, funding, swaps, or trades were performed. The evidence manifest explains partial-scroll coverage and the Perpl debugger overlay.</p>
       </section>
       <section class="section" id="audit">
-        <div class="section-head"><div><span class="eyebrow">SOURCE AUDIT / ROUTES</span><h2>Every current destination</h2></div><a class="text-link" href="reader.html?doc=route-audit.md">Audit notes ↗</a></div>
-        <p class="lede">This inventory is derived from <code>RootNavigator.tsx</code>, nested tabs, navigation calls, and registered screen components. It describes current reachability and proposes a User Mode destination; it does not change production navigation.</p>
+        <div class="section-head"><div><span class="eyebrow">RESEARCH BASELINE / ROUTES</span><h2>Baseline destination map</h2></div><a class="text-link" href="reader.html?doc=route-audit.md">Audit notes ↗</a></div>
+        <p class="lede">This 35-destination table preserves the 11 October 2026 pre-migration research snapshot. Current native navigation is data-driven: <code>migration-inventory.js</code> records 34 stack bindings, five mode-aware tabs and User-only branch screens; <code>verify-hub.mjs</code> checks those against <code>RootNavigator.tsx</code>, tab bindings and screen files. Static source checks do not claim native visual or interaction acceptance.</p>
         <div id="route-table" class="table-wrap" aria-live="polite"></div>
         <div class="subsection-head"><h3>Screen files outside the live route graph</h3><span class="tag">UNREGISTERED / LEGACY CANDIDATES</span></div>
         <div id="legacy-table" class="table-wrap" aria-live="polite"></div>

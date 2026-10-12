@@ -58,6 +58,13 @@ export type PreparedMonadOperation = {
 export type MonadOperationStatus = {
   operationId: string;
   status: 'prepared' | 'verified' | 'submitted' | 'executed' | 'finalized' | 'failed' | 'expired' | 'reverted';
+  ownerAddress?: string;
+  chainId?: number;
+  kind?: MonadOperationKind;
+  expiresAt?: string | number;
+  transactionType?: 'eip1559';
+  transaction?: MonadEip1559Transaction;
+  review?: PreparedMonadOperation['review'];
   transactionHash?: string | null;
   blockNumber?: number | null;
   message?: string;

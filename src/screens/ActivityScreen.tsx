@@ -10,6 +10,10 @@ import type {MarketTradeSummary} from '../types/marketDirectory';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useApp} from '../state/AppContext';
+import {loadPendingOperationReferences} from '../services/pendingOperationJournal';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserActivityView} from './UserActivityView';
 
 function eventTime(value: string) {
   const time = Date.parse(value);
@@ -20,6 +24,8 @@ export function ActivityScreen() {
   const navigation = useNavigation<any>();
   const focused = useIsFocused();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const activity = useMonadActivityQuery(ownerAddress, null, focused);
   const summaries = useMarketTradesQuery(ownerAddress, undefined, undefined, focused);
   const {refetch: refetchActivity, isStale: activityStale, data: activityData} = activity;
@@ -31,7 +37,21 @@ export function ActivityScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [scope, setScope] = useState<'all' | 'perp'>('all');
+  const [pendingReferenceCount, setPendingReferenceCount] = useState(0);
   const pageGeneration = useRef(0);
+  const pendingGeneration = useRef(0);
+
+  useFocusEffect(useCallback(() => {
+    const current = ++pendingGeneration.current;
+    setPendingReferenceCount(0);
+    if (!ownerAddress || presentationMode !== 'user') return () => { pendingGeneration.current += 1; };
+    void loadPendingOperationReferences(ownerAddress).then(rows => {
+      if (pendingGeneration.current === current) setPendingReferenceCount(rows.length);
+    }).catch(() => {
+      if (pendingGeneration.current === current) setPendingReferenceCount(0);
+    });
+    return () => { if (pendingGeneration.current === current) pendingGeneration.current += 1; };
+  }, [ownerAddress, presentationMode]));
 
   useEffect(() => {
     pageGeneration.current += 1;
@@ -70,9 +90,17 @@ export function ActivityScreen() {
     [activityStale, summariesStale, refresh]));
   useEffect(() => subscribeNotificationActivityRefresh(() => { void refresh(); }), [refresh]);
   const visibleEvents = scope === 'perp' ? events.filter(isPerpVenueEvent) : events;
+  const userVisibleEvents = scope === 'perp' ? events.filter(isUserPerplEvent) : events;
   const visibleSummaries = scope === 'perp' ? tradeSummaries.filter(item => item.venueId.startsWith('perpl-')) : tradeSummaries;
   const activityError = activity.error instanceof Error ? activity.error.message : '';
   const hasError = Boolean(activityError || paginationError);
+
+  if (presentationMode === 'user') return <UserActivityView theme={userTheme} events={userVisibleEvents}
+    loading={!activityData && activity.isLoading} refreshing={pullRefreshing} error={[activityError, paginationError].filter(Boolean).join(' ')}
+    pendingCount={pendingReferenceCount} hasMore={hasMore} loadingMore={loadingMore} scope={scope === 'all' ? 'all' : 'perp'}
+    onRefresh={() => { void pullToRefresh(); }} onLoadMore={() => { void loadMore(); }}
+    onSetScope={setScope} onPending={() => navigation.navigate('PendingOperations')}
+    onOpen={event => navigation.navigate('ActivityDetail', {itemId: event.id, event})} />;
 
   return <Screen refreshing={pullRefreshing || (!activityData && activity.isLoading)} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />
@@ -125,4 +153,7 @@ function isBlocked(event: MonadActivityEvent) { return event.status === 'blocked
 function isPerpVenueEvent(event: MonadActivityEvent) {
   return event.kind.startsWith('perp_') || event.kind.startsWith('perpl_')
     || event.venueId === 'monad-mock-clearinghouse-v1' || event.venueId === 'perpl-testnet-v1' || event.venueId === 'perpl-direct-testnet-v1';
+}
+function isUserPerplEvent(event: MonadActivityEvent) {
+  return event.kind.startsWith('perpl_') || event.venueId === 'perpl-testnet-v1' || event.venueId === 'perpl-direct-testnet-v1';
 }

@@ -14,6 +14,7 @@ import type {Hex, TypedDataDefinition} from 'viem';
 import type {MonadEip1559Transaction} from '../../types/monad';
 import {signPreparedMonadTransaction} from '../monadTransaction';
 import {describePasskeyError} from './meraPasskeyError';
+import {beginMeraSigningSession} from '../signingGuard';
 
 export const MERA_RP_ID = 'moeazi-monad.kiyan.finance';
 const RP_NAME = 'Moeazi Monad';
@@ -31,6 +32,13 @@ export type MeraSigningSession = {
 
 /** Opens a short-lived EVM signing session; no PRF, phrase, seed, or key is persisted. */
 export async function openMeraSigningSession(action: PasskeyAction): Promise<MeraSigningSession> {
+  const releaseSigningGuard = beginMeraSigningSession();
+  let guardReleased = false;
+  const release = () => {
+    if (guardReleased) return;
+    guardReleased = true;
+    releaseSigningGuard();
+  };
   let result: getPasskeyPrfOutput.Result | undefined;
   let seed: Uint8Array | undefined;
   let privateKey: Uint8Array | null | undefined;
@@ -50,6 +58,7 @@ export async function openMeraSigningSession(action: PasskeyAction): Promise<Mer
     if (!privateKey) throw new Error('Mera could not derive the account key.');
     session = createSecp256k1SigningSession({privateKey});
     const signingSession = session;
+    let ended = false;
     const signDigest = async (digest: Hex) => signingSession.signDigest(hexToBytes(digest));
     return {
       address: getEvmAddress(signingSession.publicKey).toLowerCase(),
@@ -76,10 +85,14 @@ export async function openMeraSigningSession(action: PasskeyAction): Promise<Mer
         signature.compact.fill(0);
         return toHex(encoded);
       },
-      end: () => signingSession.end(),
+      end: () => {
+        if (ended) return;
+        ended = true;
+        try { signingSession.end(); } finally { release(); }
+      },
     };
   } catch (error) {
-    session?.end();
+    try { session?.end(); } finally { release(); }
     throw describePasskeyError(error);
   } finally {
     result?.prfOutput.fill(0);

@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
+import {useQuery} from '@tanstack/react-query';
 import {Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {marketIdentity, type MarketDirectoryRow} from '../types/marketDirectory';
 import {readMarketWatchlist, writeMarketWatchlist} from '../services/marketWatchlist';
@@ -12,6 +13,10 @@ import {resolveMarketsForInput, useMarketDirectoryQuery} from '../services/useMa
 import {usePerplMarketStream} from '../services/usePerplMarketStream';
 import {hasExecutableSpotRoute, isDirectoryMarketEligible, isHookedPool, isV4PoolLookup} from '../services/marketDirectoryPresentation';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserMarketsView} from './UserMarketsView';
+import {findPerplVenue} from '../services/perplValidation';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -25,6 +30,8 @@ export function MarketsScreen() {
   const route = useRoute<any>();
   const focused = useIsFocused();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const directory = useMarketDirectoryQuery(ownerAddress, focused);
   usePerplMarketStream(ownerAddress, null, 60, focused);
   const {isStale: directoryStale, refetch: refetchDirectory} = directory;
@@ -39,6 +46,13 @@ export function MarketsScreen() {
   const [lookupBusy, setLookupBusy] = useState(false);
   const [error, setError] = useState('');
   const [pullRefreshing, setPullRefreshing] = useState(false);
+  const ownerKey = ownerAddress?.toLowerCase() ?? 'signed-out';
+  const perplVenueQuery = useQuery({
+    queryKey: ['mobile', 'owner', ownerKey, 'perpl', 'venues'],
+    queryFn: async () => findPerplVenue((await perplApi.venues()).venues),
+    enabled: Boolean(ownerAddress && focused && presentationMode === 'user'),
+    staleTime: 15_000, refetchInterval: focused && presentationMode === 'user' ? 15_000 : false,
+  });
 
   useEffect(() => { void readMarketWatchlist().then(setWatchlist).catch(() => undefined); }, []);
   useEffect(() => {
@@ -100,6 +114,20 @@ export function MarketsScreen() {
     try { await refetchDirectory(); } finally { setPullRefreshing(false); }
   }, [refetchDirectory]);
   const directoryError = directory.isError && !directory.data ? directory.error : null;
+
+  if (presentationMode === 'user') {
+    const freshPerplVenue = perplVenueQuery.data && !perplVenueQuery.isError && !perplVenueQuery.isStale
+      ? perplVenueQuery.data : null;
+    return <UserMarketsView theme={userTheme} markets={visible} perplVenue={freshPerplVenue}
+      loading={directory.isLoading} refreshing={pullRefreshing || directory.isLoading}
+      error={directoryError ? 'The market service could not be reached.' : undefined}
+      stale={Boolean(directory.data && (directory.isError || directory.isStale))}
+      message={error || undefined} search={search} setSearch={setSearch} category={category} setCategory={setCategory}
+      watchlist={watchlist} watchlistOnly={watchlistOnly} setWatchlistOnly={setWatchlistOnly}
+      onRefresh={() => { void refreshDirectory(); }}
+      onOpen={market => navigation.navigate('MarketDetail', {venueId: market.venueId, marketId: market.marketId})}
+      onWatch={market => { void toggleWatchlist(market); }} />;
+  }
 
   return <Screen refreshing={pullRefreshing || directory.isLoading} onRefresh={() => { void refreshDirectory(); }}>
     <PageHeader kicker="Markets · Monad Testnet" title="Markets that are live" copy="Browse listed pools and Perpl markets. A listed pool can remain visible while its quote or trade route is unavailable." />

@@ -7,11 +7,16 @@ import {formatMonadUnits} from '../services/monadFormatting';
 import {isAddress, validatePreparedMonadOperation} from '../services/monadValidation';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserTokenApprovalReviewView} from './UserTokenApprovalReviewView';
 
 export function TokenApprovalReviewScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const approval = route.params?.approval as MonadApprovalRequirement | undefined;
   const symbol = String(route.params?.tokenSymbol ?? 'token');
   const decimals = Number(route.params?.tokenDecimals ?? 0);
@@ -42,7 +47,15 @@ export function TokenApprovalReviewScreen() {
     finally { setBusy(false); }
   }
 
-  if (!approval) return <FlowScreen><PageHeader kicker="Token approval" title="Approval details unavailable" copy="Return to the originating action and prepare a fresh quote." /></FlowScreen>;
+  if (!approval) {
+    if (presentationMode === 'user') return <UserTokenApprovalReviewView theme={userTheme} ownerAddress={ownerAddress}
+      approval={null} symbol={symbol} decimals={decimals} error={error} busy={busy} returnRoute={returnRoute}
+      onBack={() => navigation.goBack()} onPrepare={() => { void prepareApproval(); }} />;
+    return <FlowScreen><PageHeader kicker="Token approval" title="Approval details unavailable" copy="Return to the originating action and prepare a fresh quote." /></FlowScreen>;
+  }
+  if (presentationMode === 'user') return <UserTokenApprovalReviewView theme={userTheme} ownerAddress={ownerAddress}
+    approval={approval} symbol={symbol} decimals={decimals} error={error} busy={busy} returnRoute={returnRoute}
+    onBack={() => navigation.goBack()} onPrepare={() => { void prepareApproval(); }} />;
   return <FlowScreen>
     <PageHeader kicker="Token approval · Monad Testnet" title="Review the exact allowance" copy="This approval is limited to the amount and spender requested by the original operation. Moeazi will wait for finality before you retry." />
     {error ? <Notice live tone="rose" title="Approval not prepared" message={error} actionLabel="Retry" onAction={() => { void prepareApproval(); }} /> : null}

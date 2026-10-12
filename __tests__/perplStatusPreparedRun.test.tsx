@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactTestRenderer, {act} from 'react-test-renderer';
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+
 const mockOwner = '0x1111111111111111111111111111111111111111';
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 const mockPreparedRun = {runId: 'prepared-run', venueId: 'perpl-direct-testnet-v1', status: 'prepared', phase: 'prepared',
@@ -10,9 +13,11 @@ const mockPreparedRun = {runId: 'prepared-run', venueId: 'perpl-direct-testnet-v
 jest.mock('@react-navigation/native', () => {
   const ReactRuntime = require('react');
   return {useNavigation: () => mockNavigation,
+    useRoute: () => ({params: {}}),
     useFocusEffect: (callback: () => void | (() => void)) => ReactRuntime.useEffect(callback, [callback])};
 });
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: 'developer', effectiveTheme: 'original'})}));
 jest.mock('../src/services/perplApi', () => ({perplApi: {
   current: async () => ({current: mockPreparedRun}), history: async () => ({runs: [], hasMore: false, nextCursor: null}),
 }, createPerplIdempotencyKey: () => 'perpl-test-key'}));

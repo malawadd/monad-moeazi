@@ -1,12 +1,13 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import type {TypedDataDefinition} from 'viem';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, Field, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
 import {perplApi, createPerplIdempotencyKey} from '../services/perplApi';
+import {MobileApiError} from '../services/apiClient';
 import {monadApi} from '../services/monadApi';
 import {formatMonadTimestamp, formatMonadUnits, parseMonadAmount} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {effectivePerplMarketSlippageBps, findPerplVenue, isPerplDirectOptimizerDuration,
   PERPL_DIRECT_OPTIMIZER_DEFAULT_DURATION_SECONDS, PERPL_DIRECT_OPTIMIZER_MAX_DURATION_SECONDS,
   PERPL_DIRECT_OPTIMIZER_MIN_DURATION_SECONDS, validatePreparedPerpl, validatePerplRawTransaction,
@@ -14,21 +15,47 @@ import {effectivePerplMarketSlippageBps, findPerplVenue, isPerplDirectOptimizerD
 import type {PerplPreparedEnrollment, PerplRun, PerplVenue} from '../types/perpl';
 import {useApp} from '../state/AppContext';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {loadPendingOperationReferences} from '../services/pendingOperationJournal';
+import {reconcilePendingOperation} from '../services/pendingOperationReconcile';
+import {UserPerplSetupView, PendingPerplEnrollment} from './user-perpl/UserPerplSetupView';
 
 export function PerplSetupScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
+  const ownerKey = ownerAddress?.toLowerCase() ?? '';
+  const ownerRef = useRef(ownerKey);
+  ownerRef.current = ownerKey;
+  const activeCheckGeneration = useRef(0);
+  const writeGeneration = useRef(0);
+  const writeFlight = useRef(false);
   const [venue, setVenue] = useState<PerplVenue | null>(null);
   const [amount, setAmount] = useState('100');
   const [durationMinutes, setDurationMinutes] = useState('120');
   const [prepared, setPrepared] = useState<PerplPreparedEnrollment | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [uncertainRunId, setUncertainRunId] = useState('');
+  const [pendingEnrollments, setPendingEnrollments] = useState<PendingPerplEnrollment[]>([]);
   const [error, setError] = useState('');
+  const [runConflict, setRunConflict] = useState(false);
   const [walletAusd, setWalletAusd] = useState('Checking Mera balance…');
   const [activeRun, setActiveRun] = useState<PerplRun | null>(null);
   const [checkingActiveRun, setCheckingActiveRun] = useState(true);
   const [activeRunError, setActiveRunError] = useState('');
+  usePreparedReviewGuard(Boolean(prepared));
+
+  useEffect(() => {
+    activeCheckGeneration.current += 1;
+    writeGeneration.current += 1; writeFlight.current = false;
+    setPrepared(null); setActiveRun(null); setPendingEnrollments([]); setUncertain(false); setUncertainRunId('');
+    setActiveRunError(''); setError(''); setRunConflict(false); setCheckingActiveRun(true); setBusy(false);
+    setWalletAusd(ownerKey ? 'Checking Mera balance…' : 'Unavailable');
+  }, [ownerKey]);
 
   const loadVenue = useCallback(async () => {
     setError('');
@@ -45,27 +72,48 @@ export function PerplSetupScreen() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Perpl setup limits could not be loaded.'); }
   }, []);
   const loadWalletAusd = useCallback(async () => {
-    if (!ownerAddress) { setWalletAusd('Unavailable'); return; }
+    const requestOwner = ownerAddress;
+    if (!requestOwner) { setWalletAusd('Unavailable'); return; }
     try {
       const snapshot = await monadApi.wallet();
-      if (snapshot.chainId !== 10143 || snapshot.ownerAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+      if (ownerRef.current?.toLowerCase() !== requestOwner.toLowerCase()) return;
+      if (snapshot.chainId !== 10143 || snapshot.ownerAddress.toLowerCase() !== requestOwner.toLowerCase()) {
         throw new Error('Wallet does not match the Mera session.');
       }
       const balance = snapshot.balances.find(item => item.asset === 'AUSD');
       setWalletAusd(balance ? `${formatMonadUnits(balance.amountUnits, balance.decimals)} AUSD` : 'Not returned');
-    } catch { setWalletAusd('Unavailable'); }
+    } catch { if (ownerRef.current?.toLowerCase() === requestOwner.toLowerCase()) setWalletAusd('Unavailable'); }
   }, [ownerAddress]);
   const loadActiveRun = useCallback(async () => {
+    const requestOwner = ownerAddress;
+    const generation = ++activeCheckGeneration.current;
+    const isCurrent = () => generation === activeCheckGeneration.current
+      && ownerRef.current?.toLowerCase() === requestOwner?.toLowerCase();
     setCheckingActiveRun(true); setActiveRunError('');
     try {
-      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
-      const currentRun = await fetchActivePerplRun(ownerAddress);
+      if (!requestOwner) throw new Error('Your Mera wallet is not available.');
+      const [currentRun, references] = await Promise.all([
+        fetchActivePerplRun(requestOwner), loadPendingOperationReferences(requestOwner),
+      ]);
+      if (!isCurrent()) return;
+      const enrollmentReferences = references.filter(reference => reference.kind === 'perpl-run' && reference.action === 'enroll');
+      const checked = await Promise.all(enrollmentReferences.map(reference => reconcilePendingOperation(requestOwner, reference)));
+      const remaining = await loadPendingOperationReferences(requestOwner);
+      if (!isCurrent()) return;
+      const stillPending = remaining.filter(reference => reference.kind === 'perpl-run' && reference.action === 'enroll');
+      const displayedPending = stillPending.filter(reference => reference.id !== currentRun?.runId);
+      setPendingEnrollments(displayedPending.map(reference => {
+        const status = checked.find(result => result.reference.id === reference.id);
+        return {id: reference.id, status: status?.status ?? 'saved', note: status?.note ?? 'The original run is still saved.'};
+      }));
       setActiveRun(currentRun);
-      if (currentRun) setPrepared(null);
+      setUncertain(false);
+      if (currentRun || stillPending.length) { setPrepared(null); setUncertainRunId(displayedPending[0]?.id ?? currentRun?.runId ?? ''); }
     } catch (reason) {
+      if (!isCurrent()) return;
       setActiveRun(null);
       setActiveRunError(reason instanceof Error ? reason.message : 'An active Perpl run could not be checked.');
-    } finally { setCheckingActiveRun(false); }
+    } finally { if (isCurrent()) setCheckingActiveRun(false); }
   }, [ownerAddress]);
   useFocusEffect(useCallback(() => { void loadVenue(); void loadWalletAusd(); void loadActiveRun(); }, [loadVenue, loadWalletAusd, loadActiveRun]));
 
@@ -95,69 +143,117 @@ export function PerplSetupScreen() {
   }
 
   async function prepare() {
+    if (writeFlight.current) return;
     if (checkingActiveRun || activeRun || activeRunError) {
       setError(activeRunError || 'Check the existing Perpl run before preparing another enrollment.');
       return;
     }
+    if (presentationMode === 'user' && runConflict) return;
+    const requestOwner = ownerAddress;
+    if (!requestOwner) { setError('Your Mera wallet is not available.'); return; }
+    const generation = ++writeGeneration.current;
+    const isCurrent = () => generation === writeGeneration.current && ownerRef.current === requestOwner.toLowerCase();
+    writeFlight.current = true;
     setBusy(true); setError(''); setPrepared(null); setUncertain(false);
     try {
-      if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
+      const saved = await loadPendingOperationReferences(requestOwner);
+      if (!isCurrent()) return;
+      const pending = saved.filter(reference => reference.kind === 'perpl-run' && reference.action === 'enroll');
+      if (pending.length) {
+        await loadActiveRun();
+        throw new Error('A signed Perpl setup still needs a status check. Open its original run before preparing another one.');
+      }
       let latestRun: PerplRun | null;
-      try { latestRun = await fetchActivePerplRun(ownerAddress); }
+      try { latestRun = await fetchActivePerplRun(requestOwner); }
       catch (reason) {
         const message = reason instanceof Error ? reason.message : 'The active Perpl run could not be checked.';
         setActiveRunError(message);
         throw new Error(`The active Perpl run could not be checked. ${message}`);
       }
+      if (!isCurrent()) return;
       setActiveRun(latestRun);
       if (latestRun) throw new Error('A Perpl run is already active. Review its status before starting another enrollment.');
       const requested = terms();
       const review = await perplApi.prepare({...requested, venueId: venue!.venueId as 'perpl-direct-testnet-v1' | 'perpl-testnet-v1', chainId: 10143, idempotencyKey: createPerplIdempotencyKey()});
-      validatePreparedPerpl(review, {ownerAddress, venue: venue!, ...requested});
+      if (!isCurrent()) return;
+      validatePreparedPerpl(review, {ownerAddress: requestOwner, venue: venue!, ...requested});
       setPrepared(review);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The Perpl enrollment review could not be prepared.'); }
-    finally { setBusy(false); }
+    } catch (reason) {
+      if (isCurrent()) {
+        if (reason instanceof MobileApiError && reason.code === 'perpl_run_active') setRunConflict(true);
+        setError(reason instanceof Error ? reason.message : 'The Perpl enrollment review could not be prepared.');
+      }
+    }
+    finally { if (generation === writeGeneration.current) { writeFlight.current = false; setBusy(false); } }
   }
 
   async function signAndEnroll() {
-    if (!prepared || !ownerAddress || !venue) return;
+    const requestOwner = ownerAddress;
+    if (!prepared || !requestOwner || !venue || writeFlight.current) return;
+    const generation = ++writeGeneration.current;
+    const isCurrent = () => generation === writeGeneration.current && ownerRef.current === requestOwner.toLowerCase();
+    writeFlight.current = true;
     setBusy(true); setError('');
     let latestRun: PerplRun | null;
     try {
-      latestRun = await fetchActivePerplRun(ownerAddress);
+      const saved = await loadPendingOperationReferences(requestOwner);
+      if (!isCurrent()) return;
+      if (saved.some(reference => reference.kind === 'perpl-run' && reference.action === 'enroll')) {
+        setPrepared(null); setError('A signed Perpl setup still needs a status check. Open its original run before signing another one.');
+        void loadActiveRun(); writeFlight.current = false; setBusy(false); return;
+      }
+      latestRun = await fetchActivePerplRun(requestOwner);
     } catch (reason) {
+      if (!isCurrent()) return;
       const message = reason instanceof Error ? reason.message : 'The active Perpl run could not be checked.';
-      setPrepared(null); setActiveRunError(message); setError(`The active Perpl run could not be checked. ${message}`); setBusy(false); return;
+      setPrepared(null); setActiveRunError(message); setError(`The active Perpl run could not be checked. ${message}`);
+      writeFlight.current = false; setBusy(false); return;
     }
+    if (!isCurrent()) return;
     setActiveRun(latestRun);
     if (latestRun) {
-      setPrepared(null); setError('A Perpl run is already active. Review its status before signing another enrollment.'); setBusy(false); return;
+      setPrepared(null); setError('A Perpl run is already active. Review its status before signing another enrollment.');
+      writeFlight.current = false; setBusy(false); return;
     }
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     let signaturesSent = false;
     try {
       const requested = terms();
-      validatePreparedPerpl(prepared, {ownerAddress, venue, ...requested});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
-      const fundingRawTransaction = await session.signEip1559Transaction(10143, prepared.fundingTransaction);
-      const mandateSignature = await session.signTypedData(10143, prepared.mandateTypedData as unknown as TypedDataDefinition);
-      session.end(); session = undefined;
-      validatePerplRawTransaction(fundingRawTransaction); validatePerplSignature(mandateSignature);
-      signaturesSent = true; setPrepared(null); setUncertain(true);
-      const result = await perplApi.enroll({runId: prepared.runId, fundingRawTransaction, mandateSignature});
+      validatePreparedPerpl(prepared, {ownerAddress: requestOwner, venue, ...requested});
+      const result = await signAndSubmitWithMera({ownerAddress: requestOwner,
+        reference: {kind: 'perpl-run', id: prepared.runId, action: 'enroll'},
+        sign: async session => ({fundingRawTransaction: await session.signEip1559Transaction(10143, prepared.fundingTransaction),
+          mandateSignature: await session.signTypedData(10143, prepared.mandateTypedData as unknown as TypedDataDefinition)}),
+        validateSigned: signatures => { validatePerplRawTransaction(signatures.fundingRawTransaction); validatePerplSignature(signatures.mandateSignature); },
+        onSubmissionStarting: () => {
+          if (!isCurrent()) throw new Error('The Mera owner changed. The signed setup was not submitted.');
+          signaturesSent = true; setPrepared(null); setUncertainRunId(prepared.runId); setUncertain(true);
+        },
+        submit: signatures => perplApi.enroll({runId: prepared.runId,
+          fundingRawTransaction: signatures.fundingRawTransaction, mandateSignature: signatures.mandateSignature}),
+      });
+      if (!isCurrent()) return;
       if (result.runId !== prepared.runId || result.venueId !== prepared.venueId) throw new Error('The service returned a different Perpl enrollment.');
       navigation.navigate('PerplStatus');
     } catch (reason) {
+      if (!isCurrent()) return;
       setError(signaturesSent
         ? `The signed Perpl setup may still be processing. Check Perpl status and Activity before starting again. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The Perpl setup could not be completed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { if (generation === writeGeneration.current) { writeFlight.current = false; setBusy(false); } }
   }
 
   const lowerBound = venue?.limits?.minDurationSeconds;
   const upperBound = venue?.limits?.maxDurationSeconds;
   const directOptimizer = venue?.venueId === 'perpl-direct-testnet-v1';
+  if (presentationMode === 'user') return <UserPerplSetupView theme={theme} venue={venue} prepared={prepared}
+    walletAusd={walletAusd} activeRun={activeRun} pendingEnrollments={pendingEnrollments} checkingActiveRun={checkingActiveRun}
+    busy={busy} uncertain={uncertain} uncertainRunId={uncertainRunId} error={error} activeRunError={activeRunError} runConflict={runConflict} durationMinutes={durationMinutes} amount={amount}
+    onDurationChange={setDurationMinutes} onAmountChange={setAmount} onBack={() => navigation.goBack()} onPrepare={() => { void prepare(); }}
+    onSign={() => { void signAndEnroll(); }} onCancel={() => { setPrepared(null); setError(''); }}
+    onOpenRun={runId => navigation.navigate('PerplStatus', runId ? {runId} : undefined)}
+    onOpenPending={() => navigation.navigate('PendingOperations')}
+    onOpenStatus={() => navigation.navigate('PerplStatus')}
+    onRetry={() => { void loadVenue(); void loadWalletAusd(); void loadActiveRun(); }} />;
   return <Screen onBack={() => navigation.goBack()}>
     <PageHeader kicker="Perpl · AUSD Testnet setup" title="Choose amount and duration" copy="One Mera unlock signs the exact AUSD funding transaction and Perpl mandate. Per-order limits and market selection come from the prepared review." />
     {error ? <Notice live tone="rose" title="Perpl setup could not continue" message={error} actionLabel={!prepared && !uncertain ? 'Retry context' : undefined} onAction={() => { void loadVenue(); }} /> : null}

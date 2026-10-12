@@ -1,9 +1,11 @@
 package com.moeazi.mobile
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory
 
 class MainActivity : ReactActivity() {
 
@@ -12,6 +14,15 @@ class MainActivity : ReactActivity() {
    * rendering of the component.
    */
   override fun getMainComponentName(): String = "MoeaziMonad"
+
+  /**
+   * react-native-screens fragments are recreated from the JS navigation tree. Replace any
+   * fragments restored by Android after configuration changes so they cannot crash startup.
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+    supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
+    super.onCreate(savedInstanceState)
+  }
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

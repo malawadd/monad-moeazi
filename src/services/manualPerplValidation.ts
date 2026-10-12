@@ -1,6 +1,6 @@
 import {decodeFunctionData} from 'viem';
 import type {MonadEip1559Transaction} from '../types/monad';
-import type {ManualPerplAccountMode, ManualPerplPreparedOperation, ManualPerplTransaction} from '../types/manualPerpl';
+import type {ManualPerplAccountMode, ManualPerplOperationStatus, ManualPerplPreparedOperation, ManualPerplTransaction} from '../types/manualPerpl';
 import {monadTimestampMillis} from './monadFormatting';
 
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
@@ -26,6 +26,7 @@ export type ManualReviewExpectation = {
   side?: string;
   sizeUnits?: string;
   limitPrice?: string;
+  priceDecimals?: number;
   leverage?: number;
 };
 
@@ -68,7 +69,7 @@ export function validateManualPerplPreparation(prepared: ManualPerplPreparedOper
   compare(expected, prepared.review, 'amountUnits', 'amountUnits');
   compare(expected, prepared.review, 'side', 'side');
   compare(expected, prepared.review, 'sizeUnits', 'sizeUnits');
-  compare(expected, prepared.review, 'limitPrice', 'limitPrice');
+  if (expected.limitPrice !== undefined) compareLimitPrice(expected, prepared.review);
   compare(expected, prepared.review, 'leverage', 'leverage');
   if (expected.collateralAmountUnits !== undefined) {
     const orderDescription = prepared.review.orderDescription;
@@ -108,6 +109,78 @@ export function validateManualPerplPreparation(prepared: ManualPerplPreparedOper
   }
 }
 
+export function validateManualPerplOperationStatus(status: ManualPerplOperationStatus, prepared: ManualPerplPreparedOperation,
+  expected: ManualReviewExpectation, currentOwner: string) {
+  const review = status.review;
+  const expectedOwner = expected.ownerAddress.toLowerCase();
+  const preparedOwner = String(prepared.review.ownerAddress ?? '').toLowerCase();
+  const statusOwner = String(review?.ownerAddress ?? '').toLowerCase();
+  const expiry = monadTimestampMillis(prepared.expiresAt);
+  const statusExpiry = status.expiresAt === undefined ? Number.NaN : monadTimestampMillis(status.expiresAt);
+  const reviewExpiry = review?.expiresAt === undefined ? Number.NaN : monadTimestampMillis(review.expiresAt as string | number);
+  const action = String(expected.action);
+  const reviewedAction = String(review?.action ?? review?.kind ?? '');
+  const statusActionAliases: Record<string, string[]> = {
+    approve: ['approve_collateral'], open: ['open_account'], deposit: ['deposit_collateral'],
+    withdraw: ['withdraw_collateral'], legacy_withdraw: ['legacy_withdraw_collateral'], legacy_rescue: ['legacy_rescue_tokens'],
+  };
+  const statusActions = [prepared.action, ...(statusActionAliases[prepared.action] ?? [])];
+  const statusName = String(status.status);
+  const allowedStatuses = ['prepared', 'submitted', 'uncertain', 'finalized', 'failed', 'no_fill', 'expired'];
+  const expectedAccount = expected.accountAddress !== undefined ? expected.accountAddress : prepared.review.accountAddress;
+  const latestAccount = review?.accountAddress;
+  const accountMatches = expectedAccount === undefined || (expectedAccount === null
+    ? latestAccount === null || latestAccount === undefined
+    : typeof latestAccount === 'string' && latestAccount.toLowerCase() === expectedAccount.toLowerCase());
+  const expectedMarket = expected.marketId !== undefined ? expected.marketId : prepared.review.marketId;
+  const marketMatches = expectedMarket === undefined || String(review?.marketId ?? '') === String(expectedMarket);
+  if (status.operationId !== prepared.operationId || status.chainId !== 10143 || status.venueId !== prepared.venueId
+      || !statusActions.includes(String(status.action)) || !allowedStatuses.includes(statusName)
+      || !review || statusOwner !== expectedOwner || preparedOwner !== expectedOwner || currentOwner.toLowerCase() !== expectedOwner
+      || prepared.action !== action || reviewedAction !== action || !accountMatches || !marketMatches
+      || !Number.isFinite(expiry) || statusExpiry !== expiry || reviewExpiry !== expiry) {
+    throw new Error('The manual Perpl status does not match this operation, action, account, owner, and market.');
+  }
+}
+
+/** A first GET can return the exact sparse DTO produced while finality is being persisted. Re-read once by the same ID. */
+export async function readValidatedManualPerplOperationStatus(read: (operationId: string) => Promise<ManualPerplOperationStatus>,
+  prepared: ManualPerplPreparedOperation, expected: ManualReviewExpectation, currentOwner: string,
+  isCurrent: () => boolean = () => true): Promise<ManualPerplOperationStatus | null> {
+  let status = await read(prepared.operationId);
+  if (!isCurrent()) return null;
+  if (isSparseFinalizationDto(status, prepared)) {
+    status = await read(prepared.operationId);
+    if (!isCurrent()) return null;
+  }
+  validateManualPerplOperationStatus(status, prepared, expected, currentOwner);
+  return status;
+}
+
+function isSparseFinalizationDto(status: ManualPerplOperationStatus, prepared: ManualPerplPreparedOperation) {
+  const review = status.review;
+  return status.operationId === prepared.operationId && status.chainId === 10143 && status.venueId === prepared.venueId
+    && ['finalized', 'failed', 'no_fill'].includes(status.status) && status.action === undefined && status.expiresAt === undefined
+    && /^0x[0-9a-f]{64}$/i.test(String(status.transactionHash ?? '')) && status.receipt === null
+    && status.result === null && (status as ManualPerplOperationStatus & {errorCode?: unknown}).errorCode === null
+    && sameKeys(status as unknown as Record<string, unknown>, ['chainId', 'errorCode', 'operationId', 'receipt', 'result', 'review', 'status', 'transactionHash', 'venueId'])
+    && !!review && sameKeys(review, ['transactionData', 'transactionNonce', 'transactionTarget', 'transactionValue'])
+    && review.transactionData === null && review.transactionNonce === null && review.transactionTarget === null
+    && review.transactionValue === '0';
+}
+
+function sameKeys(value: Record<string, unknown>, expected: string[]) {
+  const actual = Object.keys(value).sort(); const keys = [...expected].sort();
+  return actual.length === keys.length && actual.every((key, index) => key === keys[index]);
+}
+
+/** The submit response only acknowledges the URL's operation ID. A same-ID GET is required before trusting status fields. */
+export function validateManualPerplSubmissionAcknowledgement(response: unknown, operationId: string) {
+  if (!response || typeof response !== 'object' || (response as Record<string, unknown>).operationId !== operationId) {
+    throw new Error('The manual Perpl submission acknowledgement does not match the original operation ID.');
+  }
+}
+
 function sameUint(left: unknown, right: string) {
   try { return BigInt(String(left)) === BigInt(right); } catch { return false; }
 }
@@ -139,4 +212,26 @@ function compare(expected: ManualReviewExpectation, review: Record<string, unkno
   if (String(actual ?? '').toLowerCase() !== String(value).toLowerCase()) {
     throw new Error(`The prepared review does not match the selected ${reviewKey}.`);
   }
+}
+
+function compareLimitPrice(expected: ManualReviewExpectation, review: Record<string, unknown>) {
+  const precision = expected.priceDecimals;
+  const reviewedPrecision = review.priceDecimals;
+  if (!Number.isSafeInteger(precision) || precision! < 0 || precision! > 36
+      || reviewedPrecision !== precision
+      || decimalUnits(expected.limitPrice, precision!) === null
+      || decimalUnits(review.limitPrice, precision!) === null
+      || decimalUnits(expected.limitPrice, precision!) !== decimalUnits(review.limitPrice, precision!)) {
+    throw new Error('The prepared review does not match the selected limitPrice.');
+  }
+}
+
+function decimalUnits(value: unknown, precision: number): bigint | null {
+  if (typeof value !== 'string' || !/^\d+(?:\.\d+)?$/.test(value)) return null;
+  const [whole, fraction = ''] = value.split('.');
+  if (fraction.length > precision) return null;
+  try {
+    const units = BigInt(whole) * 10n ** BigInt(precision) + BigInt((fraction + '0'.repeat(precision)).slice(0, precision) || '0');
+    return units > 0n ? units : null;
+  } catch { return null; }
 }

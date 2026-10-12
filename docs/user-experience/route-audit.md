@@ -1,13 +1,16 @@
-# Current routes and page disposition
+# Route audit snapshots and current native bindings
 
-The audit reads `src/navigation/RootNavigator.tsx`, `routes.ts`, `linking.ts`,
-the registered screen components, and navigation calls in those components.
-It is a source-level reachability audit, checked against the Android captures
-listed in [the evidence manifest](evidence/README.md).
+The tables in [audit-data.js](audit-data.js) are the 11 October 2026 research
+baseline. They record the pre-migration five-tab route graph, linked screens,
+and design recommendations; later migration work does not rewrite that evidence.
+The current data-driven native route graph is inventoried separately in
+[migration-inventory.js](migration-inventory.js) and source-checked by
+[`verify-hub.mjs`](verify-hub.mjs). That inventory covers 34 stack bindings,
+five mode-aware tabs, User-only branch screens, and every current screen file.
 
-## Counts and navigation model
+## Historical baseline counts and navigation model
 
-- 28 authenticated stack destinations are declared beside `Main` in the root stack.
+- 28 authenticated stack destinations were declared beside `Main` in the baseline root stack.
 - `Main` is an additional authenticated root stack declaration for the tabs.
 - `Main` contains five tabs: Home, Markets, Strategies, Activity and Account.
 - `Welcome` is the signed-out route. There is also a loading state before routing.
@@ -16,19 +19,21 @@ listed in [the evidence manifest](evidence/README.md).
   `AgentStatus` point to `AgentScreen`; `PerplMarkets` aliases `MarketsScreen`.
 - `src/navigation/routes.ts` also exports the existing five-tab names.
 
-The full route-by-route mapping (including the Main shell), current behavior, User Mode disposition and
-Developer Mode retention is rendered in the **Every current destination** table
-on the [hub](index.html#audit). The source-of-truth detail lives in [audit-data.js](audit-data.js).
+The full baseline route-by-route mapping (including the Main shell), then-current
+behavior, proposed User Mode disposition and Developer Mode retention is rendered
+in the route table on the [hub](index.html#audit). The source-of-truth detail
+lives in [audit-data.js](audit-data.js). Current executable User/Developer
+bindings live in the separate migration inventory described above.
 
-## User Mode / Developer Mode rule
+## User Mode / Developer Mode research rule
 
-User Mode is a proposed presentation layer. It is not implemented in
-`RootNavigator`. It should make the four-tab proposal (Home, Markets, Strategies,
-Activity) and account/settings entry easy to learn. Developer Mode restores the
-current five-tab and stack presentation. Both shells share the authenticated
-Mera account, API clients, balances, histories, transaction preparation,
-validation and consent. A mode toggle does not activate an API gate or sign a
-transaction. See [implementation backlog](implementation-backlog.md).
+At the time of this research baseline, User Mode was a proposed presentation
+layer, not an implemented RootNavigator branch. The implemented migration now
+uses a four-tab User shell (Home, Markets, Strategies, Activity) and an account
+settings destination; Developer Mode retains the five-tab shell. Both share
+authentication and underlying service/transaction boundaries. This source audit
+does not prove native appearance or behavior; see the current migration inventory
+and native verification records before treating a route as accepted.
 
 ## Unregistered screen files
 
@@ -58,27 +63,45 @@ route to them. Do not delete them as part of the research stage.
 `ManagedVaultReleaseControl` and `PerplRecoveryPanel` are supporting components,
 not root screen routes.
 
-## Deep-link review
+## Baseline deep-link review
 
-`safeMobileDeepLink` accepts a limited `moeazi-monad://` URL set. The configured
-screen map includes `Safety`, `Credits`, `PurchaseStatus` and `Withdraw`, but the
-first three have no registered root screen and `withdraw` is not accepted by
-the URL allowlist. Mode-aware routing must preserve valid user destinations,
-provide a safe unavailable/recovery destination for legacy push links, and
-prevent diagnostic pages from becoming accidental User Mode entry points.
+The baseline `safeMobileDeepLink` review found stale targets for `Safety`,
+`Credits`, `PurchaseStatus` and `Withdraw`. Current allowlisting and mode-aware
+redirects are maintained in `src/navigation/linking.ts` and
+`src/navigation/presentationRoutes.ts`; unsupported targets now have an
+`UnavailableDestination` route. The verifier checks that destinations are
+registered and inventoried, but native behavior still requires separate testing.
 
-Current valid families include home, markets (optionally venue/market and
+At baseline, valid families included home, markets (optionally venue/market and
 summary), strategies, agent/status, activity/detail, account, safety, funding,
 purchase status and credits. The route mismatch is visible in the [hub audit
-table](index.html#audit). Treat Agent links as automation status in User Mode;
-keep diagnostic details in Developer Mode.
+table](index.html#audit). An earlier proposal treated Agent links as a User
+Mode status view. Current native destinations are listed below; the historical
+route table and proposed mappings later in this file are research snapshots,
+not the current registration contract.
 
-### Proposed mode-aware destination mapping
+### Current mode-specific legacy and diagnostic routes
 
-These are presentation-layer examples for the later implementation, not
-currently registered routes. `UserHome` and `legacyHome` are names proposed to
-make the mode split explicit; auth, link allowlisting and the shared account
-remain unchanged.
+`migration-inventory.js` records the live route access and component binding.
+`Wrap`, `ManagedVault`, `AutonomyChoice`, `AutonomySetup`, `AutonomyStatus`,
+`PerpSetup`, `PerpStatus`, `PerpHistory`, `AgentStatus`, and `AgentSettings`
+are Developer-only routes. Their original component families remain registered
+in Developer Mode. In particular, `AutonomyStatus` remains
+`AutonomyStatusScreen`, `PerpStatus` remains `PerpStatusScreen`, and
+`AgentStatus` remains the read-only `AgentScreen`; none is aliased to the
+unrelated direct Perpl `PerplStatusScreen` in User Mode.
+
+User deep links for `agent/status` and `autonomy/status` safely redirect to
+Strategies without inventing a run or changing the presentation mode. The
+direct `perpl/status` destination remains its separate User-capable route and
+retains its direct-Perpl run identity. See `src/navigation/presentationRoutes.ts`
+and `src/navigation/RootNavigator.tsx` for the executable behavior.
+
+### Baseline proposed mode-aware destination mapping
+
+These examples record the earlier proposal, not the current registration map.
+The current route and component bindings are listed in
+[`migration-inventory.js`](migration-inventory.js).
 
 | Deep link | User Mode destination | Developer Mode destination | Guard |
 |---|---|---|---|

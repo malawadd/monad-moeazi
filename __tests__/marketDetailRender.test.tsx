@@ -12,6 +12,9 @@ const mockMarket = {kind: 'perpl' as const, venueId: 'perpl-direct-testnet-v1', 
   quote: {mark: '6712345', observedAt: Date.now(), bid: '6712300', ask: '6712400'}};
 const mockQuery = (data: unknown) => ({data, isLoading: false, isFetching: false, isError: false, isStale: false, refetch: async () => ({})});
 
+jest.mock('@tanstack/react-query', () => ({...jest.requireActual('@tanstack/react-query'), useQuery: () => mockQuery(null)}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: 'developer', effectiveTheme: 'original'})}));
+
 jest.mock('@react-navigation/native', () => {
   const ReactRuntime = require('react');
   return {useNavigation: () => mockNavigation, useRoute: () => mockRoute,

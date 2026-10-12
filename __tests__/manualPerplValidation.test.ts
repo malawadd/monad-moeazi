@@ -1,6 +1,8 @@
 import {encodeFunctionData} from 'viem';
-import {validateManualPerplPreparation, type ManualReviewExpectation} from '../src/services/manualPerplValidation';
-import type {ManualPerplPreparedOperation} from '../src/types/manualPerpl';
+import {validateManualPerplOperationStatus, validateManualPerplPreparation, validateManualPerplSubmissionAcknowledgement,
+  readValidatedManualPerplOperationStatus,
+  type ManualReviewExpectation} from '../src/services/manualPerplValidation';
+import type {ManualPerplOperationStatus, ManualPerplPreparedOperation} from '../src/types/manualPerpl';
 
 const ownerAddress = '0x1111111111111111111111111111111111111111';
 const destination = '0x2222222222222222222222222222222222222222';
@@ -46,6 +48,16 @@ describe('validateManualPerplPreparation', () => {
       maxGas: {...(base.review.maxGas as Record<string, unknown>), maxCostWei: '1'}}}), expected)).toThrow(/maximum gas/);
   });
 
+  it('compares limit prices as exact decimals at the validated market precision', () => {
+    const base = prepared();
+    const priceExpected = {...expected, limitPrice: '3000', priceDecimals: 2};
+    expect(() => validateManualPerplPreparation({...base, review: {...base.review, priceDecimals: 2, limitPrice: '3000.0'}}, priceExpected)).not.toThrow();
+    expect(() => validateManualPerplPreparation({...base, review: {...base.review, priceDecimals: 2, limitPrice: '3000.01'}}, priceExpected)).toThrow(/limitPrice/);
+    expect(() => validateManualPerplPreparation({...base, review: {...base.review, priceDecimals: 2, limitPrice: '3000.001'}}, priceExpected)).toThrow(/limitPrice/);
+    expect(() => validateManualPerplPreparation({...base, review: {...base.review, priceDecimals: 4, limitPrice: '3000.0'}}, priceExpected)).toThrow(/limitPrice/);
+    expect(() => validateManualPerplPreparation({...base, review: {...base.review, priceDecimals: 2, limitPrice: '3e3'}}, priceExpected)).toThrow(/limitPrice/);
+  });
+
   it('rejects calldata and nonce that differ from the prepared transaction', () => {
     const base = prepared();
     expect(() => validateManualPerplPreparation(prepared({review: {...base.review, transactionData: '0xabcd'}}), expected)).toThrow(/calldata/);
@@ -74,5 +86,86 @@ describe('validateManualPerplPreparation', () => {
 
   it('rejects expired operations', () => {
     expect(() => validateManualPerplPreparation(prepared({expiresAt: Date.now() - 1}), expected)).toThrow(/expired/);
+  });
+
+  it('rejects operation GETs unless the original owner, ID, action, account, market, chain and expiry all match', () => {
+    const original = prepared();
+    const originalExpected = {...expected, accountAddress: destination};
+    const operation: ManualPerplOperationStatus = {operationId: original.operationId, status: 'finalized', chainId: 10143,
+      venueId: original.venueId, action: original.action, expiresAt: original.expiresAt,
+      review: {...original.review, accountAddress: destination}};
+    expect(() => validateManualPerplOperationStatus(operation, original, originalExpected, ownerAddress)).not.toThrow();
+    const invalid = [
+      {...operation, operationId: 'another'},
+      {...operation, chainId: 1},
+      {...operation, venueId: 'another'},
+      {...operation, action: 'limit_entry'},
+      {...operation, expiresAt: Date.now() + 999_000},
+      {...operation, review: {...operation.review, ownerAddress: destination}},
+      {...operation, review: {...operation.review, accountAddress: ownerAddress}},
+      {...operation, review: {...operation.review, marketId: 'different'}},
+    ];
+    for (const response of invalid) {
+      expect(() => validateManualPerplOperationStatus(response, original, originalExpected, ownerAddress)).toThrow(/does not match/);
+    }
+    expect(() => validateManualPerplOperationStatus(operation, original, originalExpected, destination)).toThrow(/does not match/);
+  });
+
+  it('accepts explicit account-operation DTO action aliases while matching review.action to the prepared intent', () => {
+    const expiresAt = Date.now() + 60_000;
+    const original = prepared({action: 'approve', expiresAt,
+      review: {...prepared().review, action: 'approve', kind: 'approve', ownerAddress, accountMode: 'direct_wallet',
+        accountAddress: ownerAddress, expiresAt}});
+    const expectedApproval: ManualReviewExpectation = {action: 'approve', ownerAddress, accountAddress: ownerAddress};
+    const status: ManualPerplOperationStatus = {operationId: original.operationId, status: 'finalized', chainId: 10143,
+      venueId: original.venueId, action: 'approve_collateral', expiresAt,
+      review: {...original.review, action: 'approve', ownerAddress, accountAddress: ownerAddress, expiresAt}};
+    expect(() => validateManualPerplOperationStatus(status, original, expectedApproval, ownerAddress)).not.toThrow();
+    expect(() => validateManualPerplOperationStatus({...status, action: 'open_account'}, original, expectedApproval, ownerAddress)).toThrow(/does not match/);
+    expect(() => validateManualPerplOperationStatus({...status, review: {...status.review, action: 'deposit'}}, original,
+      expectedApproval, ownerAddress)).toThrow(/does not match/);
+  });
+});
+
+describe('manual Perpl submit acknowledgements', () => {
+  it('accepts a sparse response only as an acknowledgement for the exact original ID', () => {
+    expect(() => validateManualPerplSubmissionAcknowledgement({operationId: 'operation-1', status: 'submitted'}, 'operation-1')).not.toThrow();
+    expect(() => validateManualPerplSubmissionAcknowledgement({operationId: 'other-operation', status: 'finalized'}, 'operation-1'))
+      .toThrow(/original operation ID/);
+    expect(() => validateManualPerplSubmissionAcknowledgement({status: 'submitted'}, 'operation-1')).toThrow(/original operation ID/);
+    // Full owner/action/expiry/status identity remains the responsibility of validateManualPerplOperationStatus on the GET.
+  });
+});
+
+describe('manual Perpl status reads during finality reconciliation', () => {
+  it('rereads only the exact sparse finalization DTO by the original ID before applying strict GET validation', async () => {
+    const original = prepared();
+    const originalExpected = {...expected, accountAddress: destination};
+    const complete: ManualPerplOperationStatus = {operationId: original.operationId, status: 'finalized', chainId: 10143,
+      venueId: original.venueId, action: original.action, expiresAt: original.expiresAt,
+      review: {...original.review, accountAddress: destination}};
+    const sparse = {operationId: original.operationId, status: 'finalized', chainId: 10143, venueId: original.venueId,
+      transactionHash: `0x${'a'.repeat(64)}`, receipt: null, result: null, errorCode: null,
+      review: {transactionTarget: null, transactionData: null, transactionNonce: null, transactionValue: '0'}} as ManualPerplOperationStatus;
+    const read = jest.fn().mockResolvedValueOnce(sparse).mockResolvedValueOnce(complete);
+    await expect(readValidatedManualPerplOperationStatus(read, original, originalExpected, ownerAddress)).resolves.toEqual(complete);
+    expect(read).toHaveBeenNthCalledWith(1, original.operationId);
+    expect(read).toHaveBeenNthCalledWith(2, original.operationId);
+  });
+
+  it('does not retry a wrong-ID or wrong-owner GET as if it were the sparse finalization DTO', async () => {
+    const original = prepared();
+    const originalExpected = {...expected, accountAddress: destination};
+    const wrongId = {operationId: 'other-operation', status: 'finalized', chainId: 10143, venueId: original.venueId,
+      transactionHash: `0x${'a'.repeat(64)}`, receipt: null, result: null, errorCode: null,
+      review: {transactionTarget: null, transactionData: null, transactionNonce: null, transactionValue: '0'}} as ManualPerplOperationStatus;
+    const wrongOwner: ManualPerplOperationStatus = {operationId: original.operationId, status: 'finalized', chainId: 10143,
+      venueId: original.venueId, action: original.action, expiresAt: original.expiresAt,
+      review: {...original.review, ownerAddress: destination, accountAddress: destination}};
+    for (const response of [wrongId, wrongOwner]) {
+      const read = jest.fn().mockResolvedValue(response);
+      await expect(readValidatedManualPerplOperationStatus(read, original, originalExpected, ownerAddress)).rejects.toThrow(/does not match/);
+      expect(read).toHaveBeenCalledTimes(1);
+    }
   });
 });

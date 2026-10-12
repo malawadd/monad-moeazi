@@ -1,11 +1,16 @@
 import React from 'react';
 import ReactTestRenderer, {act} from 'react-test-renderer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
 const mockOwner = '0x1111111111111111111111111111111111111111';
 const mockVault = '0x2222222222222222222222222222222222222222';
 const mockAusd = '0xa9012a055bd4e0edff8ce09f960291c09d5322dc';
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 let mockCurrentRun: any;
+let mockPresentationMode = 'developer';
 const mockPrepare = jest.fn();
 const mockEnroll = jest.fn();
 const mockOpenMeraSigningSession = jest.fn();
@@ -16,6 +21,7 @@ jest.mock('@react-navigation/native', () => {
     useFocusEffect: (callback: () => void | (() => void)) => ReactRuntime.useEffect(callback, [callback])};
 });
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: mockPresentationMode, effectiveTheme: 'original'})}));
 jest.mock('../src/services/monadApi', () => ({monadApi: {wallet: async () => ({ownerAddress: mockOwner, chainId: 10143,
   balances: [{asset: 'AUSD', amountUnits: '250000000', decimals: 6}]})}}));
 jest.mock('../src/services/wallet/meraAuth', () => ({openMeraSigningSession: (...args: unknown[]) => mockOpenMeraSigningSession(...args)}));
@@ -46,6 +52,7 @@ jest.mock('../src/components/Ui', () => {
 });
 
 import {PerplSetupScreen} from '../src/screens/PerplSetupScreen';
+import {MobileApiError} from '../src/services/apiClient';
 
 function preparedReview() {
   const deadline = String(Math.floor(Date.now() / 1000) + 300);
@@ -61,11 +68,19 @@ function preparedReview() {
 
 async function flushPromises() { for (let index = 0; index < 12; index++) await Promise.resolve(); }
 
-beforeEach(() => {
+beforeEach(async () => {
+  mockPresentationMode = 'developer';
+  await AsyncStorage.clear();
+  require('../src/services/signingGuard').resetSigningGuardForTests();
   mockNavigation.navigate.mockClear(); mockPrepare.mockReset(); mockEnroll.mockReset(); mockOpenMeraSigningSession.mockReset();
   mockSession.signEip1559Transaction.mockReset().mockResolvedValue('0x1234');
   mockSession.signTypedData.mockReset().mockResolvedValue('0x1234'); mockSession.end.mockReset();
-  mockOpenMeraSigningSession.mockResolvedValue(mockSession);
+  let releaseSession: (() => void) | undefined;
+  mockSession.end.mockImplementation(() => { releaseSession?.(); releaseSession = undefined; });
+  mockOpenMeraSigningSession.mockImplementation(async () => {
+    releaseSession = require('../src/services/signingGuard').beginMeraSigningSession();
+    return mockSession;
+  });
   mockEnroll.mockResolvedValue({runId: 'prepared-run', venueId: 'perpl-direct-testnet-v1'});
   mockCurrentRun = {runId: 'active-run', venueId: 'perpl-direct-testnet-v1', status: 'active', phase: 'running',
     ownerAddress: mockOwner, vaultAddress: mockVault, chainId: 10143,
@@ -117,5 +132,23 @@ test('a run becoming active after review preparation still blocks Mera signing',
   expect(mockEnroll).not.toHaveBeenCalled();
   expect(mockNavigation.navigate).not.toHaveBeenCalledWith('PerplStatus');
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Open Perpl run status').length).toBeGreaterThan(0);
+  await act(async () => renderer.unmount());
+});
+
+test('User Mode routes an on-chain unsettled-run conflict to run history and blocks another prepare', async () => {
+  mockPresentationMode = 'user';
+  mockCurrentRun = null;
+  mockPrepare.mockRejectedValueOnce(new MobileApiError(
+    'This Mera owner already has an active or unsettled Perpl run.', 409, 'perpl_run_active'));
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = ReactTestRenderer.create(<PerplSetupScreen />); await flushPromises(); });
+  const prepareButton = renderer.root.find(node => node.props.accessibilityLabel === 'Review this setup');
+  await act(async () => { prepareButton.props.onPress(); await flushPromises(); });
+  expect(mockPrepare).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review this setup')).toHaveLength(0);
+  const historyButton = renderer.root.find(node => node.props.accessibilityLabel === 'Review Perpl runs');
+  await act(async () => historyButton.props.onPress());
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('PerplStatus');
+  expect(mockPrepare).toHaveBeenCalledTimes(1);
   await act(async () => renderer.unmount());
 });

@@ -1,20 +1,28 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
 import {manualPerplApi} from '../services/manualPerplApi';
-import {normalizeManualPerplTransaction, validateManualPerplPreparation, type ManualReviewExpectation} from '../services/manualPerplValidation';
+import {normalizeManualPerplTransaction, validateManualPerplPreparation,
+  readValidatedManualPerplOperationStatus, validateManualPerplSubmissionAcknowledgement,
+  type ManualReviewExpectation} from '../services/manualPerplValidation';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import type {ManualPerplOperationStatus, ManualPerplPreparedOperation} from '../types/manualPerpl';
 import {useApp} from '../state/AppContext';
 import {invalidateAfterFinalizedOperation} from '../services/queryCache';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserManualPerplReviewView} from './user-perpl/UserManualPerplReviewView';
 
 export function ManualPerplReviewScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const theme = userThemeTokens(effectiveTheme);
   const prepared = route.params?.prepared as ManualPerplPreparedOperation | undefined;
   const expected = route.params?.expected as ManualReviewExpectation | undefined;
   const accountCreationSetup = route.params?.accountCreationSetup === true;
@@ -24,62 +32,117 @@ export function ManualPerplReviewScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [signed, setSigned] = useState(false);
+  const ownerRef = useRef(ownerAddress);
+  ownerRef.current = ownerAddress;
+  const reviewGenerationRef = useRef(0);
+  useEffect(() => {
+    reviewGenerationRef.current += 1;
+    setResult(null); setError(''); setBusy(false); setSigned(false);
+  }, [ownerAddress, prepared?.operationId]);
+  const reviewOwnerMatches = Boolean(ownerAddress && expected && prepared
+    && ownerAddress.toLowerCase() === expected.ownerAddress.toLowerCase()
+    && String(prepared.review.ownerAddress ?? '').toLowerCase() === ownerAddress.toLowerCase());
+  usePreparedReviewGuard(Boolean(prepared) && reviewOwnerMatches && !signed);
 
   useEffect(() => {
-    if (ownerAddress && ['finalized', 'failed', 'no_fill'].includes(result?.status ?? '')) {
+    if (ownerAddress && reviewOwnerMatches && ['finalized', 'failed', 'no_fill'].includes(result?.status ?? '')) {
       void invalidateAfterFinalizedOperation(ownerAddress);
     }
-  }, [ownerAddress, result?.status]);
-
+  }, [ownerAddress, result?.status, reviewOwnerMatches]);
   async function signAndSubmit() {
-    if (!prepared || !expected || !ownerAddress || signed) return;
+    if (!prepared || !expected || !ownerAddress || !reviewOwnerMatches || signed) return;
+    const snapshotOwner = ownerAddress.toLowerCase();
+    const snapshotGeneration = reviewGenerationRef.current;
+    const isCurrent = () => reviewGenerationRef.current === snapshotGeneration
+      && ownerRef.current?.toLowerCase() === snapshotOwner;
     setBusy(true); setError('');
-    let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
     let submitStarted = false;
     try {
       validateManualPerplPreparation(prepared, {...expected, ownerAddress});
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. Nothing was signed.');
       const transaction = normalizeManualPerplTransaction(prepared.transaction);
-      const signedTransaction = await session.signEip1559Transaction(10143, transaction);
-      session.end(); session = undefined;
-      if (!/^0x02[0-9a-f]+$/i.test(signedTransaction)) throw new Error('Mera did not return a valid signed Monad Testnet transaction.');
-      submitStarted = true; setSigned(true);
-      const submitted = await manualPerplApi.submit(prepared.operationId, signedTransaction);
-      if (submitted.operationId !== prepared.operationId) throw new Error('The manual Perpl service returned a different operation. Check its original status before continuing.');
-      let latest = submitted;
-      if (['submitted', 'uncertain'].includes(latest.status)) {
+      const submitted = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'manual-perpl-operation', id: prepared.operationId, action: 'submit'},
+        sign: session => session.signEip1559Transaction(10143, transaction),
+        validateSigned: signedTransaction => {
+          if (!/^0x02[0-9a-f]+$/i.test(signedTransaction)) throw new Error('Mera did not return a valid signed Monad Testnet transaction.');
+        },
+        onSubmissionStarting: () => {
+          if (!isCurrent()) throw new Error('The Mera owner changed while this review was open. Nothing was submitted.');
+          submitStarted = true; setSigned(true);
+        },
+        submit: signedTransaction => manualPerplApi.submit(prepared.operationId, signedTransaction),
+      });
+      if (!isCurrent()) return;
+      // Submit may return a sparse or transitional DTO. Trust it only as an
+      // acknowledgement, then use the same-ID authenticated GET for state.
+      validateManualPerplSubmissionAcknowledgement(submitted, prepared.operationId);
+      let latest = await readValidatedManualPerplOperationStatus(manualPerplApi.operation, prepared, expected, snapshotOwner, isCurrent);
+      if (!latest) return;
+      if (['prepared', 'submitted', 'uncertain'].includes(latest.status)) {
         for (let attempt = 0; attempt < 8; attempt += 1) {
           await delay(1_500);
-          try { latest = await manualPerplApi.operation(prepared.operationId); } catch { break; }
+          if (!isCurrent()) return;
+          const polled = await readValidatedManualPerplOperationStatus(manualPerplApi.operation, prepared, expected, snapshotOwner, isCurrent);
+          if (!polled) return;
+          latest = polled;
           if (!['prepared', 'submitted', 'uncertain'].includes(latest.status)) break;
         }
       }
-      setResult(latest);
+      const enriched = await enrichFinalizedDetails(latest, prepared, expected, snapshotOwner, isCurrent);
+      if (isCurrent()) setResult(enriched);
     } catch (reason) {
+      if (!isCurrent()) return;
       if (submitStarted) setSigned(true);
       setError(submitStarted
         ? `The signed action may still be processing. Check its status before taking another action. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The exact manual Perpl action could not be signed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { if (isCurrent()) setBusy(false); }
   }
 
   async function checkStatus() {
-    if (!prepared) return;
+    if (!prepared || !expected || !ownerAddress || !reviewOwnerMatches) return;
+    const snapshotOwner = ownerAddress.toLowerCase();
+    const snapshotGeneration = reviewGenerationRef.current;
+    const isCurrent = () => reviewGenerationRef.current === snapshotGeneration
+      && ownerRef.current?.toLowerCase() === snapshotOwner;
     setBusy(true); setError('');
     try {
-      const latest = await manualPerplApi.operation(prepared.operationId);
-      if (latest.operationId !== prepared.operationId) throw new Error('The service returned a different operation status.');
-      setResult(latest);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The original operation status is unavailable.'); }
-    finally { setBusy(false); }
+      const latest = await readValidatedManualPerplOperationStatus(manualPerplApi.operation, prepared, expected, snapshotOwner, isCurrent);
+      if (!latest) return;
+      const enriched = await enrichFinalizedDetails(latest, prepared, expected, snapshotOwner, isCurrent);
+      if (isCurrent()) setResult(enriched);
+    } catch (reason) { if (isCurrent()) setError(reason instanceof Error ? reason.message : 'The original operation status is unavailable.'); }
+    finally { if (isCurrent()) setBusy(false); }
   }
 
-  if (!prepared || !expected) return <FlowScreen><PageHeader kicker="Manual Perpl review" title="Review unavailable" copy="Return to the account or market and request a fresh server review." /></FlowScreen>;
+  async function enrichFinalizedDetails(status: ManualPerplOperationStatus, operation: ManualPerplPreparedOperation,
+    expectation: ManualReviewExpectation, snapshotOwner: string, isCurrent: () => boolean): Promise<ManualPerplOperationStatus> {
+    if (presentationMode !== 'user' || status.status !== 'finalized' || !isCurrent()) return status;
+    try {
+      const latest = await readValidatedManualPerplOperationStatus(manualPerplApi.operation, operation, expectation, snapshotOwner, isCurrent);
+      if (!latest) return status;
+      if (latest.status !== 'finalized') return status;
+      return {...status, ...latest, fill: latest.fill ?? status.fill, result: latest.result ?? status.result,
+        receipt: latest.receipt ?? status.receipt, transactionHash: latest.transactionHash ?? status.transactionHash};
+    } catch { return status; }
+  }
+
+  if (!prepared || !expected || !reviewOwnerMatches) return presentationMode === 'user'
+    ? <UserManualPerplReviewView theme={theme} ownerAddress={ownerAddress} prepared={null} expected={null} label={label}
+      accountCreationSetup={false} error={error || (prepared && expected ? 'This review belongs to another Mera wallet. Switch back to its owner to continue.' : '')}
+      result={null} busy={busy} signed={false} normalized={null} maximumFee={null}
+      approvalFinalized={false} creationReview={false} terminal={false} onSign={() => { void signAndSubmit(); }}
+      onCheckStatus={() => { void checkStatus(); }} onReturn={() => navigation.goBack()} />
+    : <FlowScreen><PageHeader kicker="Manual Perpl review" title="Review unavailable" copy={prepared && expected
+      ? 'This review belongs to another Mera wallet. Switch back to its owner to continue.'
+      : 'Return to the account or market and request a fresh server review.'} /></FlowScreen>;
   let normalized;
   try { normalized = normalizeManualPerplTransaction(prepared.transaction); } catch { normalized = null; }
   const fee = normalized ? BigInt(normalized.gasLimit) * BigInt(normalized.maxFeePerGas) : null;
   const terminal = result && ['finalized', 'failed', 'no_fill'].includes(result.status);
+  const orderAction = ['market_entry', 'limit_entry', 'close_position', 'reduce_size', 'add_margin', 'amend_limit', 'cancel_limit'].includes(prepared.action);
+  const hasFinalizedEvidence = Boolean(result?.fill?.length || result?.result || result?.receipt);
+  const detailsRefreshNeeded = Boolean(signed && result?.status === 'finalized' && orderAction && !hasFinalizedEvidence);
   const approvalFinalized = accountCreationSetup && prepared.action === 'approve' && result?.status === 'finalized';
   const creationReview = accountCreationSetup && prepared.action === 'open';
   const estimatedEntryMarginUnits = prepared.review.estimatedEntryMarginUnits;
@@ -87,6 +150,12 @@ export function ManualPerplReviewScreen() {
   const hasEntryEstimates = ['market_entry', 'limit_entry'].includes(prepared.action)
     && (estimatedEntryMarginUnits !== undefined || estimatedEntryFeeUnits !== undefined);
   const tint = result?.status === 'failed' || result?.status === 'no_fill' ? 'rose' : result?.status === 'finalized' ? 'mint' : 'orange';
+
+  if (presentationMode === 'user') return <UserManualPerplReviewView theme={theme} ownerAddress={ownerAddress} prepared={prepared}
+    expected={expected} label={label} accountCreationSetup={accountCreationSetup} error={error} result={result} busy={busy} signed={signed}
+    normalized={normalized} maximumFee={fee} approvalFinalized={Boolean(approvalFinalized)} creationReview={creationReview}
+    terminal={Boolean(terminal)} detailsRefreshNeeded={detailsRefreshNeeded} onSign={() => { void signAndSubmit(); }} onCheckStatus={() => { void checkStatus(); }}
+    onReturn={() => navigation.goBack()} />;
 
   return <FlowScreen>
     <PageHeader kicker={accountCreationSetup ? (creationReview ? 'Account setup · Step 2 of 2' : 'Account setup · Step 1 of 2') : 'Final review · Mera signing'}
@@ -134,7 +203,7 @@ export function ManualPerplReviewScreen() {
       <DataRow label="Nonce" value={normalized.nonce} />
       <Text style={s.meta}>Transaction data</Text><Text selectable style={s.body}>{normalized.data}</Text>
     </Card> : null}
-    {result?.fill ? <Card><Text style={s.strong}>Finalized fill</Text><ScalarDetails record={result.fill} /></Card> : null}
+    {result?.fill ? <Card><Text style={s.strong}>Finalized fill</Text><ScalarDetails record={result.fill as unknown as Record<string, unknown>} /></Card> : null}
     {result?.result ? <Card><Text style={s.strong}>Finalized exchange result</Text><ScalarDetails record={result.result} /></Card> : null}
     {result?.receipt ? <Card><Text style={s.strong}>Receipt and state evidence</Text><ScalarDetails record={result.receipt} /></Card> : null}
     <Button label={signed ? 'Signature already submitted' : creationReview ? 'Review and sign account creation with Mera' : 'Sign exact action with Mera'} onPress={() => { void signAndSubmit(); }} loading={busy} disabled={signed || !normalized} />

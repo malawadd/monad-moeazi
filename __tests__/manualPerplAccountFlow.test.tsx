@@ -11,21 +11,27 @@ const secondOwner = '0x6666666666666666666666666666666666666666';
 const mockNavigation = {navigate: jest.fn(), goBack: jest.fn()};
 let mockAccountResult: any;
 let mockMinimumOpenUnits = '100000000';
+let mockMinimumDepositUnits = '1000000';
+let mockMinimumWithdrawalUnits = '10000';
 let mockCurrentOwner = mockOwner;
+let mockPresentationMode: 'user' | 'developer' = 'developer';
+let mockMarkets: any[] = [];
 const mockPrepareAccount = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({useNavigation: () => mockNavigation, useIsFocused: () => true}));
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockCurrentOwner})}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: mockPresentationMode, effectiveTheme: 'original'})}));
 jest.mock('../src/services/useMarketQueries', () => ({
   useManualPerplAccountQuery: () => ({data: mockAccountResult, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
-  useMarketDirectoryQuery: () => ({data: {markets: []}, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
+  useMarketDirectoryQuery: () => ({data: {markets: mockMarkets}, isLoading: false, isFetching: false, error: null, refetch: async () => ({})}),
 }));
 jest.mock('../src/services/manualPerplApi', () => ({manualPerplApi: {
   account: async () => mockAccountResult,
   prepareAccount: (input: unknown) => mockPrepareAccount(input),
 }, createManualPerplIdempotencyKey: () => 'manual-perpl-test-key'}));
 jest.mock('../src/services/perplApi', () => ({perplApi: {venues: async () => ({venues: [{venueId: 'perpl-direct-testnet-v1', chainId: 10143,
-  collateral: {symbol: 'AUSD', address: mockTokenAddress, decimals: 6}, limits: {minAccountOpenUnits: mockMinimumOpenUnits}}]})}}));
+  collateral: {symbol: 'AUSD', address: mockTokenAddress, decimals: 6}, limits: {minAccountOpenUnits: mockMinimumOpenUnits,
+    minDepositUnits: mockMinimumDepositUnits, minWithdrawalUnits: mockMinimumWithdrawalUnits}}]})}}));
 jest.mock('../src/components/Ui', () => {
   const ReactRuntime = require('react');
   const Native = require('react-native');
@@ -79,12 +85,20 @@ function prepared(action: string, amountUnits: string) {
 
 async function renderAccount(status: 'not_created' | 'open', allowanceUnits = '0', withLegacy = false, lockedUnits = '0') {
   mockAccountResult = account(status, allowanceUnits, withLegacy, lockedUnits);
+  return renderCurrentAccount();
+}
+async function renderCurrentAccount() {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
   await act(async () => { renderer = ReactTestRenderer.create(<PerplManualAccountScreen />); await Promise.resolve(); await Promise.resolve(); });
   return renderer;
 }
 async function setAmount(renderer: ReactTestRenderer.ReactTestRenderer, value: string) {
-  const field = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'AUSD amount');
+  let field = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'AUSD amount');
+  if (!field) {
+    const custom = renderer.root.findAll(node => node.props.accessibilityLabel === 'Custom amount: Enter AUSD')[0];
+    if (custom) await act(async () => custom.props.onPress());
+    field = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'AUSD amount');
+  }
   expect(field).toBeDefined();
   await act(async () => field!.props.onChangeText(value));
 }
@@ -94,7 +108,7 @@ async function pressButton(renderer: ReactTestRenderer.ReactTestRenderer, label:
   await act(async () => control!.props.onPress());
 }
 
-beforeEach(() => { mockNavigation.navigate.mockClear(); mockPrepareAccount.mockReset(); mockMinimumOpenUnits = '100000000'; mockCurrentOwner = mockOwner; });
+beforeEach(() => { mockPresentationMode = 'developer'; mockMarkets = []; mockNavigation.navigate.mockClear(); mockPrepareAccount.mockReset(); mockMinimumOpenUnits = '100000000'; mockMinimumDepositUnits = '1000000'; mockMinimumWithdrawalUnits = '10000'; mockCurrentOwner = mockOwner; });
 
 test('new direct account requires a separate exact AUSD approval before createAccount', async () => {
   mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
@@ -239,5 +253,95 @@ test('an unavailable Perpl snapshot shows no account or recovery actions', async
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review account creation and initial deposit')).toHaveLength(0);
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review legacy AUSD withdrawal')).toHaveLength(0);
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Perpl could not verify the direct account state. Refresh before approving, opening, or managing collateral.')).toBe(true);
+  await act(async () => renderer.unmount());
+});
+
+test('User mode account setup keeps approval and account opening as separate exact reviews', async () => {
+  mockPresentationMode = 'user';
+  mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
+  const renderer = await renderAccount('not_created');
+  await setAmount(renderer, '100');
+  await pressButton(renderer, 'Review exact AUSD approval with Mera');
+  expect(mockPrepareAccount).toHaveBeenLastCalledWith({action: 'approve', amountUnits: '100000000', idempotencyKey: 'manual-perpl-test-key'});
+  expect(mockNavigation.navigate).toHaveBeenLastCalledWith('ManualPerplReview', expect.objectContaining({
+    expected: expect.objectContaining({action: 'approve', amountUnits: '100000000', accountAddress: mockOwner}),
+    accountCreationSetup: true,
+  }));
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review account opening with Mera')[0].props.disabled).toBe(true);
+  await act(async () => renderer.unmount());
+});
+
+test('User account shows one selected balance source and only its matching next action', async () => {
+  mockPresentationMode = 'user';
+  const renderer = await renderAccount('open');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'From Mera wallet Half').length).toBeGreaterThan(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'From free Perpl balance Half')).toHaveLength(0);
+  await pressButton(renderer, 'From Mera wallet Max');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review exact AUSD approval with Mera').length).toBeGreaterThan(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review AUSD deposit with Mera')).toHaveLength(0);
+  await pressButton(renderer, 'Withdraw AUSD');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'From Mera wallet Max')).toHaveLength(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'From free Perpl balance Max').length).toBeGreaterThan(0);
+  await pressButton(renderer, 'From free Perpl balance Max');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review free AUSD withdrawal with Mera').length).toBeGreaterThan(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review AUSD deposit with Mera')).toHaveLength(0);
+  await act(async () => renderer.unmount());
+});
+
+test('User deposit approval follows the live Perpl minimum and offers a valid minimum preset', async () => {
+  mockPresentationMode = 'user';
+  mockMinimumDepositUnits = '10000000';
+  mockPrepareAccount.mockImplementation(async ({action, amountUnits}: {action: string; amountUnits: string}) => prepared(action, amountUnits));
+  const renderer = await renderAccount('open', '2000000');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'From Mera wallet Minimum').length).toBeGreaterThan(0);
+  await setAmount(renderer, '1');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review exact AUSD approval with Mera')).toHaveLength(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review AUSD deposit with Mera')).toHaveLength(0);
+  await setAmount(renderer, '10');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Review exact AUSD approval with Mera').length).toBeGreaterThan(0);
+  expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('10 AUSD'))).toBe(true);
+  await act(async () => renderer.unmount());
+});
+
+test('User withdrawal honors the live minimum from Perpl limits before enabling the review', async () => {
+  mockPresentationMode = 'user';
+  mockMinimumWithdrawalUnits = '10000';
+  const renderer = await renderAccount('open', '0');
+  await pressButton(renderer, 'Withdraw AUSD');
+  await setAmount(renderer, '0.005');
+  let review = renderer.root.find(node => node.props.accessibilityLabel === 'Review free AUSD withdrawal with Mera');
+  expect(review.props.disabled).toBe(true);
+  expect(renderer.root.findAllByType(Text).some(node => String(node.props.children).includes('0.01 AUSD'))).toBe(true);
+  await pressButton(renderer, 'From free Perpl balance Minimum');
+  review = renderer.root.find(node => node.props.accessibilityLabel === 'Review free AUSD withdrawal with Mera');
+  expect(review.props.disabled).toBe(false);
+  await act(async () => renderer.unmount());
+});
+
+test('User account uses verified precision and PNS order prices, never ONS display values', async () => {
+  mockPresentationMode = 'user';
+  mockMarkets = [{kind: 'perpl', marketId: '7', symbol: 'ETH-PERP', priceDecimals: 2, sizeDecimals: 3}];
+  const snapshot: any = account('open');
+  snapshot.positions = [{marketId: '7', symbol: 'ETH-PERP', side: 'long', sizeUnits: '1500', entryPrice: '123456', markPrice: '123500', leverage: 2, unrealizedPnlUnits: '0'}];
+  snapshot.orders = [{orderId: '91', marketId: '7', symbol: 'ETH-PERP', side: 'long', sizeUnits: '1500', price: '9999', pricePNS: '123456', status: 'open'}];
+  mockAccountResult = snapshot;
+  const renderer = await renderCurrentAccount();
+  const visibleText = renderer.root.findAllByType(Text).map(node => String(node.props.children)).join(' ');
+  expect(visibleText).toContain('1.5 / 1234.56');
+  expect(visibleText).not.toContain('99.99');
+  await act(async () => renderer.unmount());
+});
+
+test('User account marks position and order values unavailable when precision is missing', async () => {
+  mockPresentationMode = 'user';
+  const snapshot: any = account('open');
+  snapshot.positions = [{marketId: '7', symbol: 'ETH-PERP', side: 'long', sizeUnits: '1500', entryPrice: '123456', markPrice: '123500', leverage: 2, unrealizedPnlUnits: '0'}];
+  snapshot.orders = [{orderId: '91', marketId: '7', symbol: 'ETH-PERP', side: 'long', sizeUnits: '1500', price: '9999', pricePNS: '123456', status: 'open'}];
+  mockAccountResult = snapshot;
+  const renderer = await renderCurrentAccount();
+  const visibleText = renderer.root.findAllByType(Text).map(node => String(node.props.children)).join(' ');
+  expect(visibleText).toContain('Size unavailable / Price unavailable');
+  expect(visibleText).toContain('Entry price unavailable');
+  expect(visibleText).not.toContain('1500 / 123456');
   await act(async () => renderer.unmount());
 });

@@ -1,15 +1,21 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
+import {useQuery} from '@tanstack/react-query';
 import {Button, Card, DataRow, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {MarketChart, type ChartRange} from '../components/MarketChart';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
 import {marketIdentity, uniqueMarketTradeActivity, type MarketBook, type MarketDirectoryRow} from '../types/marketDirectory';
 import type {ChartOverlay} from '../types/marketChart';
-import type {MonadMarketAsset, MonadVenueId} from '../types/monad';
 import type {PerplPosition, PerplRun} from '../types/perpl';
 import {formatMonadTimestamp, monadTimestampMillis} from '../services/monadFormatting';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserMarketDetailView} from './UserMarketDetailView';
+import {findPerplVenue} from '../services/perplValidation';
+import {perplMarketQuoteUnit} from '../services/marketPriceUnits';
+import {perplApi} from '../services/perplApi';
 import {useMarketCandlesQuery, useMarketDirectoryQuery, useMarketSnapshotQuery, useMarketTradesQuery, useManualPerplAccountQuery, usePerplCurrentQuery} from '../services/useMarketQueries';
 import {usePerplMarketStream} from '../services/usePerplMarketStream';
 import {mergeCandles} from '../types/perplMarketStream';
@@ -19,6 +25,8 @@ import {useChartSettings} from '../services/chartSettings';
 import {hasExecutableSpotRoute, isHookedPool} from '../services/marketDirectoryPresentation';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {perplTradeRouteParams, spotTradeReviewParams} from '../services/marketTradeRoutes';
+import {userMarketDetailBackAction} from '../navigation/userMarketDetailBack';
 
 const RANGE: Record<ChartRange, {durationMs: number; resolutionSeconds: number}> = {
   '1H': {durationMs: 60 * 60_000, resolutionSeconds: 60},
@@ -32,6 +40,8 @@ export function MarketDetailScreen() {
   const route = useRoute<any>();
   const focused = useIsFocused();
   const {ownerAddress} = useApp();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const venueId = String(route.params?.venueId ?? '');
   const marketId = String(route.params?.marketId ?? '');
   const selectedSummaryId = route.params?.summaryId ? String(route.params.summaryId) : undefined;
@@ -39,6 +49,13 @@ export function MarketDetailScreen() {
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const isPerpl = venueId.startsWith('perpl-');
   const live = usePerplMarketStream(ownerAddress, isPerpl ? marketId : null, RANGE[range].resolutionSeconds, focused);
+  const ownerKey = ownerAddress?.toLowerCase() ?? 'signed-out';
+  const perplVenueQuery = useQuery({
+    queryKey: ['mobile', 'owner', ownerKey, 'perpl', 'venues'],
+    queryFn: async () => findPerplVenue((await perplApi.venues()).venues),
+    enabled: Boolean(ownerAddress && focused && isPerpl && presentationMode === 'user'),
+    staleTime: 15_000, refetchInterval: focused && isPerpl && presentationMode === 'user' ? 15_000 : false,
+  });
   const chartSettings = useChartSettings();
   const directory = useMarketDirectoryQuery(ownerAddress, focused);
   const snapshot = useMarketSnapshotQuery(ownerAddress, venueId, marketId, focused, isPerpl && live.quoteFresh && live.bookFresh);
@@ -86,7 +103,8 @@ export function MarketDetailScreen() {
   const marketPrice = market?.kind === 'perpl' ? liveQuote?.mark ?? liveQuote?.last ?? liveQuote?.mid : market?.quote?.price ?? market?.price;
   const displayPrice = market ? formatPrice(marketPrice, market.kind === 'perpl' ? market.priceDecimals ?? 0 : 0) : 'Loading…';
   const manualPosition = manualAccount?.positions.find(position => String(position.marketId) === marketId);
-  const autonomousOrders = (Array.isArray(autonomousRun?.positionSnapshot?.openOrders) ? autonomousRun.positionSnapshot!.openOrders : []) as Array<Record<string, unknown>>;
+  const autonomousOrders = useMemo(() => (Array.isArray(autonomousRun?.positionSnapshot?.openOrders)
+    ? autonomousRun.positionSnapshot!.openOrders : []) as Array<Record<string, unknown>>, [autonomousRun]);
   const chartOverlays: ChartOverlay[] = useMemo(() => isPerpl ? buildPerplPositionOverlays({marketId,
     manualPosition, manualOrders: manualAccount?.orders ?? [], autonomousPosition: autonomousPosition as PerplPosition | null,
     autonomousOrders: autonomousOrders as any, showManual: chartSettings.settings.showManualPositions,
@@ -123,6 +141,44 @@ export function MarketDetailScreen() {
     setPullRefreshing(true);
     try { await refresh(); } finally { setPullRefreshing(false); }
   }, [refresh]);
+
+  if (presentationMode === 'user') {
+    const freshPerplVenue = perplVenueQuery.data && !perplVenueQuery.isError && !perplVenueQuery.isStale
+      ? perplVenueQuery.data : null;
+    const priceUnit = market?.kind === 'spot' && market.baseAsset && market.quoteAsset
+      ? `${market.quoteAsset.symbol} per ${market.baseAsset.symbol}`
+      : market?.kind === 'perpl' ? perplMarketQuoteUnit(market, freshPerplVenue) ?? 'Price unit unavailable'
+        : 'Price unit unavailable';
+    const userPrice = market?.kind === 'perpl' && !hasValidPrecision(market.priceDecimals)
+      ? 'Unavailable' : displayPrice;
+    const userLivePnl = market?.kind === 'perpl' && hasValidPrecision(market.priceDecimals)
+      && hasValidPrecision(market.sizeDecimals) ? livePnl : [];
+    return <UserMarketDetailView theme={userTheme} venueId={venueId} marketId={marketId} market={market}
+      loading={initialLoading} refreshing={pullRefreshing} onRefresh={() => { void pullToRefresh(); }}
+      selectedSummaryId={selectedSummaryId} onBack={() => {
+        const action = userMarketDetailBackAction({selectedSummaryId, linkedPath: route.path,
+          canGoBack: navigation.canGoBack()});
+        if (action === 'clear-summary') navigation.setParams({summaryId: undefined});
+        else if (action === 'markets') navigation.navigate('Main', {screen: 'Markets'});
+        else navigation.goBack();
+      }}
+      quote={liveQuote ?? null} price={userPrice} unit={priceUnit} quoteState={!liveQuote ? 'Quote unavailable'
+        : quoteState === 'fresh' ? 'Recent quote' : quoteState === 'stale' ? 'Stale quote' : 'Quote time unavailable'}
+      queryError={hasQueryError && !anyStaleError ? 'Some market details could not be loaded.' : undefined}
+      stale={anyStaleError} refreshingStale={refreshingStaleData} streamStatus={isPerpl ? live.status : undefined}
+      streamError={isPerpl ? live.subscriptionError ?? undefined : undefined} chartCandles={chartCandles} range={range} onRangeChange={setRange}
+      resolutionSeconds={candles.data?.resolutionSeconds ?? undefined} candleTimeUnit={candles.data?.candleTimeUnit}
+      liveUpdatedAt={live.quoteFresh ? live.quoteReceivedAt : liveQuote?.observedAt ? monadTimestampMillis(liveQuote.observedAt) : live.lastUpdateAt}
+      overlays={chartOverlays} summaries={summaries} chartTrades={chartTrades} activity={marketActivity} livePnl={userLivePnl}
+      chartSettings={chartSettings.settings} book={activeBook ?? null} bookStale={isPerpl && activeBookStale} bookLive={liveBookFresh}
+      publicTrades={live.trades} manualAccount={manualAccount} manualReady={manualReady} marketCanTrade={marketCanTrade}
+      manualPosition={manualPosition} autonomousPosition={autonomousPosition as PerplPosition | null}
+      onOpenManualAccount={() => navigation.navigate('PerplManualAccount')}
+      onOpenSummary={summaryId => navigation.navigate('MarketDetail', {venueId, marketId, summaryId})}
+      onOpenActivity={event => navigation.navigate('ActivityDetail', {itemId: event.id})}
+      onOpenSpotTrade={(side, params) => navigation.navigate('TradeReview', {...params, side})}
+      onOpenPerplTrade={params => navigation.navigate('PerplTrade', params)} />;
+  }
 
   return <Screen refreshing={pullRefreshing || initialLoading} onRefresh={() => { void pullToRefresh(); }} onBack={() => navigation.goBack()}>
     <PageHeader kicker={`${market?.displayName ?? venueId} · Monad Testnet`} title={market?.symbol ?? 'Market detail'} copy={market?.name ?? `Venue ${venueId} · market ${marketId}`} />
@@ -175,13 +231,13 @@ export function MarketDetailScreen() {
       {market.kind === 'perpl' ? <>
         <Card><Text style={s.strong}>Manual Perpl trading</Text>
           {manualReady && marketCanTrade ? <>
-            <Button label="Long · market or limit" onPress={() => navigation.navigate('PerplTrade', {marketId, symbol: market.symbol, priceDecimals: market.priceDecimals, sizeDecimals: market.sizeDecimals, maxLeverage: market.maxLeverage})} />
-            <Button label="Short · market or limit" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {marketId, symbol: market.symbol, priceDecimals: market.priceDecimals, sizeDecimals: market.sizeDecimals, maxLeverage: market.maxLeverage, side: 'short'})} />
+            <Button label="Long · market or limit" onPress={() => navigation.navigate('PerplTrade', perplTradeRouteParams(market)!)} />
+            <Button label="Short · market or limit" variant="secondary" onPress={() => navigation.navigate('PerplTrade', perplTradeRouteParams(market, {side: 'short'}))} />
           </> : <Text style={s.body}>Manual order preparation is unavailable until the Mera-owned Perpl account is open and the local manual gate allows the selected action.</Text>}
           <Button label="Open manual account and AUSD balance" variant="secondary" onPress={() => navigation.navigate('PerplManualAccount')} />
-          {manualPosition && manualAccount?.capabilities.closePosition ? <Button label="Close manual position" variant="danger" onPress={() => navigation.navigate('PerplTrade', {marketId, symbol: market.symbol, side: manualPosition.side, sizeDecimals: market.sizeDecimals, priceDecimals: market.priceDecimals, action: 'close_position'})} /> : null}
-          {manualPosition && manualAccount?.capabilities.reducePosition ? <Button label="Reduce manual position" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {marketId, symbol: market.symbol, side: manualPosition.side, sizeDecimals: market.sizeDecimals, priceDecimals: market.priceDecimals, action: 'reduce_size'})} /> : null}
-          {manualPosition && manualAccount?.capabilities.marketOrders ? <Button label="Add AUSD margin" variant="secondary" onPress={() => navigation.navigate('PerplTrade', {marketId, symbol: market.symbol, side: manualPosition.side, sizeDecimals: market.sizeDecimals, priceDecimals: market.priceDecimals, action: 'add_margin'})} /> : null}
+          {manualPosition && manualAccount?.capabilities.closePosition ? <Button label="Close manual position" variant="danger" onPress={() => navigation.navigate('PerplTrade', perplTradeRouteParams(market, {action: 'close_position', positionSide: manualPosition.side}))} /> : null}
+          {manualPosition && manualAccount?.capabilities.reducePosition ? <Button label="Reduce manual position" variant="secondary" onPress={() => navigation.navigate('PerplTrade', perplTradeRouteParams(market, {action: 'reduce_size', positionSide: manualPosition.side}))} /> : null}
+          {manualPosition && manualAccount?.capabilities.marketOrders ? <Button label="Add AUSD margin" variant="secondary" onPress={() => navigation.navigate('PerplTrade', perplTradeRouteParams(market, {action: 'add_margin', positionSide: manualPosition.side}))} /> : null}
         </Card>
       </> : <SpotActions market={market} navigation={navigation} />}
       <Card><Text style={s.strong}>Trade summaries</Text>
@@ -204,9 +260,7 @@ function SpotActions({market, navigation}: {market: MarketDirectoryRow; navigati
   const hooked = isHookedPool(market);
   const routeReady = hasExecutableSpotRoute(market);
   if (!market.baseAsset || !market.quoteAsset) return <Card><Text style={s.body}>This pool did not return token contract details required for a reviewed swap.</Text></Card>;
-  const params = {marketId: market.marketId, venue: market.venueId as MonadVenueId, accountScope: 'wallet' as const,
-    baseAsset: market.baseAsset as MonadMarketAsset, quoteAsset: market.quoteAsset as MonadMarketAsset,
-    poolId: market.poolId, poolKey: market.poolKey, verified: market.verified === true, verificationSource: market.verificationSource};
+  const params = spotTradeReviewParams(market)!;
   return <Card><Text style={s.strong}>{market.verified ? 'Verified spot pool' : 'Unverified spot pool'}</Text>
     {market.verified === false ? <Text style={s.body}>This pool is outside the operator verified list. Review the Pool ID, tokens, fee, hooks, and minimum output before authorizing a wallet swap.</Text> : null}
     {market.poolId ? <DataRow label="Exact Pool ID" value={market.poolId} /> : null}
@@ -256,6 +310,9 @@ function formatPrice(value: unknown, decimals = 0) {
   if (value === null || value === undefined || value === '') return 'Unavailable';
   const number = Number(value) / (10 ** decimals);
   return Number.isFinite(number) ? number.toLocaleString(undefined, {maximumFractionDigits: 8}) : 'Unavailable';
+}
+function hasValidPrecision(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 30;
 }
 function getQuoteState(value?: number | string | null): 'fresh' | 'stale' | 'unknown' {
   if (value === null || value === undefined) return 'unknown';

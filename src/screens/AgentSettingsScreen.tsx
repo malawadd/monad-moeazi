@@ -3,7 +3,6 @@ import {useFocusEffect} from '@react-navigation/native';
 import {Card, DataRow, FlowScreen, Notice, PageHeader} from '../components/Ui';
 import {monadApi} from '../services/monadApi';
 import type {MonadAgentSnapshot} from '../types/monad';
-import {screenStyles as s} from '../theme/screenStyles';
 
 export function AgentSettingsScreen() {
   const [agent, setAgent] = useState<MonadAgentSnapshot | null>(null);

@@ -1,4 +1,4 @@
-import React, {createContext, PropsWithChildren, useContext, useEffect, useRef, useState} from 'react';
+import React, {createContext, PropsWithChildren, useContext, useEffect, useState} from 'react';
 import {previewActivity, previewHome, previewLimits, previewMarkets} from '../data/fixtures';
 import {AccountBootstrap, mobileApi, refreshSession} from '../services/apiClient';
 import {getNotificationPreferences, getPushRegistrationAdapter} from '../services/notifications/NotificationClient';
@@ -38,15 +38,11 @@ export function AppProvider({children}: PropsWithChildren) {
   const [account, setAccount] = useState<AccountBootstrap | null>(null);
   const [activityRows, setActivityRows] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
-  const previousQueryOwner = useRef<string | null>(null);
-
-  useEffect(() => {
-    const nextOwner = mode === 'authenticated' && ownerAddress ? ownerAddress.toLowerCase() : null;
-    if (previousQueryOwner.current !== nextOwner) clearOwnerScopedQueryCache();
-    previousQueryOwner.current = nextOwner;
-  }, [mode, ownerAddress]);
 
   async function loadAuthenticated(address: string) {
+    // Clear the previous owner's in-memory data before committing the new owner.
+    // A post-commit effect can cancel queries started by a cold deep-linked screen.
+    clearOwnerScopedQueryCache();
     setAccount(null); setHome(previewHome); setActivityRows([]); setLimits(null);
     setOwnerAddress(address.toLowerCase()); setMode('authenticated');
   }
@@ -57,10 +53,10 @@ export function AppProvider({children}: PropsWithChildren) {
       if (!active) return;
       const address = session?.session.walletAddress;
       if (!validAddress(address) || session?.session.subject !== `mera:${address.toLowerCase()}`) {
-        void clearSession(); setMode('signed-out'); return;
+        void clearSession(); clearOwnerScopedQueryCache(); setMode('signed-out'); return;
       }
       void loadAuthenticated(address);
-    }).catch(() => { if (active) setMode('signed-out'); });
+    }).catch(() => { if (active) { clearOwnerScopedQueryCache(); setMode('signed-out'); } });
     return () => { active = false; };
   }, []);
 
@@ -107,14 +103,14 @@ export function AppProvider({children}: PropsWithChildren) {
   async function signOut() {
     if (mode === 'authenticated') await getPushRegistrationAdapter().unregisterDevice().catch(() => undefined);
     if (mode === 'authenticated') await mobileApi.logout().catch(() => undefined);
-    await clearSession(); setMode('signed-out'); setOwnerAddress(null); setAccount(null);
+    await clearSession(); clearOwnerScopedQueryCache(); setMode('signed-out'); setOwnerAddress(null); setAccount(null);
     setLimits(null); setActivityRows([]); setHome(previewHome);
   }
 
   const value: AppState = {mode, ownerAddress, account, home,
     limits, markets: mode === 'preview' ? previewMarkets : [],
     activity: mode === 'preview' ? previewActivity : activityRows, busy,
-    signIn, enterPreview: () => { setLimits(previewLimits); setOwnerAddress(null); setMode('preview'); },
+    signIn, enterPreview: () => { clearOwnerScopedQueryCache(); setLimits(previewLimits); setOwnerAddress(null); setMode('preview'); },
     signOut, refreshHome, refreshActivity, refreshMagicChain, loadLimits, startAutopilot, stopAutopilot};
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

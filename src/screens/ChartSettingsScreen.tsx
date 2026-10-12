@@ -5,6 +5,9 @@ import {useChartSettings} from '../services/chartSettings';
 import type {ChartRange} from '../types/marketChart';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {UserChartSettingsView} from './UserChartSettingsView';
 
 const rows: Array<{key: 'showMarkPrice' | 'showVolume' | 'showOrderBook' | 'showTradeMarkers' | 'showManualPositions' | 'showAutonomousPositions' | 'showPnl' | 'showRiskLevels'; title: string; detail: string}> = [
   {key: 'showMarkPrice', title: 'Perpl mark price', detail: 'Show the mark price used to value open positions.'},
@@ -19,6 +22,9 @@ const rows: Array<{key: 'showMarkPrice' | 'showVolume' | 'showOrderBook' | 'show
 
 export function ChartSettingsScreen() {
   const {settings, update, loading} = useChartSettings();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  if (presentationMode === 'user') return <UserChartSettingsView theme={userThemeTokens(effectiveTheme)}
+    settings={settings} update={update} loading={loading} />;
   return <FlowScreen>
     <View style={styles.header}><StatusBadge label="MARKET DISPLAY" tone="sky" />
       <Text accessibilityRole="header" style={styles.title}>Chart settings</Text>

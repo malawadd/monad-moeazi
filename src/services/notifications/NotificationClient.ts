@@ -1,6 +1,6 @@
 import {PermissionsAndroid, Platform} from 'react-native';
 import {apiRequest} from '../apiClient';
-import {getInitialNotificationUrl, subscribeNotificationOpened} from './NotificationLinks';
+import {getInitialNotificationUrl, hasNotificationLinksEnabled, setNotificationLinksEnabled, subscribeNotificationOpened} from './NotificationLinks';
 
 export type NotificationPreferences = {
   enabled: boolean;
@@ -104,6 +104,9 @@ type FcmEnvironment = {
 export class FcmPushRegistrationAdapter implements PushRegistrationAdapter {
   readonly provider = 'fcm' as const;
   private stopTokenRefresh?: () => void;
+  private messaging?: FcmMessagingClient;
+  private foregroundSubscribers = new Set<(message: PushMessage) => void>();
+  private stopForeground?: () => void;
 
   constructor(private readonly environment: FcmEnvironment = {
     platform: Platform.OS,
@@ -116,10 +119,16 @@ export class FcmPushRegistrationAdapter implements PushRegistrationAdapter {
   async registerDevice(): Promise<boolean> {
     if (this.environment.platform !== 'android') return false;
     const capability = await apiRequest<{enabled: boolean; provider: PushProvider}>('/api/mobile/notifications/capabilities');
-    if (!capability.enabled || capability.provider !== this.provider) return false;
+    if (!capability.enabled || capability.provider !== this.provider) {
+      setNotificationLinksEnabled(false);
+      return false;
+    }
     if (this.environment.androidVersion >= 33) {
       const result = await this.environment.requestNotificationPermission();
-      if (result !== this.environment.permissionGrantedResult) return false;
+      if (result !== this.environment.permissionGrantedResult) {
+        setNotificationLinksEnabled(false);
+        return false;
+      }
     }
     let messaging: FcmMessagingClient | undefined;
     let pushToken: string | undefined;
@@ -132,19 +141,25 @@ export class FcmPushRegistrationAdapter implements PushRegistrationAdapter {
     } catch {
       // Google Play services may be missing on the offline KeePassDX emulator.
       await clearFcmRegistration(messaging, this.environment.loadMessaging);
+      setNotificationLinksEnabled(false);
       return false;
     }
     if (!messaging) return false;
     if (!pushToken) {
       await clearFcmRegistration(messaging, this.environment.loadMessaging);
+      setNotificationLinksEnabled(false);
       return false;
     }
     try {
       await registerToken(pushToken);
     } catch (error) {
       await clearFcmRegistration(messaging, this.environment.loadMessaging);
+      setNotificationLinksEnabled(false);
       throw error;
     }
+    this.messaging = messaging;
+    setNotificationLinksEnabled(true);
+    this.startForegroundSubscription();
     this.stopTokenRefresh?.();
     this.stopTokenRefresh = messaging.onTokenRefresh(token => { void registerToken(token).catch(() => undefined); });
     return true;
@@ -157,20 +172,38 @@ export class FcmPushRegistrationAdapter implements PushRegistrationAdapter {
   }
 
   async unregisterDevice() {
+    const hadEnabledRegistration = this.messaging !== undefined || await hasNotificationLinksEnabled();
+    setNotificationLinksEnabled(false);
     this.stopTokenRefresh?.();
     this.stopTokenRefresh = undefined;
-    await clearFcmRegistration(undefined, this.environment.loadMessaging);
+    this.stopForeground?.();
+    this.stopForeground = undefined;
+    const messaging = this.messaging;
+    this.messaging = undefined;
+    // A fresh app session with push disabled has no local token to clear. Avoid
+    // loading Firebase just because sign-out also removes backend state.
+    if (hadEnabledRegistration) await clearFcmRegistration(messaging, this.environment.loadMessaging);
     await apiRequest('/api/mobile/notifications/device', {method: 'DELETE'});
   }
 
   subscribeForeground(callback: (message: PushMessage) => void) {
-    if (Platform.OS !== 'android') return () => undefined;
-    let active = true;
-    let unsubscribe: () => void = () => undefined;
-    void firebaseMessaging().then(messaging => {
-      if (active) unsubscribe = messaging.subscribeForeground(callback);
-    }).catch(() => undefined);
-    return () => { active = false; unsubscribe(); };
+    if (this.environment.platform !== 'android') return () => undefined;
+    this.foregroundSubscribers.add(callback);
+    this.startForegroundSubscription();
+    return () => {
+      this.foregroundSubscribers.delete(callback);
+      if (this.foregroundSubscribers.size === 0) {
+        this.stopForeground?.();
+        this.stopForeground = undefined;
+      }
+    };
+  }
+
+  private startForegroundSubscription() {
+    if (!this.messaging || this.stopForeground || this.foregroundSubscribers.size === 0) return;
+    this.stopForeground = this.messaging.subscribeForeground(message => {
+      for (const callback of [...this.foregroundSubscribers]) callback(message);
+    });
   }
 
   async getInitialNotificationUrl() {

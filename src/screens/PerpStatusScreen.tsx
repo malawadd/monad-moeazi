@@ -6,10 +6,11 @@ import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen, StatusB
 import {perpAutonomyApi, createPerpIdempotencyKey} from '../services/perpAutonomyApi';
 import {validatePerpStop} from '../services/perpAutonomyValidation';
 import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../services/monadFormatting';
-import {openMeraSigningSession} from '../services/wallet/meraAuth';
+import {signAndSubmitWithMera} from '../services/meraSubmission';
 import {useApp} from '../state/AppContext';
 import type {PerpEvent, PerpRun, PerpRunsPage, PerpStopReview, PerpStopResult} from '../types/perpAutonomy';
 import {screenStyles as s} from '../theme/screenStyles';
+import {usePreparedReviewGuard} from '../navigation/usePreparedReviewGuard';
 
 const STOPPABLE = new Set(['active', 'uncertain']);
 
@@ -25,6 +26,7 @@ export function PerpStatusScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
+  usePreparedReviewGuard(Boolean(stopReview));
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -68,25 +70,25 @@ export function PerpStatusScreen() {
 
   async function signStop() {
     if (!stopReview || !current || !ownerAddress) return;
-    setBusy(true); setError(''); let session: Awaited<ReturnType<typeof openMeraSigningSession>> | undefined;
+    setBusy(true); setError('');
     let signatureSent = false;
     try {
       validatePerpStop(stopReview, ownerAddress, current.vaultAddress);
-      session = await openMeraSigningSession('signin');
-      if (session.address.toLowerCase() !== ownerAddress.toLowerCase()) throw new Error('The passkey opened a different Mera wallet. No stop was signed.');
-      const signature = await session.signTypedData(10143, stopReview.typedData as unknown as TypedDataDefinition);
-      session.end(); session = undefined;
-      if (!/^0x[0-9a-f]{130}$/i.test(signature)) throw new Error('Mera returned an invalid stop signature.');
-      signatureSent = true; setStopReview(null);
-      const result = await perpAutonomyApi.stop({runId: stopReview.runId, idempotencyKey: stopReview.idempotencyKey,
-        nonce: String(stopReview.typedData.message.nonce), deadline: Number(stopReview.typedData.message.deadline), signature});
+      const result = await signAndSubmitWithMera({ownerAddress,
+        reference: {kind: 'perp-stop', id: stopReview.idempotencyKey, relatedId: stopReview.runId, action: 'stop'},
+        sign: session => session.signTypedData(10143, stopReview.typedData as unknown as TypedDataDefinition),
+        validateSigned: signature => { if (!/^0x[0-9a-f]{130}$/i.test(signature)) throw new Error('Mera returned an invalid stop signature.'); },
+        onSubmissionStarting: () => { signatureSent = true; setStopReview(null); },
+        submit: signature => perpAutonomyApi.stop({runId: stopReview.runId, idempotencyKey: stopReview.idempotencyKey,
+          nonce: String(stopReview.typedData.message.nonce), deadline: Number(stopReview.typedData.message.deadline), signature}),
+      });
       setStopResult(result); setStopUncertain(result.status === 'uncertain'); void refresh();
     } catch (reason) {
       if (signatureSent) setStopUncertain(true);
       setError(signatureSent
         ? `The signed stop may still be processing. Check Activity and this run before retrying. ${reason instanceof Error ? reason.message : ''}`.trim()
         : reason instanceof Error ? reason.message : 'The stop request could not be signed.');
-    } finally { session?.end(); setBusy(false); }
+    } finally { setBusy(false); }
   }
 
   return <Screen refreshing={loading} onRefresh={() => { void refresh(); }} onBack={() => navigation.goBack()}>

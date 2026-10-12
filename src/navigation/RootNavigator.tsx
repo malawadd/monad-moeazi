@@ -1,21 +1,18 @@
-import React from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import React, {useEffect, useRef} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {StyleSheet, Text, View} from 'react-native';
+import {StackActions, useNavigation} from '@react-navigation/native';
 import {AccountScreen} from '../screens/AccountScreen';
 import {ChartSettingsScreen} from '../screens/ChartSettingsScreen';
 import {ActivityDetailScreen} from '../screens/ActivityDetailScreen';
-import {ActivityScreen} from '../screens/ActivityScreen';
 import {AgentScreen} from '../screens/AgentScreen';
 import {AgentSettingsScreen} from '../screens/AgentSettingsScreen';
 import {AutonomySetupScreen} from '../screens/AutonomySetupScreen';
 import {AutonomyStatusScreen} from '../screens/AutonomyStatusScreen';
 import {AutonomyChoiceScreen} from '../screens/AutonomyChoiceScreen';
 import {ManagedVaultScreen} from '../screens/ManagedVaultScreen';
-import {MarketsScreen} from '../screens/MarketsScreen';
 import {MarketDetailScreen} from '../screens/MarketDetailScreen';
 import {MonadFundingScreen} from '../screens/MonadFundingScreen';
-import {MonadHomeScreen} from '../screens/MonadHomeScreen';
 import {NotificationSettingsScreen} from '../screens/NotificationSettingsScreen';
 import {OperationReviewScreen} from '../screens/OperationReviewScreen';
 import {PerpSetupScreen} from '../screens/PerpSetupScreen';
@@ -32,61 +29,91 @@ import {SendScreen} from '../screens/SendScreen';
 import {TradeReviewScreen} from '../screens/TradeReviewScreen';
 import {TokenApprovalReviewScreen} from '../screens/TokenApprovalReviewScreen';
 import {WelcomeScreen} from '../screens/WelcomeScreen';
+import {UserWelcomeScreen} from '../screens/UserWelcomeScreen';
+import {UserFundingScreen} from '../screens/UserFundingScreen';
+import {UserSettingsScreen} from '../screens/UserSettingsScreen';
+import {UserReceiveScreen} from '../screens/UserReceiveScreen';
 import {WrapScreen} from '../screens/WrapScreen';
-import {StrategiesScreen} from '../screens/StrategiesScreen';
 import {StrategyDetailScreen} from '../screens/StrategyDetailScreen';
+import {PendingOperationsScreen} from '../screens/PendingOperationsScreen';
+import {UnavailableDestinationScreen} from '../screens/UnavailableDestinationScreen';
+import {StrategiesScreen} from '../screens/StrategiesScreen';
 import {useApp} from '../state/AppContext';
+import {usePresentation} from '../state/PresentationContext';
 import {colors, type} from '../theme/tokens';
-import {TypographicTabBar} from './TypographicTabBar';
+import {PresentationTabs} from './UserModeTabs';
+import {canAccessRoute, presentationResetRoutes, presentationTransitionTarget, replaceForPresentationTransition, shouldResetStackForPresentationChange, USER_TAB_NAMES} from './presentationRoutes';
 
 const Stack = createNativeStackNavigator();
-const Tabs = createBottomTabNavigator();
-
-function AuthenticatedTabs() {
-  return <Tabs.Navigator initialRouteName="Home" screenOptions={{headerShown: false}} tabBar={props => <TypographicTabBar {...props} />}>
-    <Tabs.Screen name="Home" component={MonadHomeScreen} />
-    <Tabs.Screen name="Markets" component={MarketsScreen} />
-    <Tabs.Screen name="Strategies" component={StrategiesScreen} />
-    <Tabs.Screen name="Activity" component={ActivityScreen} />
-    <Tabs.Screen name="Account" component={AccountScreen} />
-  </Tabs.Navigator>;
-}
 
 export function RootNavigator() {
   const {mode} = useApp();
-  if (mode === 'loading') return <View style={styles.loading}><Text style={styles.loadingText}>OPENING MOEAZI</Text></View>;
+  const presentation = usePresentation();
+  const navigation = useNavigation<any>();
+  const priorPresentationMode = useRef(presentation.presentationMode);
+  const presentationWasReady = useRef(presentation.ready);
+  useEffect(() => {
+    const previous = priorPresentationMode.current;
+    const next = presentation.presentationMode;
+    priorPresentationMode.current = next;
+    if (!presentation.ready || !presentationWasReady.current) {
+      presentationWasReady.current = presentation.ready;
+      return;
+    }
+    if (previous === next) return;
+    const state = navigation.getState();
+    const current = state.routes?.[state.index];
+    const nested = current?.state;
+    const activeTab = nested?.routes?.[nested.index]?.name;
+    const currentRouteName = current?.name ?? '';
+    const target = presentationTransitionTarget(previous, next, currentRouteName, activeTab);
+    const stackEntries = (state.routes ?? []).map((route: any) => ({
+      name: route.name,
+      selectedTab: route.name === 'Main' ? route.state?.routes?.[route.state?.index ?? 0]?.name : undefined,
+    }));
+    if (shouldResetStackForPresentationChange(previous, next, stackEntries)) {
+      const fallbackTarget = canAccessRoute('user', currentRouteName)
+        ? {name: currentRouteName, params: currentRouteName === 'Main'
+          ? {screen: USER_TAB_NAMES.includes(activeTab) ? activeTab : 'Home'} : current?.params}
+        : {name: 'Main', params: {screen: 'Strategies'}};
+      const safeTarget = target?.name === 'PendingOperations' && current?.params
+        ? {...target, params: {...current.params, ...(target.params ?? {})}}
+        : target ?? fallbackTarget;
+      const routes = presentationResetRoutes(safeTarget);
+      navigation.reset({index: routes.length - 1, routes});
+      return;
+    }
+    if (target) {
+      if (replaceForPresentationTransition(previous, next, current?.name ?? '', target.name)) {
+        navigation.dispatch(StackActions.replace(target.name, target.params));
+      }
+      else navigation.navigate(target.name, target.params);
+    }
+  }, [navigation, presentation.presentationMode, presentation.ready]);
+  if (mode === 'loading' || !presentation.ready) return <View style={styles.loading}><Text style={styles.loadingText}>OPENING MOEAZI</Text></View>;
+  const userMode = presentation.presentationMode === 'user';
+  const screens: Array<[string, React.ComponentType<any>]> = [
+    ['Funding', userMode ? UserFundingScreen : MonadFundingScreen], ['Receive', UserReceiveScreen],
+    ['Send', SendScreen], ['OperationReview', OperationReviewScreen],
+    ['MarketDetail', MarketDetailScreen], ['PerplManualAccount', PerplManualAccountScreen],
+    ['PerplTrade', PerplTradeScreen], ['ManualPerplReview', ManualPerplReviewScreen], ['Wrap', WrapScreen],
+    ['ManagedVault', ManagedVaultScreen], ['AutonomySetup', AutonomySetupScreen], ['AutonomyStatus', AutonomyStatusScreen],
+    ['AutonomyChoice', AutonomyChoiceScreen], ['PerpSetup', PerpSetupScreen], ['PerpStatus', PerpStatusScreen],
+    ['PerpHistory', PerpHistoryScreen], ['PerplMarkets', PerplMarketsScreen], ['PerplSetup', PerplSetupScreen],
+    ['PerplStatus', PerplStatusScreen], ['PerplHistory', PerplHistoryScreen], ['StrategyDetail', StrategyDetailScreen],
+    ['TradeReview', TradeReviewScreen], ['TokenApprovalReview', TokenApprovalReviewScreen],
+    ['ActivityDetail', ActivityDetailScreen], ['NotificationSettings', NotificationSettingsScreen],
+    ['ChartSettings', ChartSettingsScreen], ['Agent', userMode ? StrategiesScreen : AgentScreen],
+    ['AgentStatus', AgentScreen], ['AgentSettings', AgentSettingsScreen],
+    ['AccountSettings', userMode ? UserSettingsScreen : AccountScreen], ['PendingOperations', PendingOperationsScreen],
+    ['UnavailableDestination', UnavailableDestinationScreen],
+  ];
   return <Stack.Navigator screenOptions={{headerShown: false}}>
     {mode === 'authenticated' ? <>
-      <Stack.Screen name="Main" component={AuthenticatedTabs} />
-      <Stack.Screen name="Funding" component={MonadFundingScreen} />
-      <Stack.Screen name="Send" component={SendScreen} />
-      <Stack.Screen name="OperationReview" component={OperationReviewScreen} />
-      <Stack.Screen name="MarketDetail" component={MarketDetailScreen} />
-      <Stack.Screen name="PerplManualAccount" component={PerplManualAccountScreen} />
-      <Stack.Screen name="PerplTrade" component={PerplTradeScreen} />
-      <Stack.Screen name="ManualPerplReview" component={ManualPerplReviewScreen} />
-      <Stack.Screen name="Wrap" component={WrapScreen} />
-      <Stack.Screen name="ManagedVault" component={ManagedVaultScreen} />
-      <Stack.Screen name="AutonomySetup" component={AutonomySetupScreen} />
-      <Stack.Screen name="AutonomyStatus" component={AutonomyStatusScreen} />
-      <Stack.Screen name="AutonomyChoice" component={AutonomyChoiceScreen} />
-      <Stack.Screen name="PerpSetup" component={PerpSetupScreen} />
-      <Stack.Screen name="PerpStatus" component={PerpStatusScreen} />
-      <Stack.Screen name="PerpHistory" component={PerpHistoryScreen} />
-      <Stack.Screen name="PerplMarkets" component={PerplMarketsScreen} />
-      <Stack.Screen name="PerplSetup" component={PerplSetupScreen} />
-      <Stack.Screen name="PerplStatus" component={PerplStatusScreen} />
-      <Stack.Screen name="PerplHistory" component={PerplHistoryScreen} />
-      <Stack.Screen name="StrategyDetail" component={StrategyDetailScreen} />
-      <Stack.Screen name="TradeReview" component={TradeReviewScreen} />
-      <Stack.Screen name="TokenApprovalReview" component={TokenApprovalReviewScreen} />
-      <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-      <Stack.Screen name="ChartSettings" component={ChartSettingsScreen} />
-      <Stack.Screen name="Agent" component={AgentScreen} />
-      <Stack.Screen name="AgentStatus" component={AgentScreen} />
-      <Stack.Screen name="AgentSettings" component={AgentSettingsScreen} />
-    </> : <Stack.Screen name="Welcome" component={WelcomeScreen} />}
+      <Stack.Screen name="Main" component={PresentationTabs} />
+      {screens.filter(([name]) => canAccessRoute(presentation.presentationMode, name))
+        .map(([name, component]) => <Stack.Screen key={name} name={name} component={component} />)}
+    </> : <Stack.Screen name="Welcome" component={userMode ? UserWelcomeScreen : WelcomeScreen} />}
   </Stack.Navigator>;
 }
 

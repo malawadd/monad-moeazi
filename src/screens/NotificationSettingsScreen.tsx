@@ -1,10 +1,14 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, Switch, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Switch, Text, View} from 'react-native';
 import {FlowScreen, Notice, Panel, StatusBadge} from '../components/Ui';
 import {defaultNotificationPreferences, getNotificationPreferences, getPushRegistrationAdapter, NotificationPreferences} from '../services/notifications/NotificationClient';
 import {MobileApiError} from '../services/apiClient';
-import {colors, spacing} from '../theme/tokens';
+import {colors, spacing, userFonts} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
+import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText} from '../components/user/UserPrimitives';
+import {usePresentation} from '../state/PresentationContext';
+import {userThemeTokens} from '../theme/userThemes';
+import {useNavigation} from '@react-navigation/native';
 
 type PreferenceKey = keyof NotificationPreferences;
 type Setting = {key: PreferenceKey; title: string; detail: string};
@@ -19,10 +23,14 @@ const settings: Setting[] = [
 ];
 
 export function NotificationSettingsScreen() {
+  const navigation = useNavigation<any>();
+  const {presentationMode, effectiveTheme} = usePresentation();
+  const userTheme = userThemeTokens(effectiveTheme);
   const [preferences, setPreferences] = useState(defaultNotificationPreferences);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<PreferenceKey | null>(null);
   const [message, setMessage] = useState<{title: string; body: string; tone: 'sky' | 'mint' | 'rose'} | null>(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -73,6 +81,41 @@ export function NotificationSettingsScreen() {
     setSaving(null);
   }
 
+  if (presentationMode === 'user') return <UserPage theme={userTheme}>
+    <UserHeading kicker="ACCOUNT SETTINGS" title="Trade notifications"
+      copy="Choose which confirmed events can reach your registered phones. Android permission and device registration are handled separately on each phone." theme={userTheme} />
+    <UserButton label="Back to settings" secondary theme={userTheme}
+      onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AccountSettings')} />
+    {message ? <UserCard theme={userTheme} style={{backgroundColor: message.tone === 'rose' ? userTheme.danger
+      : message.tone === 'mint' ? userTheme.success : userTheme.neutralSurface}}>
+      <UserText theme={userTheme} kind="title">{message.title}</UserText>
+      <UserText theme={userTheme}>{message.body}</UserText>
+    </UserCard> : null}
+    <UserCard theme={userTheme}>
+      <UserText theme={userTheme} kind="title">Your alerts</UserText>
+      {settings.map(setting => <Pressable key={setting.key} accessibilityRole="switch"
+        accessibilityLabel={setting.title} accessibilityHint={setting.detail}
+        accessibilityState={{checked: preferences[setting.key], disabled: loading || saving !== null, busy: saving === setting.key}}
+        disabled={loading || saving !== null}
+        onPress={() => { void update(setting.key, !preferences[setting.key]); }}
+        style={({pressed}) => [styles.userSettingRow, {borderBottomColor: userTheme.border,
+          backgroundColor: pressed ? userTheme.raised : userTheme.surface}]}>
+        <View style={styles.copy}>
+          <Text style={[styles.userSettingTitle, {color: userTheme.ink}]}>{setting.title}</Text>
+          <Text style={[styles.userSettingDetail, {color: userTheme.muted}]}>{setting.detail}</Text>
+        </View>
+        <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.switchTarget}>
+          <Switch accessible={false} value={preferences[setting.key]} trackColor={{false: userTheme.neutralSurface, true: userTheme.success}}
+            thumbColor={userTheme.ink} />
+        </View>
+      </Pressable>)}
+    </UserCard>
+    <UserDisclosure theme={userTheme} label="Notification privacy" value={preferences.showAmounts ? 'Amounts shown' : 'Amounts hidden'}
+      expanded={privacyOpen} onPress={() => setPrivacyOpen(value => !value)}>
+      <UserText theme={userTheme}>Notification amounts are hidden unless you turn them on. If enabled, amounts may appear on a lock screen; Android does not let Moeazi reliably detect lock-screen state at send time.</UserText>
+    </UserDisclosure>
+  </UserPage>;
+
   return <FlowScreen>
     <View style={styles.header}>
       <StatusBadge label="ACCOUNT SETTINGS" tone="sky" />
@@ -109,4 +152,9 @@ const styles = StyleSheet.create({
   copy: {flex: 1, gap: 4},
   settingTitle: {...s.strong, fontSize: 14},
   detail: {...s.body, fontSize: 12, lineHeight: 17},
+  userSettingRow: {minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 8},
+  userSettingTitle: {fontFamily: userFonts.body, fontSize: 15, lineHeight: 21, fontWeight: '800'},
+  userSettingDetail: {fontFamily: userFonts.body, fontSize: 13, lineHeight: 19, fontWeight: '500'},
+  switchTarget: {minWidth: 52, minHeight: 52, alignItems: 'center', justifyContent: 'center'},
 });

@@ -42,11 +42,12 @@ export async function runPerplOptimizerDecisionTick(input: { provider: any; row:
     if (observedAt > state.lastObservationAt) { state.lastObservationAt = observedAt; await saveOptimizerState(row.runId, state); }
   }
   const positionMarket = account.positions.length ? Number((account.positions[0] as any).mkt) : null;
+  const hasPosition = positionMarket !== null;
   const scanDue = !forced && state.status === "running"
     && now < expiresAt && now - state.lastMarketScanAt >= scannerCadenceMs(state);
-  if (!positionMarket && !forced && state.status !== "running") return respond(row, account, tickId, state, forced,
+  if (!hasPosition && !forced && state.status !== "running") return respond(row, account, tickId, state, forced,
     "optimizer_target_or_cycle_cap_reached", { optimizerStatus: state.status }, observation);
-  if (!positionMarket && !forced && !scanDue && now < expiresAt) return respond(row, account, tickId, state, forced,
+  if (!hasPosition && !forced && !scanDue && now < expiresAt) return respond(row, account, tickId, state, forced,
     "optimizer_market_scan_not_due", { nextMarketScanAt: state.lastMarketScanAt + scannerCadenceMs(state) }, observation);
   const marketIds = scannerMarketIds(JSON.parse(row.marketIdsJson), positionMarket, scanDue);
   const markets = marketIds.length ? await readPerplVenueMarkets({ marketIds, withBook: true, finalized: true }) : [];
@@ -58,14 +59,16 @@ export async function runPerplOptimizerDecisionTick(input: { provider: any; row:
     scanDecision = decidePerplOptimizer({ now, expiresAt, run: row,
       account: { ...account, positions: [], orders: [] }, markets, histories: observation.samples,
       params: state.params, optimizerStatus: state.status, policyVersion: state.version });
-    const advanced = advancePerplScanner(state, scanDecision, now, Boolean(positionMarket));
+    const advanced = advancePerplScanner(state, scanDecision, now, hasPosition);
     await operatorMutation("monadVenueOptimizer", "recordScannerScan", { runId: row.runId, tickId,
       recordJson: JSON.stringify(advanced.record) });
     Object.assign(state, advanced.state);
     await saveOptimizerState(row.runId, state);
   }
+  if (!hasPosition && row.entryPausedAt) return respond(row, account, tickId, state, forced,
+    "optimizer_entries_paused_for_safety", { reason: row.entryPauseReason ?? "worker_safety" }, observation);
   state.lastExitCheckAt = now;
-  const decision = !positionMarket && scanDecision ? scanDecision : decidePerplOptimizer({ now, expiresAt, run: row, account, markets,
+  const decision = !hasPosition && scanDecision ? scanDecision : decidePerplOptimizer({ now, expiresAt, run: row, account, markets,
     histories: observation.samples, params: state.params, forceExit: forced, optimizerStatus: state.status,
     activeCycle: state.activeCycle, policyVersion: state.version });
   if (decision.kind === "hold") {

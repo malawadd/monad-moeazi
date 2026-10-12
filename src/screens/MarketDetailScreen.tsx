@@ -1,7 +1,6 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
-import {useQuery} from '@tanstack/react-query';
 import {Button, Card, DataRow, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {MarketChart, type ChartRange} from '../components/MarketChart';
@@ -14,9 +13,7 @@ import {useApp} from '../state/AppContext';
 import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
 import {UserMarketDetailView} from './UserMarketDetailView';
-import {findPerplVenue} from '../services/perplValidation';
 import {perplMarketQuoteUnit} from '../services/marketPriceUnits';
-import {perplApi} from '../services/perplApi';
 import {useMarketCandlesQuery, useMarketDirectoryQuery, useMarketSnapshotQuery, useMarketTradesQuery, useManualPerplAccountQuery, usePerplCurrentQuery} from '../services/useMarketQueries';
 import {usePerplMarketStream} from '../services/usePerplMarketStream';
 import {mergeCandles} from '../types/perplMarketStream';
@@ -50,13 +47,6 @@ export function MarketDetailScreen() {
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const isPerpl = venueId.startsWith('perpl-');
   const live = usePerplMarketStream(ownerAddress, isPerpl ? marketId : null, RANGE[range].resolutionSeconds, focused);
-  const ownerKey = ownerAddress?.toLowerCase() ?? 'signed-out';
-  const perplVenueQuery = useQuery({
-    queryKey: ['mobile', 'owner', ownerKey, 'perpl', 'venues'],
-    queryFn: async () => findPerplVenue((await perplApi.venues()).venues),
-    enabled: Boolean(ownerAddress && focused && isPerpl && presentationMode === 'user'),
-    staleTime: 15_000, refetchInterval: focused && isPerpl && presentationMode === 'user' ? 15_000 : false,
-  });
   const chartSettings = useChartSettings();
   const directory = useMarketDirectoryQuery(ownerAddress, focused);
   const snapshot = useMarketSnapshotQuery(ownerAddress, venueId, marketId, focused, isPerpl && live.quoteFresh && live.bookFresh);
@@ -144,11 +134,9 @@ export function MarketDetailScreen() {
   }, [refresh]);
 
   if (presentationMode === 'user') {
-    const freshPerplVenue = perplVenueQuery.data && !perplVenueQuery.isError && !perplVenueQuery.isStale
-      ? perplVenueQuery.data : null;
     const priceUnit = market?.kind === 'spot' && market.baseAsset && market.quoteAsset
       ? `${market.quoteAsset.symbol} per ${market.baseAsset.symbol}`
-      : market?.kind === 'perpl' ? perplMarketQuoteUnit(market, freshPerplVenue) ?? 'Price unit unavailable'
+      : market?.kind === 'perpl' ? perplMarketQuoteUnit(market) ?? 'Price unit unavailable'
         : 'Price unit unavailable';
     const userPrice = market?.kind === 'perpl' && !hasValidPrecision(market.priceDecimals)
       ? 'Unavailable' : displayPrice;

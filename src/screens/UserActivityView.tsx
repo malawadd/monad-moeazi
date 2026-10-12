@@ -1,15 +1,16 @@
 import React from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import type {UserActivityItem} from '../services/userActivityPresentation';
+import {userActivityTitle, type UserActivityItem} from '../services/userActivityPresentation';
 import type {UserThemeTokens} from '../theme/userThemes';
 import {UserButton, UserCard, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
 
 export function UserActivityView({theme, items, loading, refreshing, error, pendingCount, dismissingReminders, hasMore, loadingMore, scope,
-  onRefresh, onLoadMore, onSetScope, onPending, onDismissPending, onOpen}: {
+  showAutonomousActivity, onRefresh, onLoadMore, onSetScope, onPending, onDismissPending, onAutonomousSettings, onOpen}: {
   theme: UserThemeTokens; items: UserActivityItem[]; loading: boolean; refreshing: boolean; error: string;
   pendingCount: number; dismissingReminders: boolean; hasMore: boolean; loadingMore: boolean; scope: 'all' | 'perp';
+  showAutonomousActivity: boolean;
   onRefresh(): void; onLoadMore(): void; onSetScope(value: 'all' | 'perp'): void;
-  onPending(): void; onDismissPending(): void; onOpen(item: UserActivityItem): void;
+  onPending(): void; onDismissPending(): void; onAutonomousSettings(): void; onOpen(item: UserActivityItem): void;
 }) {
   return <UserPage theme={theme} refreshing={refreshing} onRefresh={onRefresh}>
     <UserHeading theme={theme} kicker="ACCOUNT · ACTIVITY" title="Recent activity" copy="See wallet and Perpl actions recorded for this account." />
@@ -30,18 +31,22 @@ export function UserActivityView({theme, items, loading, refreshing, error, pend
       </Pressable>)}
     </View>
     {!items.length && !loading && !error ? <UserCard theme={theme}>
-      <UserText theme={theme} kind="title">No activity yet</UserText>
-      <UserText theme={theme}>Recorded actions will appear here.</UserText>
+      <UserText theme={theme} kind="title">{!showAutonomousActivity ? 'Autonomous updates are hidden' : 'No activity yet'}</UserText>
+      <UserText theme={theme}>{!showAutonomousActivity
+        ? 'Turn them on in Settings to see grouped strategy checks. Order receipts stay visible.'
+        : 'Recorded actions will appear here.'}</UserText>
+      {!showAutonomousActivity ? <UserButton label="Autonomous activity settings" secondary onPress={onAutonomousSettings} theme={theme} /> : null}
     </UserCard> : null}
     {items.map(item => {
       const event = item.event;
-      const groupedSwap = Boolean(item.lifecycle);
+      const groupedLifecycle = Boolean(item.lifecycle);
+      const title = userActivityTitle(item);
       return <Pressable key={item.key} accessibilityRole="button"
-        accessibilityLabel={groupedSwap ? `Open wallet swap, latest status ${event.status}, ${item.lifecycle!.events.length} updates`
+        accessibilityLabel={groupedLifecycle ? `Open ${title.toLowerCase()}, latest status ${event.status}, ${item.lifecycle!.events.length} updates`
           : `Open activity: ${event.title}`}
         onPress={() => onOpen(item)} style={({pressed}) => [styles.event, {borderColor: theme.border, backgroundColor: theme.surface}, pressed && {opacity: 0.7}]}>
         <UserText theme={theme} kind="meta">{dateLabel(event.occurredAt)} · {event.status}</UserText>
-        <UserText theme={theme} kind="title">{groupedSwap ? 'Wallet swap' : event.title}</UserText>
+        <UserText theme={theme} kind="title">{title}</UserText>
         <UserText theme={theme}>{event.summary}</UserText>
         {item.lifecycle ? <UserText theme={theme} kind="meta">{item.lifecycle.events.length} status updates · Open for receipt details</UserText> : null}
         {event.amount && event.asset ? <UserValueRow theme={theme} label="Amount" value={`${event.amount} ${event.asset}`} /> : null}

@@ -13,11 +13,12 @@ import {userFonts} from '../theme/tokens';
 export function UserSettingsScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress, signOut, busy} = useApp();
-  const {effectiveTheme, userTheme, setUserTheme, setPresentationMode} = usePresentation();
+  const {effectiveTheme, userTheme, setUserTheme, setPresentationMode, showAutonomousActivity, setShowAutonomousActivity} = usePresentation();
   const theme = userThemeTokens(effectiveTheme);
   const [ownerExpanded, setOwnerExpanded] = useState(false);
   const [modeBusy, setModeBusy] = useState(false);
   const [modeMessage, setModeMessage] = useState('');
+  const [activityPreferenceMessage, setActivityPreferenceMessage] = useState('');
   const focused = useIsFocused();
   const current = usePerplCurrentQuery(ownerAddress, focused);
   const currentRun = ownerScopedPerplRun(current.data?.current ?? null, ownerAddress);
@@ -43,6 +44,18 @@ export function UserSettingsScreen() {
     <UserButton label="Back to Moeazi" secondary onPress={() => navigation.goBack()} theme={theme} />
     <UserCard theme={theme}>
       <UserThemePicker selected={userTheme} onSelect={setUserTheme} />
+    </UserCard>
+    <UserCard theme={theme}>
+      <UserText theme={theme} kind="title">Autonomous activity</UserText>
+      <UserText theme={theme}>Show grouped strategy checks and optimizer updates. Order receipts stay visible.</UserText>
+      <Pressable accessibilityRole="switch" accessibilityLabel="Show autonomous background updates"
+        accessibilityState={{checked: showAutonomousActivity}}
+        onPress={() => { void setShowAutonomousActivity(!showAutonomousActivity).then(saved =>
+          setActivityPreferenceMessage(saved ? 'Saved on this device.' : 'This choice applies for this session only.')); }}
+        style={[styles.activityToggle, {borderColor: theme.border, backgroundColor: theme.raised}]}>
+        <Text style={[styles.toolText, {color: theme.ink}]}>Show in activity · {showAutonomousActivity ? 'On' : 'Off'}</Text>
+      </Pressable>
+      {activityPreferenceMessage ? <UserText theme={theme} kind="meta">{activityPreferenceMessage}</UserText> : null}
     </UserCard>
     <UserCard theme={theme}>
       <UserText theme={theme} kind="title">Your account</UserText>
@@ -86,6 +99,7 @@ const styles = StyleSheet.create({
   address: {fontFamily: userFonts.mono, fontSize: 13, lineHeight: 20, fontWeight: '700', flexShrink: 1},
   tools: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   modeAlert: {borderWidth: 2, padding: 10},
+  activityToggle: {minHeight: 52, borderWidth: 3, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8},
   tool: {flex: 1, minWidth: 88, minHeight: 52, borderWidth: 3, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8},
   toolText: {fontFamily: userFonts.body, fontSize: 15, lineHeight: 21, fontWeight: '800', textAlign: 'center'},
 });

@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
-import {useQuery} from '@tanstack/react-query';
 import {Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {marketIdentity, type MarketDirectoryRow} from '../types/marketDirectory';
 import {readMarketWatchlist, writeMarketWatchlist} from '../services/marketWatchlist';
@@ -9,14 +8,17 @@ import {monadApi} from '../services/monadApi';
 import {perplApi} from '../services/perplApi';
 import {formatMonadTimestamp, monadTimestampMillis} from '../services/monadFormatting';
 import type {MonadMarket} from '../types/monad';
-import {resolveMarketsForInput, useMarketDirectoryQuery} from '../services/useMarketQueries';
+import {resolveMarketsForInput, useMarketDirectoryQuery, useManualPerplAccountQuery, usePerplCurrentQuery} from '../services/useMarketQueries';
 import {usePerplMarketStream} from '../services/usePerplMarketStream';
 import {hasExecutableSpotRoute, isDirectoryMarketEligible, isHookedPool, isV4PoolLookup} from '../services/marketDirectoryPresentation';
 import {useApp} from '../state/AppContext';
 import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
 import {UserMarketsView} from './UserMarketsView';
-import {findPerplVenue} from '../services/perplValidation';
+import {verifiedMarketOpenPositions, type UserMarketOpenPosition} from '../services/marketOpenPositions';
+import {useProlongedRefreshFailure} from '../services/useProlongedRefreshFailure';
+import {autonomousPositionReadUnavailable, EMPTY_MARKET_POSITION_READS, manualPositionReadUnavailable,
+  retainMarketPositionReads} from '../services/marketPositionReads';
 import {colors, spacing, type} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 
@@ -46,13 +48,22 @@ export function MarketsScreen() {
   const [lookupBusy, setLookupBusy] = useState(false);
   const [error, setError] = useState('');
   const [pullRefreshing, setPullRefreshing] = useState(false);
-  const ownerKey = ownerAddress?.toLowerCase() ?? 'signed-out';
-  const perplVenueQuery = useQuery({
-    queryKey: ['mobile', 'owner', ownerKey, 'perpl', 'venues'],
-    queryFn: async () => findPerplVenue((await perplApi.venues()).venues),
-    enabled: Boolean(ownerAddress && focused && presentationMode === 'user'),
-    staleTime: 15_000, refetchInterval: focused && presentationMode === 'user' ? 15_000 : false,
-  });
+  const needPositions = focused && presentationMode === 'user' && category !== 'spot';
+  const manualPositionQuery = useManualPerplAccountQuery(ownerAddress, needPositions);
+  const autonomousPositionQuery = usePerplCurrentQuery(ownerAddress, needPositions);
+  const ownerKey = ownerAddress?.toLowerCase() ?? null;
+  const [retainedPositionReads, setRetainedPositionReads] = useState(() => retainMarketPositionReads(ownerAddress,
+    manualPositionQuery.data, autonomousPositionQuery.data, EMPTY_MARKET_POSITION_READS));
+  useEffect(() => { setRetainedPositionReads(previous => retainMarketPositionReads(ownerAddress,
+    manualPositionQuery.data, autonomousPositionQuery.data, previous)); },
+  [ownerAddress, manualPositionQuery.data, autonomousPositionQuery.data]);
+  const positionReads = retainedPositionReads.ownerKey === ownerKey ? retainedPositionReads : EMPTY_MARKET_POSITION_READS;
+  const manualReadUnavailable = manualPositionReadUnavailable(manualPositionQuery.data, ownerAddress);
+  const autonomousReadUnavailable = autonomousPositionReadUnavailable(autonomousPositionQuery.data, ownerAddress);
+  const userRefreshFailed = focused && presentationMode === 'user' && Boolean(directory.isError || (needPositions
+    && (manualPositionQuery.isError || manualReadUnavailable || autonomousPositionQuery.isError || autonomousReadUnavailable)));
+  const hasRefreshCache = Boolean(directory.data || (needPositions && (positionReads.manualAccount || positionReads.autonomousRun)));
+  const connectionUnavailable = useProlongedRefreshFailure(userRefreshFailed, hasRefreshCache, undefined, ownerKey);
 
   useEffect(() => { void readMarketWatchlist().then(setWatchlist).catch(() => undefined); }, []);
   useEffect(() => {
@@ -114,14 +125,24 @@ export function MarketsScreen() {
     try { await refetchDirectory(); } finally { setPullRefreshing(false); }
   }, [refetchDirectory]);
   const directoryError = directory.isError && !directory.data ? directory.error : null;
+  const positionSources = useMemo(() => ({ownerAddress,
+    manualAccount: positionReads.manualAccount,
+    autonomousRun: positionReads.autonomousRun,
+  }), [ownerAddress, positionReads]);
+  const userMarketPositions = useMemo(() => {
+    const byMarket = new Map<string, UserMarketOpenPosition[]>();
+    for (const market of visible) {
+      const positions = verifiedMarketOpenPositions(market, positionSources);
+      if (positions.length) byMarket.set(marketIdentity(market.venueId, market.marketId), positions);
+    }
+    return byMarket;
+  }, [visible, positionSources]);
 
   if (presentationMode === 'user') {
-    const freshPerplVenue = perplVenueQuery.data && !perplVenueQuery.isError && !perplVenueQuery.isStale
-      ? perplVenueQuery.data : null;
-    return <UserMarketsView theme={userTheme} markets={visible} perplVenue={freshPerplVenue}
+    return <UserMarketsView theme={userTheme} markets={visible} marketPositions={userMarketPositions}
       loading={directory.isLoading} refreshing={pullRefreshing || directory.isLoading}
       error={directoryError ? 'The market service could not be reached.' : undefined}
-      stale={Boolean(directory.data && (directory.isError || directory.isStale))}
+      connectionNotice={connectionUnavailable && !directoryError}
       message={error || undefined} search={search} setSearch={setSearch} category={category} setCategory={setCategory}
       watchlist={watchlist} watchlistOnly={watchlistOnly} setWatchlistOnly={setWatchlistOnly}
       onRefresh={() => { void refreshDirectory(); }}

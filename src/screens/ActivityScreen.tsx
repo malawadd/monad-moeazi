@@ -4,6 +4,7 @@ import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/nat
 import {Button, Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
 import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {fetchMonadActivityPage, useMarketTradesQuery, useMonadActivityQuery} from '../services/useMarketQueries';
+import {activityEventsForOwner, mergeActivityEventPages} from '../services/activityHistory';
 import {subscribeNotificationActivityRefresh} from '../services/notifications/NotificationEvents';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
 import type {MonadActivityEvent} from '../types/monad';
@@ -15,7 +16,7 @@ import {loadPendingOperationReferences, type PendingOperationReference} from '..
 import {dismissPendingOperationReminder, loadPendingOperationReminderReferences} from '../services/pendingOperationReminder';
 import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
-import {buildUserActivityItems, isHiddenUserActivityDiagnostic} from '../services/userActivityPresentation';
+import {buildUserActivityItems, filterAutonomousActivity, isHiddenUserActivityDiagnostic, userActivityRouteParams} from '../services/userActivityPresentation';
 import {UserActivityView} from './UserActivityView';
 
 function eventTime(value: string) {
@@ -27,7 +28,7 @@ export function ActivityScreen() {
   const navigation = useNavigation<any>();
   const focused = useIsFocused();
   const {ownerAddress} = useApp();
-  const {presentationMode, effectiveTheme} = usePresentation();
+  const {presentationMode, effectiveTheme, showAutonomousActivity} = usePresentation();
   const userTheme = userThemeTokens(effectiveTheme);
   const activity = useMonadActivityQuery(ownerAddress, null, focused);
   const summaries = useMarketTradesQuery(ownerAddress, undefined, undefined, focused);
@@ -43,6 +44,9 @@ export function ActivityScreen() {
   const [pendingReferences, setPendingReferences] = useState<PendingOperationReference[]>([]);
   const [dismissingReminders, setDismissingReminders] = useState(false);
   const pageGeneration = useRef(0);
+  const pageOwner = useRef(ownerAddress?.toLowerCase() ?? '');
+  const hasLoadedOlderPages = useRef(false);
+  const previousHeadEvents = useRef<MonadActivityEvent[]>([]);
   const pendingGeneration = useRef(0);
 
   useFocusEffect(useCallback(() => {
@@ -59,12 +63,35 @@ export function ActivityScreen() {
   }, [ownerAddress, presentationMode]));
 
   useEffect(() => {
-    pageGeneration.current += 1;
-    setMoreEvents([]);
-    setNextCursor(activityData?.nextCursor ?? null);
-    setHasMore(activityData?.hasMore ?? false);
+    const ownerKey = ownerAddress?.toLowerCase() ?? '';
+    if (pageOwner.current !== ownerKey) {
+      pageOwner.current = ownerKey;
+      pageGeneration.current += 1;
+      hasLoadedOlderPages.current = false;
+      previousHeadEvents.current = [];
+      setMoreEvents([]);
+      setNextCursor(null);
+      setHasMore(false);
+      setPaginationError('');
+      setLoadingMore(false);
+    }
+    if (!ownerKey || !activityData) return;
+    if (hasLoadedOlderPages.current) {
+      const currentHeadIds = new Set((activityData.events ?? []).map(event => event.id));
+      // Snapshot the old head before scheduling the state update. React may
+      // evaluate the updater after this effect replaces the ref below.
+      const priorHead = previousHeadEvents.current;
+      setMoreEvents(previous => mergeActivityEventPages(priorHead, previous)
+        .filter(event => !currentHeadIds.has(event.id)));
+    } else {
+      setNextCursor(activityData.nextCursor);
+      setHasMore(activityData.hasMore);
+    }
+    previousHeadEvents.current = activityData.events ?? [];
   }, [ownerAddress, activityData]);
-  const events = useMemo(() => [...(activityData?.events ?? []), ...moreEvents], [activityData?.events, moreEvents]);
+  const ownerKey = ownerAddress?.toLowerCase() ?? '';
+  const events = useMemo(() => activityEventsForOwner(ownerKey, pageOwner.current,
+    activityData?.events ?? [], moreEvents), [ownerKey, activityData?.events, moreEvents]);
   const tradeSummaries: MarketTradeSummary[] = summaryData?.summaries ?? [];
   const refresh = useCallback(async () => {
     setPaginationError('');
@@ -77,27 +104,29 @@ export function ActivityScreen() {
   const loadMore = useCallback(async () => {
     if (!hasMore || !nextCursor || loadingMore) return;
     const generation = pageGeneration.current;
+    hasLoadedOlderPages.current = true;
     setLoadingMore(true); setPaginationError('');
     try {
       if (!ownerAddress) throw new Error('Sign in to load account activity.');
       const page = await fetchMonadActivityPage(ownerAddress, nextCursor);
       if (generation === pageGeneration.current) {
-        setMoreEvents(previous => {
-          const seen = new Set([...events, ...previous].map(event => event.id));
-          return [...previous, ...page.events.filter(event => !seen.has(event.id))];
-        });
+        hasLoadedOlderPages.current = true;
+        // The visible list deduplicates against the current head. Keep all older
+        // pages here so a later head shift cannot discard an evicted event.
+        setMoreEvents(previous => mergeActivityEventPages(previous, page.events));
         setNextCursor(page.nextCursor); setHasMore(page.hasMore);
       }
     } catch (reason) { if (generation === pageGeneration.current) setPaginationError(reason instanceof Error ? reason.message : 'More activity could not be loaded.'); }
-    finally { setLoadingMore(false); }
-  }, [hasMore, nextCursor, loadingMore, ownerAddress, events]);
+    finally { if (generation === pageGeneration.current) setLoadingMore(false); }
+  }, [hasMore, nextCursor, loadingMore, ownerAddress]);
   useFocusEffect(useCallback(() => { if (activityStale || summariesStale) void refresh(); },
     [activityStale, summariesStale, refresh]));
   useEffect(() => subscribeNotificationActivityRefresh(() => { void refresh(); }), [refresh]);
   const visibleEvents = scope === 'perp' ? events.filter(isPerpVenueEvent) : events;
   const userVisibleEvents = (scope === 'perp' ? events.filter(isUserPerplEvent) : events)
     .filter(event => !isHiddenUserActivityDiagnostic(event));
-  const userActivityItems = useMemo(() => buildUserActivityItems(userVisibleEvents), [userVisibleEvents]);
+  const userActivityItems = useMemo(() => filterAutonomousActivity(buildUserActivityItems(userVisibleEvents), showAutonomousActivity),
+    [userVisibleEvents, showAutonomousActivity]);
   const visibleSummaries = scope === 'perp' ? tradeSummaries.filter(item => item.venueId.startsWith('perpl-')) : tradeSummaries;
   const activityError = activity.error instanceof Error ? activity.error.message : '';
   const hasError = Boolean(activityError || paginationError);
@@ -121,12 +150,12 @@ export function ActivityScreen() {
 
   if (presentationMode === 'user') return <UserActivityView theme={userTheme} items={userActivityItems}
     loading={!activityData && activity.isLoading} refreshing={pullRefreshing} error={[activityError, paginationError].filter(Boolean).join(' ')}
+    showAutonomousActivity={showAutonomousActivity}
     pendingCount={pendingReferences.length} dismissingReminders={dismissingReminders} hasMore={hasMore} loadingMore={loadingMore} scope={scope === 'all' ? 'all' : 'perp'}
     onRefresh={() => { void pullToRefresh(); }} onLoadMore={() => { void loadMore(); }}
     onSetScope={setScope} onPending={() => navigation.navigate('PendingOperations')} onDismissPending={() => { void dismissPendingReminders(); }}
-    onOpen={item => navigation.navigate('ActivityDetail', item.lifecycle
-      ? {itemId: item.event.id, operationId: item.lifecycle.operationId}
-      : {itemId: item.event.id, event: item.event})} />;
+    onAutonomousSettings={() => navigation.navigate('AccountSettings')}
+    onOpen={item => navigation.navigate('ActivityDetail', userActivityRouteParams(item))} />;
 
   return <Screen refreshing={pullRefreshing || (!activityData && activity.isLoading)} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />

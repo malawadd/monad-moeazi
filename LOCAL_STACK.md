@@ -116,6 +116,10 @@ For the current deterministic optimizer runbook, follow
 [Perpl optimizer operations](docs/REPEAT_PERPL_OPTIMIZER.md). The
 [three-cycle manual guide](docs/REPEAT_PERPL_DIRECT_CYCLES.md) describes the
 earlier acceptance workflow.
+The operator console's read-only [Perpl health panel](docs/PERPL_HEALTH.md)
+shows tick, position, order, market-data, and settlement alerts. The
+[worker recovery record](docs/PERPL_WORKER_HEALTH.md) documents the watchdog
+and the October 2026 stalled-tick incident.
 
 Manual Perpl accounts have a separate global Testnet gate, independent of the
 Perpl autonomy gate. The loopback operator console shows the configured and

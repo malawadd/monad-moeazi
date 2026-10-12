@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Moeazi · Local operations</title>
     <link rel="stylesheet" href="/app.css">
+    <link rel="stylesheet" href="/perpl-health.css">
     <link rel="stylesheet" href="/manual-sequence.css">
     <link rel="stylesheet" href="/autonomy.css">
     <link rel="stylesheet" href="/perp-scenarios.css">
@@ -18,6 +19,7 @@
     <script src="/perp-scenarios.js" defer></script>
     <script src="/perpl-scenarios.js" defer></script>
     <script src="/manual-perpl-gate.js" defer></script>
+    <script src="/perpl-health.js" defer></script>
   </head>
   <body>
     <section id="login-shell" class="login-shell" aria-labelledby="login-title" hidden>
@@ -104,8 +106,18 @@
 
       <section class="workspace" id="health" aria-labelledby="health-title">
         <div class="panel-head"><div><p class="eyebrow">LOCAL SERVICE STATUS</p><h2 id="health-title">Health &amp; monitoring</h2></div><button data-refresh="health" type="button">Refresh</button></div>
-        <p class="section-lead">Loopback diagnostics for the Monad API, Convex, agent services, data stores, and Temporal. Checks do not make provider calls.</p>
+        <p class="section-lead">Read-only diagnostics for the Monad API, Convex, agent services, data stores, and Temporal. Perpl run health also reads Monad Testnet RPC and Perpl public context; it never submits transactions.</p>
         <div id="health-grid" class="ops-grid" aria-live="polite"><p class="empty-state">Loading local services…</p></div>
+        <div class="perpl-health-panel" aria-labelledby="perpl-health-title">
+          <div class="panel-head"><div><p class="eyebrow">PERPL TESTNET · READ ONLY</p><h3 id="perpl-health-title">Autonomous run health</h3></div>
+            <div class="head-actions"><span id="perpl-health-state" role="status">Loading…</span><button id="perpl-health-refresh" type="button">Refresh</button></div></div>
+          <p class="section-lead">Tracks worker ticks, open positions, order reconciliation, market observations, settlement, service readiness, and execution gates. This page cannot submit or cancel trades.</p>
+          <div id="perpl-health-summary" class="perpl-health-summary" aria-live="polite"><p class="empty-state">Reading Perpl run health…</p></div>
+          <div id="perpl-health-alerts" class="perpl-health-alerts" aria-live="polite"></div>
+          <h4 class="perpl-health-subtitle">Active and recent runs</h4>
+          <div id="perpl-health-runs" class="perpl-health-runs" aria-live="polite"><p class="empty-state">Loading Perpl runs…</p></div>
+          <p id="perpl-health-updated" class="muted" role="status"></p>
+        </div>
       </section>
 
       <section class="workspace" id="workspace-page" aria-labelledby="workspace-title">

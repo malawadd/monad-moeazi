@@ -36,8 +36,12 @@ async function tick(context: any) {
     return context.json({ accepted: Boolean(saved?.runId), status: result.status, phase: result.phase,
       nextTickId: saved?.nextTickId ?? null });
   } catch (error) {
-    process.stderr.write(`[perpl-worker] tick ${body.tickId} will be reconciled again\n`);
-    return context.json({ error: error instanceof Error ? error.message.slice(0, 180) : "perpl_tick_failed" }, 503);
+    const code = error && typeof error === "object" && "code" in error && typeof error.code === "string"
+      ? error.code.slice(0, 80) : "perpl_tick_failed";
+    const detail = (error instanceof Error ? error.message : "unknown_error")
+      .replace(/https?:\/\/\S+/g, "[url]").replace(/0x[a-fA-F0-9]{64}/g, "[tx_hash]").slice(0, 160);
+    process.stderr.write(`[perpl-worker] tick ${body.tickId} failed with ${code}: ${detail}; it will be reconciled again\n`);
+    return context.json({ error: code, detail }, 503);
   } finally { await provider.destroy(); }
 }
 export function registerPerplWorkerRoutes(app: Hono<any>) {

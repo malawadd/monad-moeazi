@@ -33,6 +33,11 @@ export const monadVenueTables = {
     lastRequestId: v.optional(v.number()), positionsJson: v.optional(v.string()), ordersJson: v.optional(v.string()),
     tickSequence: v.number(), nextTickId: v.optional(v.string()),
     leaseHolder: v.optional(v.string()), leaseExpiresAt: v.optional(v.number()),
+    entryPausedAt: v.optional(v.number()), entryPauseReason: v.optional(v.string()),
+    lastSuccessfulTickAt: v.optional(v.number()), nextTickDueAt: v.optional(v.number()),
+    lastWorkerError: v.optional(v.string()), lastWorkerErrorAt: v.optional(v.number()),
+    consecutiveWorkerFailures: v.optional(v.number()),
+    watchdogLastRetryAt: v.optional(v.number()), watchdogRetryCount: v.optional(v.number()),
     scheduledFunctionId: v.optional(v.id("_scheduled_functions")), createdAt: v.number(), updatedAt: v.number(),
     activatedAt: v.optional(v.number()), stoppedAt: v.optional(v.number()), completedAt: v.optional(v.number()),
   }).index("by_runId", ["runId"])

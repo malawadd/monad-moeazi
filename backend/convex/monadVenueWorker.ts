@@ -2,6 +2,7 @@ import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { appendMonadActivity, requireMonadOperator } from "./monadHelpers";
+import { venueDispatchTickArgs, venueWatchdogDecision } from "./monadVenueWatchdogRules";
 
 const internalApi: any = internal;
 async function findRun(ctx: any, runId: string) {
@@ -26,21 +27,73 @@ export const getWorkerRun = query({ args: { runId: v.string() }, handler: async 
   await requireMonadOperator(ctx); return await findRun(ctx, args.runId);
 } });
 
+export const pauseEntries = mutation({ args: { runId: v.string(), reason: v.string() }, handler: async (ctx, args) => {
+  await requireMonadOperator(ctx); const row = await findRun(ctx, args.runId);
+  if (!row || row.venueId !== "perpl-direct-testnet-v1" || !row.optimizerStateJson
+    || !["active", "stopping", "settling", "uncertain", "incomplete_settlement"].includes(row.status)
+    || !/^[a-z][a-z0-9_]{3,63}$/.test(args.reason)) throw new Error("Perpl optimizer entry pause is invalid.");
+  if (row.entryPausedAt) return { paused: true, alreadyPaused: true };
+  await ctx.db.patch(row._id, { entryPausedAt: Date.now(), entryPauseReason: args.reason });
+  await event(ctx, row, { eventId: "entries_paused", kind: "perpl_optimizer_safety",
+    status: "paused", summary: "New autonomous entries paused after a worker safety incident; exits and settlement remain enabled." });
+  return { paused: true, alreadyPaused: false };
+} });
+
 export const claimTick = mutation({ args: { runId: v.string(), tickId: v.string(), holderId: v.string() }, handler: async (ctx, args) => {
   await requireMonadOperator(ctx); const row = await findRun(ctx, args.runId); const now = Date.now();
   if (!row || row.nextTickId !== args.tickId || row.lastTickId === args.tickId) return { claimed: false, reason: "stale" };
   if (row.leaseExpiresAt && row.leaseExpiresAt > now) {
-    await ctx.scheduler.runAfter(Math.max(1_000, row.leaseExpiresAt - now), internalApi.monadVenueActions.dispatchTick, args);
+    const scheduledFunctionId = await ctx.scheduler.runAfter(Math.max(1_000, row.leaseExpiresAt - now), internal.monadVenueActions.dispatchTick,
+      venueDispatchTickArgs(args));
+    await ctx.db.patch(row._id, { scheduledFunctionId, nextTickDueAt: row.leaseExpiresAt });
     return { claimed: false, reason: "leased" };
   }
   await ctx.db.patch(row._id, { leaseHolder: args.holderId, leaseExpiresAt: now + 45_000, updatedAt: now });
   return { claimed: true, row };
 } });
 
-export const scheduleRetry = internalMutation({ args: { runId: v.string(), tickId: v.string(), delayMs: v.number() }, handler: async (ctx, args) => {
+export const scheduleRetry = internalMutation({ args: { runId: v.string(), tickId: v.string(), delayMs: v.number(),
+  reason: v.optional(v.string()) }, handler: async (ctx, args) => {
   const row = await findRun(ctx, args.runId); if (!row || row.nextTickId !== args.tickId) return false;
-  await ctx.scheduler.runAfter(Math.max(1_000, Math.min(60_000, args.delayMs)), internalApi.monadVenueActions.dispatchTick,
-    { runId: args.runId, tickId: args.tickId }); return true;
+  const delay = Math.max(1_000, Math.min(60_000, args.delayMs));
+  const scheduledFunctionId = await ctx.scheduler.runAfter(delay, internal.monadVenueActions.dispatchTick,
+    venueDispatchTickArgs(args));
+  await ctx.db.patch(row._id, { scheduledFunctionId, nextTickDueAt: Date.now() + delay,
+    lastWorkerError: args.reason?.slice(0, 180) ?? row.lastWorkerError,
+    lastWorkerErrorAt: args.reason ? Date.now() : row.lastWorkerErrorAt,
+    consecutiveWorkerFailures: (row.consecutiveWorkerFailures ?? 0) + 1 });
+  return true;
+} });
+
+export const watchdogRuns = internalMutation({ args: {}, handler: async (ctx) => {
+  const now = Date.now(); let inspected = 0; let retried = 0; let paused = 0;
+  for (const venueId of ["perpl-direct-testnet-v1", "perpl-testnet-v1"]) {
+    for (const status of ["activation_pending", "active", "stopping", "settling", "uncertain", "incomplete_settlement"]) {
+      const rows = await ctx.db.query("monadVenueRuns").withIndex("by_venue_status_createdAt", (q: any) =>
+        q.eq("venueId", venueId).eq("status", status)).order("desc").take(100);
+      for (const row of rows) {
+        inspected += 1;
+        const decision = venueWatchdogDecision(row, now);
+        if (!decision.requeue && !decision.pauseEntries) continue;
+        const patch: Record<string, unknown> = {};
+        if (decision.pauseEntries) {
+          patch.entryPausedAt = now; patch.entryPauseReason = "worker_tick_overdue"; paused += 1;
+          await event(ctx, row, { eventId: `watchdog_pause:${row.nextTickId}`, kind: "perpl_optimizer_safety",
+            status: "paused", summary: "New autonomous entries paused because worker checks stopped; exits and settlement remain enabled." });
+        }
+        if (decision.requeue) {
+          patch.scheduledFunctionId = await ctx.scheduler.runAfter(0, internal.monadVenueActions.dispatchTick,
+            venueDispatchTickArgs({ runId: row.runId, tickId: row.nextTickId! }));
+          patch.nextTickDueAt = now; patch.watchdogLastRetryAt = now;
+          patch.watchdogRetryCount = (row.watchdogRetryCount ?? 0) + 1; retried += 1;
+          await event(ctx, row, { eventId: `watchdog_retry:${row.nextTickId}`, kind: "perpl_worker_recovery",
+            status: "retrying", summary: "A stalled Perpl worker tick is being retried with its original tick ID." });
+        }
+        await ctx.db.patch(row._id, patch);
+      }
+    }
+  }
+  return { inspected, retried, paused };
 } });
 
 export const getObservations = query({ args: { runId: v.string(), marketId: v.optional(v.number()), limit: v.optional(v.number()) }, handler: async (ctx, args) => {
@@ -77,11 +130,14 @@ export const updateWorkerState = mutation({ args: { runId: v.string(), tickId: v
   if (repeat) {
     nextTickId = `${row.runId}:tick:${row.tickSequence}`;
     scheduledFunctionId = await ctx.scheduler.runAfter(Math.max(1_000, Math.min(60_000, args.nextDelayMs)),
-      internalApi.monadVenueActions.dispatchTick, { runId: row.runId, tickId: nextTickId });
+      internal.monadVenueActions.dispatchTick, venueDispatchTickArgs({ runId: row.runId, tickId: nextTickId }));
   }
+  const now = Date.now();
   await ctx.db.patch(row._id, { ...patch, status: args.status, phase: args.phase, lastTickId: args.tickId,
     nextTickId, scheduledFunctionId, tickSequence: repeat ? row.tickSequence + 1 : row.tickSequence,
-    leaseHolder: undefined, leaseExpiresAt: undefined, completedAt: args.status === "completed" ? Date.now() : undefined, updatedAt: Date.now() });
+    leaseHolder: undefined, leaseExpiresAt: undefined, completedAt: args.status === "completed" ? now : undefined,
+    lastSuccessfulTickAt: now, nextTickDueAt: repeat ? now + Math.max(1_000, Math.min(60_000, args.nextDelayMs)) : undefined,
+    lastWorkerError: undefined, lastWorkerErrorAt: undefined, consecutiveWorkerFailures: 0, updatedAt: now });
   if (args.eventJson) await event(ctx, row, JSON.parse(args.eventJson));
   return { runId: row.runId, status: args.status, phase: args.phase, nextTickId };
 } });

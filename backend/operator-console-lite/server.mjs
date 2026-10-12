@@ -34,6 +34,8 @@ const STATIC = new Map([
   ["/perp-scenarios.js", ["perp-scenarios.js", "text/javascript; charset=utf-8"]],
   ["/perpl-scenarios.js", ["perpl-scenarios.js", "text/javascript; charset=utf-8"]],
   ["/manual-perpl-gate.js", ["manual-perpl-gate.js", "text/javascript; charset=utf-8"]],
+  ["/perpl-health.js", ["perpl-health.js", "text/javascript; charset=utf-8"]],
+  ["/perpl-health.css", ["perpl-health.css", "text/css; charset=utf-8"]],
   ["/perp-scenarios.css", ["perp-scenarios.css", "text/css; charset=utf-8"]],
   ["/fonts/syne.woff2", ["assets/syne.woff2", "font/woff2"]],
   ["/fonts/jakarta.woff2", ["assets/jakarta.woff2", "font/woff2"]],

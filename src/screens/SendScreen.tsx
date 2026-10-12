@@ -17,6 +17,7 @@ import {userFonts} from '../theme/tokens';
 import {userSendAmountPresets} from '../services/userSendPresets';
 
 const assets: MonadAsset[] = ['MON', 'USDC'];
+const userQuickAssets: MonadAsset[] = ['AUSD', 'MON'];
 
 export function SendScreen() {
   const navigation = useNavigation<any>();
@@ -27,9 +28,12 @@ export function SendScreen() {
   const {refetch} = walletQuery;
   const wallet = walletQuery.data ?? null;
   const [pullRefreshing, setPullRefreshing] = useState(false);
-  const [asset, setAsset] = useState<MonadAsset>('MON');
+  const [userAsset, setUserAsset] = useState<MonadAsset>('AUSD');
+  const [developerAsset, setDeveloperAsset] = useState<MonadAsset>('MON');
+  const asset = presentationMode === 'user' ? userAsset : developerAsset;
   const [amount, setAmount] = useState('');
   const [customAmountOpen, setCustomAmountOpen] = useState(false);
+  const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
   const [recipient, setRecipient] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,18 +43,22 @@ export function SendScreen() {
     try { await refresh(); } finally { setPullRefreshing(false); }
   }, [refresh]);
   const walletError = walletQuery.error instanceof Error ? walletQuery.error.message : '';
+  const canSendAsset = isSendableAsset(asset);
+  const selectedBalance = wallet?.balances.find(row => row.asset === asset) ?? null;
+  const heldBalances = positiveBalances(wallet);
   const sendPresets = userSendAmountPresets(wallet, ownerAddress, asset);
 
   function selectAsset(next: MonadAsset) {
-    setAsset(next);
     if (presentationMode === 'user') {
+      setUserAsset(next);
       setAmount(''); setCustomAmountOpen(false); setError('');
-    }
+    } else setDeveloperAsset(next);
   }
 
   async function review() {
     setLoading(true); setError('');
     try {
+      if (!isSendableAsset(asset)) throw new Error(`${asset} sending is coming soon.`);
       if (!wallet || wallet.stale) throw new Error('A current wallet balance is required before preparing a transfer. Pull down to refresh.');
       if (!ownerAddress) throw new Error('Your Mera wallet is not available.');
       if (wallet.ownerAddress.toLowerCase() !== ownerAddress.toLowerCase() || wallet.chainId !== 10143) {
@@ -75,7 +83,7 @@ export function SendScreen() {
     <UserButton label="Back to settings" secondary theme={userTheme}
       onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('AccountSettings')} />
     <UserHeading kicker="WALLET · MONAD TESTNET" title="Send test tokens"
-      copy="Choose an asset, enter the amount and destination, then review the exact transfer before Mera asks you to sign." theme={userTheme} />
+      copy="Choose a token, amount and recipient." theme={userTheme} />
     {error ? <UserCard theme={userTheme} style={{backgroundColor: userTheme.danger}}>
       <UserText theme={userTheme} kind="title">Transfer not prepared</UserText>
       <Text accessibilityRole="alert" style={{color: userTheme.ink, fontFamily: userFonts.body, fontSize: 15, lineHeight: 22, fontWeight: '700'}}>{error}</Text>
@@ -88,13 +96,33 @@ export function SendScreen() {
     {wallet ? <UserCard theme={userTheme}>
       <UserText theme={userTheme} kind="meta">{wallet.stale ? 'Last known balance · refresh before sending' : 'Current wallet balance'}</UserText>
       <View style={styles.assetChoices}>
-        {assets.map(item => <Pressable key={item} accessibilityRole="button"
-          accessibilityLabel={`Send ${item}`} accessibilityState={{selected: asset === item}}
+        {userQuickAssets.map(item => <Pressable key={item} accessibilityRole="button"
+          accessibilityLabel={`Select ${item}`} accessibilityHint="Tap to select. Long press to choose from wallet-held tokens."
+          accessibilityState={{selected: asset === item}} onLongPress={() => setTokenPickerOpen(true)}
           onPress={() => selectAsset(item)} style={[styles.userAssetChoice, {borderColor: userTheme.border,
             backgroundColor: asset === item ? userTheme.accent : userTheme.raised}]}>
           <Text style={[styles.userAssetText, {color: asset === item ? userTheme.accentText : userTheme.ink}]}>{item}</Text>
         </Pressable>)}
       </View>
+      <UserDisclosure theme={userTheme} label={`Choose token · ${asset}`} value="Wallet balances"
+        expanded={tokenPickerOpen} onPress={() => setTokenPickerOpen(open => !open)}>
+        <View style={styles.userTokenPicker}>
+          <UserText theme={userTheme} kind="meta">Wallet-held tokens · positive balances</UserText>
+          {heldBalances.length ? heldBalances.map(balance => <Pressable key={balance.asset} accessibilityRole="radio"
+            accessibilityLabel={`${balance.asset}, ${formatMonadUnits(balance.amountUnits, balance.decimals)}, ${isSendableAsset(balance.asset) ? 'sending available' : 'sending coming soon'}`}
+            accessibilityState={{checked: asset === balance.asset}} onPress={() => { selectAsset(balance.asset); setTokenPickerOpen(false); }}
+            style={[styles.userTokenOption, {borderColor: userTheme.border, backgroundColor: userTheme.raised}]}>
+            <View style={styles.userTokenOptionTop}>
+              <Text style={[styles.userTokenName, {color: userTheme.ink}]}>{balance.asset}</Text>
+              <Text style={[styles.userTokenAmount, {color: userTheme.ink}]}>{formatMonadUnits(balance.amountUnits, balance.decimals)} {balance.asset}</Text>
+            </View>
+            <Text style={[styles.userTokenAvailability, {color: userTheme.muted}]}>
+              {isSendableAsset(balance.asset) ? 'Available to send' : 'Sending coming soon'}
+            </Text>
+          </Pressable>) : <UserText theme={userTheme}>No positive token balances were returned for this wallet.</UserText>}
+        </View>
+      </UserDisclosure>
+      <UserText theme={userTheme} kind="meta">Hold a token to choose another.</UserText>
       <UserText theme={userTheme} kind="meta">Choose an amount</UserText>
       <View style={styles.userPresetChoices}>
         {sendPresets.map(preset => <Pressable key={preset.percent} testID={`send-preset-${preset.percent}`} accessibilityRole="radio"
@@ -115,16 +143,17 @@ export function SendScreen() {
       </UserDisclosure>
       <UserField label="Recipient wallet address" value={recipient} onChangeText={setRecipient}
         autoCapitalize="none" autoCorrect={false} placeholder="0x…" theme={userTheme} />
-      <UserText theme={userTheme}>Available: {wallet.balances.find(row => row.asset === asset)
-        ? `${formatMonadUnits(wallet.balances.find(row => row.asset === asset)!.amountUnits, wallet.balances.find(row => row.asset === asset)!.decimals)} ${asset}`
+      <UserText theme={userTheme}>Available: {selectedBalance
+        ? `${formatMonadUnits(selectedBalance.amountUnits, selectedBalance.decimals)} ${asset}`
         : `The service did not return a ${asset} balance for this wallet.`}</UserText>
+      {!canSendAsset ? <UserText theme={userTheme} kind="meta">{asset} sending is coming soon.</UserText> : null}
     </UserCard> : <UserCard theme={userTheme}>
       <UserText theme={userTheme} kind="title">Balance needed before sending</UserText>
       <UserText theme={userTheme}>Refresh the wallet balance to prepare a transfer.</UserText>
       <UserButton label="Check wallet balance" secondary onPress={() => { void pullToRefresh(); }} theme={userTheme} loading={pullRefreshing} />
     </UserCard>}
     <UserButton label="Prepare transfer review" onPress={() => { void review(); }} loading={loading}
-      disabled={!wallet} theme={userTheme} />
+      disabled={!wallet || !canSendAsset} theme={userTheme} />
     <UserText theme={userTheme} kind="meta">Network fees are paid in MON. A broadcast transfer may not be reversible.</UserText>
   </UserPage>;
 
@@ -136,7 +165,7 @@ export function SendScreen() {
     {wallet ? <Card>
       <Text style={s.meta}>{wallet.stale ? 'Balance may be out of date' : `Observed at block ${wallet.observedBlock}`}</Text>
       <View style={styles.assetChoices}>
-        {assets.map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{selected: asset === item}} onPress={() => setAsset(item)} style={[styles.assetChoice, asset === item && styles.assetSelected]}><Text style={styles.assetText}>{item}</Text></Pressable>)}
+        {assets.map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{selected: asset === item}} onPress={() => selectAsset(item)} style={[styles.assetChoice, asset === item && styles.assetSelected]}><Text style={styles.assetText}>{item}</Text></Pressable>)}
       </View>
       <Field label={`Amount (${asset})`} value={amount} onChangeText={setAmount} placeholder="0" keyboardType="decimal-pad" />
       <Field label="Recipient address" value={recipient} onChangeText={setRecipient} autoCapitalize="none" autoCorrect={false} placeholder="0x…" />
@@ -155,6 +184,12 @@ const styles = StyleSheet.create({
   assetText: {...type.meta, color: colors.ink, fontSize: 12},
   userAssetChoice: {flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 3, padding: 9},
   userAssetText: {fontFamily: userFonts.body, fontSize: 16, lineHeight: 22, fontWeight: '800'},
+  userTokenPicker: {gap: spacing.xs, paddingTop: spacing.sm},
+  userTokenOption: {minHeight: 52, borderWidth: 2, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, justifyContent: 'center', gap: 2},
+  userTokenOptionTop: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.xs},
+  userTokenName: {fontFamily: userFonts.body, fontSize: 15, lineHeight: 20, fontWeight: '800'},
+  userTokenAmount: {fontFamily: userFonts.mono, fontSize: 14, lineHeight: 19, fontWeight: '700', flexShrink: 1, textAlign: 'right'},
+  userTokenAvailability: {fontFamily: userFonts.body, fontSize: 13, lineHeight: 17},
   userPresetChoices: {flexDirection: 'row', gap: spacing.xs},
   userPresetChoice: {flex: 1, minWidth: 0, minHeight: 62, alignItems: 'center', justifyContent: 'center', borderWidth: 3, paddingHorizontal: 3, paddingVertical: 6},
   userPresetPercent: {fontFamily: userFonts.body, fontSize: 15, lineHeight: 20, fontWeight: '800'},
@@ -162,6 +197,15 @@ const styles = StyleSheet.create({
   userInput: {minHeight: 52, borderWidth: 3, paddingHorizontal: 12, paddingVertical: 10,
     fontFamily: userFonts.body, fontSize: 16, lineHeight: 22, fontWeight: '600'},
 });
+
+function isSendableAsset(asset: MonadAsset): asset is 'MON' | 'USDC' { return asset === 'MON' || asset === 'USDC'; }
+function positiveBalances(wallet: ReturnType<typeof useMonadWalletQuery>['data'] | null) {
+  return (wallet?.balances ?? []).filter(balance => {
+    if (!/^(?:0|[1-9][0-9]*)$/.test(balance.amountUnits) || !Number.isSafeInteger(balance.decimals)
+        || balance.decimals < 0 || balance.decimals > 36) return false;
+    return BigInt(balance.amountUnits) > 0n;
+  }).sort((first, second) => ['AUSD', 'MON', 'USDC', 'WMON'].indexOf(first.asset) - ['AUSD', 'MON', 'USDC', 'WMON'].indexOf(second.asset));
+}
 
 function UserField({label, theme, ...props}: React.ComponentProps<typeof TextInput> & {label: string; theme: ReturnType<typeof userThemeTokens>}) {
   return <View style={styles.userField}>

@@ -124,11 +124,13 @@ import type * as monadTradeSummaryLifecycle from "../monadTradeSummaryLifecycle.
 import type * as monadV4PoolIndex from "../monadV4PoolIndex.js";
 import type * as monadVenueAccounting from "../monadVenueAccounting.js";
 import type * as monadVenueActions from "../monadVenueActions.js";
+import type * as monadVenueHealth from "../monadVenueHealth.js";
 import type * as monadVenueOptimizer from "../monadVenueOptimizer.js";
 import type * as monadVenueOrders from "../monadVenueOrders.js";
 import type * as monadVenueRuns from "../monadVenueRuns.js";
 import type * as monadVenueScenarios from "../monadVenueScenarios.js";
 import type * as monadVenueSchema from "../monadVenueSchema.js";
+import type * as monadVenueWatchdogRules from "../monadVenueWatchdogRules.js";
 import type * as monadVenueWorker from "../monadVenueWorker.js";
 import type * as mutations from "../mutations.js";
 import type * as operatorCreditControls from "../operatorCreditControls.js";
@@ -283,11 +285,13 @@ declare const fullApi: ApiFromModules<{
   monadV4PoolIndex: typeof monadV4PoolIndex;
   monadVenueAccounting: typeof monadVenueAccounting;
   monadVenueActions: typeof monadVenueActions;
+  monadVenueHealth: typeof monadVenueHealth;
   monadVenueOptimizer: typeof monadVenueOptimizer;
   monadVenueOrders: typeof monadVenueOrders;
   monadVenueRuns: typeof monadVenueRuns;
   monadVenueScenarios: typeof monadVenueScenarios;
   monadVenueSchema: typeof monadVenueSchema;
+  monadVenueWatchdogRules: typeof monadVenueWatchdogRules;
   monadVenueWorker: typeof monadVenueWorker;
   mutations: typeof mutations;
   operatorCreditControls: typeof operatorCreditControls;

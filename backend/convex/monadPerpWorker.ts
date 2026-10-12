@@ -5,6 +5,7 @@ import { appendMonadActivity, requireMonadOperator, reserveAutonomyOperatorLease
 import { perpTickClaimDecision } from "./monadPerpLeaseRules";
 import { progressScenario } from "./monadPerpScenarios";
 import { economicActivePnl, economicTerminalPnl, finalizedReturnUnits } from "./monadPerpAccounting";
+import { venueDispatchTickArgs } from "./monadVenueWatchdogRules";
 const internalApi: any = internal;
 const terminal = ["completed", "expired", "failed", "liquidated"];
 
@@ -22,7 +23,7 @@ export const claimTick = mutation({ args: { runId: v.string(), tickId: v.string(
   const decision = perpTickClaimDecision(row, args.tickId, now);
   if (!decision.claimed) {
     if (decision.reason === "leased") await ctx.scheduler.runAfter(decision.retryAfterMs ?? 1000,
-      internalApi.monadPerpActions.dispatchTick, args);
+      internal.monadPerpActions.dispatchTick, venueDispatchTickArgs(args));
     return decision;
   }
   await ctx.db.patch(row._id, { leaseHolder: args.holderId, leaseExpiresAt: now + 45_000, updatedAt: now });

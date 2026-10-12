@@ -19,12 +19,18 @@ export const dispatchTick = internalAction({ args: { runId: v.string(), tickId: 
   try {
     const response = await fetch(callbackUrl(), { method: "POST", headers: { Authorization: `Bearer ${secret}`,
       "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(args) });
-    if (!response.ok) throw new Error(`Perpl tick returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      const body: any = await response.json().catch(() => null);
+      const code = typeof body?.error === "string" ? body.error.slice(0, 120) : "callback_failed";
+      const detail = typeof body?.detail === "string" ? body.detail.slice(0, 120) : "";
+      throw new Error(`Perpl tick HTTP ${response.status}: ${code}${detail ? ` (${detail})` : ""}`);
+    }
     return await response.json();
   } catch (error) {
+    const reason = error instanceof Error ? error.message.slice(0, 180) : "callback_failed";
     const retry: boolean = await ctx.runMutation(internalApi.monadVenueWorker.scheduleRetry, {
-      runId: args.runId, tickId: args.tickId, delayMs: RETRY_MS,
+      runId: args.runId, tickId: args.tickId, delayMs: RETRY_MS, reason,
     });
-    return { retryScheduled: retry, error: error instanceof Error ? error.message.slice(0, 120) : "callback_failed" };
+    return { retryScheduled: retry, error: reason };
   }
 } });

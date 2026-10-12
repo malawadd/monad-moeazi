@@ -15,6 +15,8 @@ import type {PerplEvent, PerplOrder, PerplRunHistoryPage} from '../types/perpl';
 import type {MarketTradeSummary} from '../types/marketDirectory';
 
 type Snapshot = {owner: string; runId: string; page: PerplRunHistoryPage; summaries: MarketTradeSummary[]};
+const MATERIAL_OPTIMIZER_REASONS = new Set(['optimizer_open_position_recovery_seed_missing', 'optimizer_active_cycle_missing',
+  'perpl_direct_market_missing', 'perpl_direct_execution_disabled']);
 
 export function UserPerplHistoryScreen() {
   const navigation = useNavigation<any>();
@@ -22,7 +24,7 @@ export function UserPerplHistoryScreen() {
   const runId = typeof route.params?.runId === 'string' ? route.params.runId : '';
   const {ownerAddress} = useApp();
   const owner = ownerAddress?.toLowerCase() ?? '';
-  const {effectiveTheme} = usePresentation();
+  const {effectiveTheme, showAutonomousActivity} = usePresentation();
   const theme = userThemeTokens(effectiveTheme);
   const ownerRef = useRef(owner);
   const runRef = useRef(runId);
@@ -148,10 +150,15 @@ export function UserPerplHistoryScreen() {
           : <UserText theme={theme}>No position summaries have been returned for this run.</UserText>}
       </UserDisclosure>
       <UserText theme={theme} kind="title">Recorded activity</UserText>
-      {current.page.events.filter(event => !isStrategyTick(event)).length
-        ? current.page.events.filter(event => !isStrategyTick(event)).map((event, index) => <EventItem key={eventKey(event) ?? `event-${index}`} event={event} theme={theme} />)
+      {current.page.events.filter(event => !isStrategyTick(event) || isMaterialOptimizerState(event)).length
+        ? current.page.events.filter(event => !isStrategyTick(event) || isMaterialOptimizerState(event)).map((event, index) => <EventItem key={eventKey(event) ?? `event-${index}`} event={event} theme={theme} />)
         : current.page.events.length ? null : <UserCard theme={theme}><UserText theme={theme}>No events are recorded for this run yet.</UserText></UserCard>}
-      {current.page.events.some(isStrategyTick) ? <UserDisclosure label="Strategy checks"
+      {!showAutonomousActivity && current.page.events.some(isStrategyTick) ? <UserCard theme={theme}>
+        <UserText theme={theme} kind="title">Autonomous updates are hidden</UserText>
+        <UserText theme={theme}>Turn them on in Settings to see grouped strategy checks. Order receipts stay visible.</UserText>
+        <UserButton label="Autonomous activity settings" onPress={() => navigation.navigate('AccountSettings')} theme={theme} secondary />
+      </UserCard> : null}
+      {showAutonomousActivity && current.page.events.some(isStrategyTick) ? <UserDisclosure label="Strategy checks"
         value={String(current.page.events.filter(isStrategyTick).length)} expanded={checksExpanded}
         onPress={() => setChecksExpanded(value => !value)} theme={theme}>
         <UserText theme={theme}>Recorded strategy scans and policy checks. These entries do not imply that an order was proposed or filled.</UserText>
@@ -280,6 +287,11 @@ function eventTitle(kind: string) {
 function isStrategyTick(event: PerplEvent) {
   const kind = String(event.kind ?? event.type ?? '').toLowerCase();
   return kind.includes('optimizer') || kind.includes('scanner');
+}
+function isMaterialOptimizerState(event: PerplEvent) {
+  const kind = String(event.kind ?? event.type ?? '').toLowerCase();
+  const status = String(event.status ?? event.phase ?? '').toLowerCase();
+  return kind === 'perpl_direct_optimizer' && MATERIAL_OPTIMIZER_REASONS.has(status);
 }
 function summarizeStrategyTicks(events: PerplEvent[]) {
   const counts = new Map<string, number>();

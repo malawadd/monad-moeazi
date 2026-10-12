@@ -1,0 +1,23 @@
+.perpl-health-panel{margin-top:20px;padding:15px;border:2px solid var(--ink);background:#f4f7f1}
+.perpl-health-panel h3{margin:0;font:700 17px var(--display)}
+.perpl-health-subtitle{margin:18px 0 8px;font:700 13px var(--display)}
+.perpl-health-summary,.perpl-health-runs,.perpl-health-alerts{display:grid;gap:9px}
+.perpl-health-summary{grid-template-columns:repeat(auto-fit,minmax(155px,1fr));margin:10px 0}
+.perpl-health-metric,.perpl-health-service,.perpl-health-run,.perpl-health-alert{min-width:0;padding:11px;border:1.5px solid var(--ink);background:#fffefa;box-shadow:2px 2px 0 #1112}
+.perpl-health-metric strong{display:block;font:700 22px var(--display)}
+.perpl-health-metric span,.perpl-health-service small{display:block;color:var(--muted);font:9px/1.5 var(--mono);overflow-wrap:anywhere}
+.perpl-health-service{border-left:5px solid #278653}.perpl-health-service.down{border-left-color:var(--red)}
+.perpl-health-service strong{display:block;font-size:11px}.perpl-health-service small{margin-top:4px}
+.perpl-health-alert{display:grid;gap:4px;border-left:5px solid #d18b16}.perpl-health-alert.critical{border-left-color:var(--red);background:#fff3f0}.perpl-health-alert.info{border-left-color:#5284ad}
+.perpl-health-alert strong{font:700 12px var(--display)}.perpl-health-alert span,.perpl-health-run p{margin:0;color:#4e554d;font-size:10px;overflow-wrap:anywhere}
+.perpl-health-run h4{margin:0 0 8px;font:700 13px var(--display);overflow-wrap:anywhere}
+.perpl-health-run-head{display:flex;justify-content:space-between;gap:8px;align-items:start}
+.perpl-health-run-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px;margin:8px 0}
+.perpl-health-run-grid>div{padding:7px;border:1px solid var(--line);background:#f7f7f1}
+.perpl-health-run-grid small{display:block;color:var(--muted);font:8px var(--mono);text-transform:uppercase}
+.perpl-health-run-grid strong{display:block;margin-top:3px;font:10px/1.45 var(--mono);overflow-wrap:anywhere}
+.perpl-health-order{padding:8px;border-top:1px solid var(--line);font:9px/1.5 var(--mono);overflow-wrap:anywhere}
+.perpl-health-order:first-child{margin-top:5px}.perpl-health-tag{padding:3px 6px;border:1px solid var(--line);font:8px var(--mono);text-transform:uppercase}
+.perpl-health-cycle{display:grid;gap:5px;margin:8px 0;padding:9px;border:1px solid #d18b16;background:#fff8e9;font-size:10px;overflow-wrap:anywhere}
+.perpl-health-cycle small{color:var(--muted);font:9px/1.5 var(--mono)}
+@media(max-width:600px){.perpl-health-panel{padding:11px}.perpl-health-panel .panel-head{flex-wrap:wrap}}

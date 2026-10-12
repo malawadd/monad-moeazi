@@ -14,12 +14,12 @@ import {perplApi} from '../services/perplApi';
 import {findPerplVenue} from '../services/perplValidation';
 import {hasInitialAusdFunding, recordInitialAusdFunding} from '../services/userFundingMilestones';
 import {formatHomeAmount, isUserHomeOffline, nextUserHomeAction, ownerScopedPerplRun, readUserWalletAsset, requiredPerplFundingUnits, verifiedPerplBalanceUnits} from '../services/userHomeReadiness';
-import {buildUserActivityItems} from '../services/userActivityPresentation';
+import {buildUserActivityItems, userActivityRouteParams, userActivityTitle} from '../services/userActivityPresentation';
 
 export function UserHomeScreen() {
   const navigation = useNavigation<any>();
   const {ownerAddress} = useApp();
-  const {effectiveTheme} = usePresentation();
+  const {effectiveTheme, showAutonomousActivity} = usePresentation();
   const theme = userThemeTokens(effectiveTheme);
   const focused = useIsFocused();
   const {isConnected} = useNetInfo();
@@ -98,7 +98,9 @@ export function UserHomeScreen() {
     else navigation.navigate('Strategies');
   };
   const strategyTotal = currentRun && !currentStatusStale ? verifiedPerplBalanceUnits(currentRun, ownerAddress) : null;
-  const recentActivityItems = useMemo(() => buildUserActivityItems(activityQuery.data?.events ?? []), [activityQuery.data?.events]);
+  const recentActivityItems = useMemo(() => buildUserActivityItems(activityQuery.data?.events ?? [])
+    .filter(item => showAutonomousActivity || item.lifecycle?.family !== 'autonomous_updates'),
+    [activityQuery.data?.events, showAutonomousActivity]);
   const strategyObservedAt = currentRun?.positionSnapshot?.observedAt;
   const staleActivity = activityQuery.isError && Boolean(activityQuery.data);
   const exactAusd = ausd ? formatMonadUnits(ausd.units.toString(), 6) : null;
@@ -157,13 +159,11 @@ export function UserHomeScreen() {
             <Text style={[styles.activityLinkText, {color: theme.ink}]}>View all</Text></Pressable>
         </View>
         {recentActivityItems.slice(0, 2).map(item => <Pressable key={item.key} accessibilityRole="button"
-          accessibilityLabel={item.lifecycle ? `Open wallet swap, latest status ${item.event.status}, ${item.lifecycle.events.length} updates`
+          accessibilityLabel={item.lifecycle ? `Open ${userActivityTitle(item).toLowerCase()}, latest status ${item.event.status}, ${item.lifecycle.events.length} updates`
             : `Open ${item.event.title}, status ${item.event.status}`}
-          onPress={() => navigation.navigate('ActivityDetail', item.lifecycle
-            ? {itemId: item.event.id, operationId: item.lifecycle.operationId}
-            : {itemId: item.event.id, event: item.event})}
+          onPress={() => navigation.navigate('ActivityDetail', userActivityRouteParams(item))}
           style={[styles.activityRow, {borderColor: theme.border}]}>
-          <View style={styles.activityCopy}><Text numberOfLines={1} style={[styles.activityTitle, {color: theme.ink}]}>{item.lifecycle ? 'Wallet swap' : item.event.title}</Text>
+          <View style={styles.activityCopy}><Text numberOfLines={1} style={[styles.activityTitle, {color: theme.ink}]}>{userActivityTitle(item)}</Text>
             <Text numberOfLines={2} style={[styles.activitySummary, {color: theme.muted}]}>{item.event.summary}</Text></View>
           <Text style={[styles.activityStatus, {color: theme.ink}]}>{item.event.status}</Text>
           {item.event.status === 'finalized' && item.event.fundsMoved && item.event.amount && item.event.asset ?

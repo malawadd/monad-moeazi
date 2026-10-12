@@ -14,23 +14,26 @@ const spotMarket: MarketDirectoryRow = {kind: 'spot', venueId: 'uniswap_v4_testn
   capabilities: {marketData: true, walletSwap: true}};
 
 describe('Perpl market quote units', () => {
-  it('uses the exact live collateral symbol and exact market identity', () => {
+  it('uses the pinned AUSD convention immediately without venue-query timing', () => {
     expect(perplMarketQuoteUnit(market, venue)).toBe('AUSD per BTC-PERP');
+    expect(perplMarketQuoteUnit(market, null)).toBe('AUSD per BTC-PERP');
+    expect(perplMarketQuoteUnit(market, {...venue, venueId: 'perpl-testnet-v1'})).toBe('AUSD per BTC-PERP');
   });
 
-  it.each([
-    ['missing venue', null],
-    ['different venue', {...venue, venueId: 'perpl-testnet-v1'}],
-    ['wrong chain', {...venue, chainId: 1}],
-    ['wrong collateral symbol', {...venue, collateral: {...venue.collateral!, symbol: 'USDC'}}],
-    ['wrong collateral decimals', {...venue, collateral: {...venue.collateral!, decimals: 18}}],
-  ])('leaves units unknown when metadata is %s', (_reason, candidate) => {
-    expect(perplMarketQuoteUnit(market, candidate as PerplVenue | null)).toBeNull();
+  it('prefers explicit quote-currency metadata over the AUSD fallback', () => {
+    expect(perplMarketQuoteUnit({...market, quoteAsset: {id: 'USDC', symbol: 'USDC', address: `0x${'4'.repeat(40)}`, decimals: 6}}, null))
+      .toBe('USDC per BTC-PERP');
   });
 
-  it('leaves units unknown when the directory omits a valid price precision', () => {
-    expect(perplMarketQuoteUnit({...market, priceDecimals: undefined}, venue)).toBeNull();
-    expect(perplMarketQuoteUnit({...market, priceDecimals: 31}, venue)).toBeNull();
+  it('does not label Spot or unknown venues as AUSD Perpl markets', () => {
+    expect(perplMarketQuoteUnit({...market, kind: 'spot'}, null)).toBeNull();
+    expect(perplMarketQuoteUnit({...market, venueId: 'future-unknown-perp'}, null)).toBeNull();
+    expect(perplMarketQuoteUnit({...market, chainId: 1}, null)).toBeNull();
+  });
+
+  it('keeps the known unit stable even while price precision is unavailable', () => {
+    expect(perplMarketQuoteUnit({...market, priceDecimals: undefined}, null)).toBe('AUSD per BTC-PERP');
+    expect(perplMarketQuoteUnit({...market, priceDecimals: 31}, null)).toBe('AUSD per BTC-PERP');
   });
 });
 

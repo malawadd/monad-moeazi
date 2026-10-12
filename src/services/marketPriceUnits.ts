@@ -3,15 +3,18 @@ import type {PerplVenue} from '../types/perpl';
 
 const WALLET_SPOT_SUMMARY_VENUES = new Set(['uniswap_v4_testnet', 'moeazi_test_amm', 'moeazi_mock_pools_testnet']);
 
-/** Returns a Perpl quote unit only when the live venue context matches this exact market. */
-export function perplMarketQuoteUnit(market: MarketDirectoryRow, venue: PerplVenue | null | undefined): string | null {
-  if (market.kind !== 'perpl' || !venue || venue.venueId !== market.venueId
-      || venue.chainId !== 10143 || (market.chainId !== undefined && market.chainId !== 10143)) return null;
-  const collateral = venue.collateral;
-  if (!collateral || collateral.symbol !== 'AUSD' || collateral.decimals !== 6
-      || !market.symbol.trim() || !Number.isSafeInteger(market.priceDecimals)
-      || (market.priceDecimals ?? -1) < 0 || (market.priceDecimals ?? 31) > 30) return null;
-  return `${collateral.symbol} per ${market.symbol.trim()}`;
+const KNOWN_AUSD_PERPL_TESTNET_VENUES = new Set(['perpl-direct-testnet-v1', 'perpl-testnet-v1']);
+
+/** Resolve explicit market quote metadata first, then the known AUSD Testnet convention. */
+export function perplMarketQuoteUnit(market: MarketDirectoryRow, venue?: PerplVenue | null): string | null {
+  if (market.kind !== 'perpl' || (market.chainId !== undefined && market.chainId !== 10143)) return null;
+  const symbol = market.symbol.trim();
+  if (!symbol || !/^[a-z0-9._-]{1,32}$/i.test(symbol)) return null;
+  const explicitQuote = market.quoteAsset?.symbol.trim();
+  if (explicitQuote && /^[a-z0-9._-]{1,16}$/i.test(explicitQuote)) return `${explicitQuote} per ${symbol}`;
+  if (venue && venue.venueId === market.venueId && venue.chainId === 10143
+      && venue.collateral?.symbol === 'AUSD' && venue.collateral.decimals === 6) return `AUSD per ${symbol}`;
+  return KNOWN_AUSD_PERPL_TESTNET_VENUES.has(market.venueId) ? `AUSD per ${symbol}` : null;
 }
 
 export type WalletSpotSummaryUnits = {priceDecimals: number; sizeDecimals: number; quoteDecimals: number};

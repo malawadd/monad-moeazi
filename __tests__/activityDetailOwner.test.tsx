@@ -5,7 +5,7 @@ import {Text} from 'react-native';
 let mockOwner = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const mockFetch = jest.fn();
 const mockNavigation = {goBack: jest.fn(), navigate: jest.fn()};
-let mockRoute: {params: {itemId: string; event?: unknown; operationId?: string}; path?: string} = {
+let mockRoute: {params: Record<string, any>; path?: string} = {
   params: {itemId: 'event-1', event: {id: 'event-1', title: 'Untrusted route event', summary: 'must not render'}},
 };
 
@@ -108,5 +108,91 @@ test('grouped operation lookup follows all older pages and retains the selected 
   const rendered = text(renderer);
   expect(rendered.indexOf('prepared · wallet swap')).toBeLessThan(rendered.indexOf('authorized · wallet swap'));
   expect(rendered.indexOf('authorized · wallet swap')).toBeLessThan(rendered.indexOf('finalized · wallet swap'));
+  await act(async () => renderer.unmount());
+});
+
+test('manual Perpl detail includes its prepared and submitted stages across pages without another operation', async () => {
+  const operationId = 'aa58b552-cc08-4a04-8553-36d663c031cd';
+  const otherOperationId = '11223344-5566-7788-99aa-bbccddeeff00';
+  const venueId = 'perpl-direct-testnet-v1';
+  const selectedId = `manual-perpl:${operationId}:finalized`;
+  const make = (id: string, kind: string, status: string, summary: string, occurredAt: string) => ({id, kind, status, summary,
+    title: summary, occurredAt, venueId, fundsMoved: status === 'finalized'});
+  mockRoute = {params: {itemId: selectedId, manualPerplOperationId: operationId}};
+  mockFetch.mockReset()
+    .mockResolvedValueOnce({events: [make(selectedId, 'manual_perpl_finalized', 'finalized', 'Selected order finalized', '2026-10-12T12:00:02Z')],
+      nextCursor: 'manual-older-1', hasMore: true})
+    .mockResolvedValueOnce({events: [make(`manual-perpl:${otherOperationId}:finalized`, 'manual_perpl_finalized', 'finalized',
+      'Different account operation', '2026-10-12T12:00:03Z')], nextCursor: 'manual-older-2', hasMore: true})
+    .mockResolvedValueOnce({events: [make(`manual-perpl:${operationId}:prepared`, 'manual_perpl_prepared', 'prepared',
+      'Selected order prepared', '2026-10-12T12:00:00Z'), make(`manual-perpl:${operationId}:submitted`,
+      'manual_perpl_submitted', 'submitted', 'Selected order submitted', '2026-10-12T12:00:01Z')], nextCursor: null, hasMore: false});
+
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = ReactTestRenderer.create(<ActivityDetailScreen />); await flush(); });
+  expect(mockFetch.mock.calls).toEqual([[ownerA, null], [ownerA, 'manual-older-1'], [ownerA, 'manual-older-2']]);
+  const rendered = text(renderer);
+  expect(rendered).toContain('Operation timeline');
+  expect(rendered.indexOf('prepared · manual perpl prepared')).toBeLessThan(rendered.indexOf('submitted · manual perpl submitted'));
+  expect(rendered.indexOf('submitted · manual perpl submitted')).toBeLessThan(rendered.indexOf('finalized · manual perpl finalized'));
+  expect(rendered).not.toContain('Different account operation');
+  await act(async () => renderer.unmount());
+});
+
+test('autonomous Perpl detail follows one request ID across pages, not another order in the same run', async () => {
+  const runId = '11223344-5566-7788-99aa-bbccddeeff00';
+  const venueId = 'perpl-direct-testnet-v1';
+  const selectedId = `${venueId}:${runId}:order:41:finalized`;
+  const make = (requestId: number, status: string, summary: string, occurredAt: string) => ({
+    id: `${venueId}:${runId}:order:${requestId}:${status}`, kind: `perpl_order_${status}`, status, summary, title: summary,
+    occurredAt, venueId, fundsMoved: status === 'finalized',
+    details: [{label: 'requestId', value: String(requestId)}],
+  });
+  mockRoute = {params: {itemId: selectedId, perplOrder: {venueId, runId, requestId: 41}}};
+  mockFetch.mockReset()
+    .mockResolvedValueOnce({events: [make(41, 'finalized', 'Request 41 finalized', '2026-10-12T12:00:02Z')],
+      nextCursor: 'order-older-1', hasMore: true})
+    .mockResolvedValueOnce({events: [make(42, 'finalized', 'Request 42 finalized', '2026-10-12T12:00:03Z')],
+      nextCursor: 'order-older-2', hasMore: true})
+    .mockResolvedValueOnce({events: [make(41, 'prepared', 'Request 41 prepared', '2026-10-12T12:00:00Z'),
+      make(41, 'submitted', 'Request 41 submitted', '2026-10-12T12:00:01Z')], nextCursor: null, hasMore: false});
+
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = ReactTestRenderer.create(<ActivityDetailScreen />); await flush(); });
+  expect(mockFetch.mock.calls).toEqual([[ownerA, null], [ownerA, 'order-older-1'], [ownerA, 'order-older-2']]);
+  const rendered = text(renderer);
+  expect(rendered).toContain('Request 41 prepared');
+  expect(rendered).toContain('Request 41 submitted');
+  expect(rendered).toContain('Request 41 finalized');
+  expect(rendered).not.toContain('Request 42 finalized');
+  await act(async () => renderer.unmount());
+});
+
+test('autonomous update detail includes only the selected venue and run across pages', async () => {
+  const runId = '11223344-5566-7788-99aa-bbccddeeff00';
+  const otherRun = 'aa223344-5566-7788-99aa-bbccddeeff00';
+  const venueId = 'perpl-direct-testnet-v1';
+  const make = (idRun: string, kind: string, status: string, summary: string, time: number) => ({
+    id: `${venueId}:${idRun}:optimizer:${time}`, kind, status, summary, title: summary,
+    occurredAt: `2026-10-12T12:00:0${time}Z`, venueId, fundsMoved: false,
+  });
+  const selectedId = `${venueId}:${runId}:optimizer:3`;
+  mockRoute = {params: {itemId: selectedId, autonomousUpdates: {venueId, runId}}};
+  mockFetch.mockReset()
+    .mockResolvedValueOnce({events: [make(runId, 'perpl_optimizer_cycle_completed', 'completed', 'Selected run result', 3)],
+      nextCursor: 'updates-older-1', hasMore: true})
+    .mockResolvedValueOnce({events: [make(otherRun, 'perpl_optimizer_scanner', 'observed', 'Different run update', 2)],
+      nextCursor: 'updates-older-2', hasMore: true})
+    .mockResolvedValueOnce({events: [make(runId, 'perpl_direct_optimizer', 'optimizer_market_scan_not_due', 'Selected run scan', 1)],
+      nextCursor: null, hasMore: false});
+
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = ReactTestRenderer.create(<ActivityDetailScreen />); await flush(); });
+  expect(mockFetch.mock.calls).toEqual([[ownerA, null], [ownerA, 'updates-older-1'], [ownerA, 'updates-older-2']]);
+  const rendered = text(renderer);
+  expect(rendered).toContain('Autonomous updates');
+  expect(rendered).toContain('Selected run scan');
+  expect(rendered).toContain('Selected run result');
+  expect(rendered).not.toContain('Different run update');
   await act(async () => renderer.unmount());
 });

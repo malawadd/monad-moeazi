@@ -3,8 +3,9 @@ import type {MonadActivityEvent} from '../types/monad';
 import type {UserThemeTokens} from '../theme/userThemes';
 import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
 
-export function UserActivityDetailView({theme, event, timeline = [], loading, error, interrupted = false, onBack, onRetry}: {
-  theme: UserThemeTokens; event: MonadActivityEvent | null; timeline?: MonadActivityEvent[]; loading: boolean; error: string; interrupted?: boolean; onBack(): void; onRetry(): void;
+export function UserActivityDetailView({theme, event, timeline = [], lifecycleTitle, loading, error, interrupted = false, onBack, onRetry}: {
+  theme: UserThemeTokens; event: MonadActivityEvent | null; timeline?: MonadActivityEvent[]; lifecycleTitle?: string;
+  loading: boolean; error: string; interrupted?: boolean; onBack(): void; onRetry(): void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   return <UserPage theme={theme}>
@@ -15,7 +16,8 @@ export function UserActivityDetailView({theme, event, timeline = [], loading, er
       <UserButton label="Refresh activity" onPress={onRetry} theme={theme} secondary /></UserCard> : null}
     {!loading && !error && !event ? <UserHeading theme={theme} kicker="ACCOUNT · ACTIVITY" title="Activity not found" copy="This event was not returned for the signed-in wallet." /> : null}
     {!loading && !error && event ? <>
-      <UserHeading theme={theme} kicker="ACCOUNT · ACTIVITY" title={event.title} copy={event.summary} />
+      <UserHeading theme={theme} kicker="ACCOUNT · ACTIVITY" title={lifecycleTitle ?? event.title}
+        copy={lifecycleTitle ? 'Grouped strategy checks and optimizer updates for this run.' : event.summary} />
       <UserCard theme={theme} texture>
         <UserValueRow theme={theme} label="Status" value={status(event)} />
         <UserValueRow theme={theme} label="When" value={date(event.occurredAt)} />

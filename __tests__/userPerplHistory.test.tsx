@@ -17,7 +17,7 @@ jest.mock('@react-navigation/native', () => {
 jest.mock('../src/services/perplApi', () => ({perplApi: {runHistory: (...args: unknown[]) => mockRunHistory(...args)}}));
 jest.mock('../src/services/marketDirectoryApi', () => ({marketDirectoryApi: {trades: (...args: unknown[]) => mockTrades(...args)}}));
 jest.mock('../src/state/AppContext', () => ({useApp: () => ({ownerAddress: mockOwner})}));
-jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: mockMode, effectiveTheme: 'original'})}));
+jest.mock('../src/state/PresentationContext', () => ({usePresentation: () => ({presentationMode: mockMode, effectiveTheme: 'original', showAutonomousActivity: true})}));
 
 import {PerplHistoryScreen} from '../src/screens/PerplHistoryScreen';
 

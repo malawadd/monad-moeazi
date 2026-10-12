@@ -3,7 +3,7 @@ import {act, create} from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {PresentationProvider, usePresentation} from '../src/state/PresentationContext';
 import {DEFAULT_PRESENTATION_PREFERENCES, loadPresentationPreferences, PRESENTATION_MODE_KEY,
-  savePresentationMode, USER_THEME_KEY} from '../src/services/presentationPreferences';
+  savePresentationMode, USER_AUTONOMOUS_ACTIVITY_KEY, USER_THEME_KEY} from '../src/services/presentationPreferences';
 import {beginMeraSigningSession, resetSigningGuardForTests} from '../src/services/signingGuard';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -23,7 +23,16 @@ test('missing and invalid saved values normalize to user/original defaults', asy
   expect(await loadPresentationPreferences()).toEqual(DEFAULT_PRESENTATION_PREFERENCES);
   await AsyncStorage.setItem(PRESENTATION_MODE_KEY, 'unexpected');
   await AsyncStorage.setItem(USER_THEME_KEY, 'not-a-theme');
-  expect(await loadPresentationPreferences()).toEqual({mode: 'user', theme: 'original'});
+  expect(await loadPresentationPreferences()).toEqual(DEFAULT_PRESENTATION_PREFERENCES);
+});
+
+test('grouped autonomous activity is enabled by default and its preference survives reload', async () => {
+  expect(await AsyncStorage.getItem(USER_AUTONOMOUS_ACTIVITY_KEY)).toBeNull();
+  expect((await loadPresentationPreferences()).showAutonomousActivity).toBe(true);
+  await AsyncStorage.setItem(USER_AUTONOMOUS_ACTIVITY_KEY, 'false');
+  expect((await loadPresentationPreferences()).showAutonomousActivity).toBe(false);
+  await AsyncStorage.setItem(USER_AUTONOMOUS_ACTIVITY_KEY, 'true');
+  expect((await loadPresentationPreferences()).showAutonomousActivity).toBe(true);
 });
 
 test('mode change persists before committing and holds the guard through the commit', async () => {
@@ -54,5 +63,25 @@ test('user theme changes immediately in memory even when storage rejects', async
   rejectWrite?.(new Error('storage unavailable'));
   await expect(update).resolves.toBe(false);
   expect(state?.effectiveTheme).toBe('blueprint');
+  act(() => { renderer!.unmount(); });
+});
+
+test('autonomous activity toggle applies immediately and persists the next launch preference', async () => {
+  let state: ReturnType<typeof usePresentation> | undefined;
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(<PresentationProvider><PreferenceProbe onChange={value => { state = value; }} /></PresentationProvider>);
+  });
+  expect(state?.showAutonomousActivity).toBe(true);
+  let saved: boolean | undefined;
+  await act(async () => { saved = await state?.setShowAutonomousActivity(false); });
+  expect(saved).toBe(true);
+  expect(state?.showAutonomousActivity).toBe(false);
+  expect(await AsyncStorage.getItem(USER_AUTONOMOUS_ACTIVITY_KEY)).toBe('false');
+
+  jest.spyOn(AsyncStorage, 'setItem').mockImplementationOnce(() => Promise.reject(new Error('storage unavailable')));
+  await act(async () => { saved = await state?.setShowAutonomousActivity(true); });
+  expect(saved).toBe(false);
+  expect(state?.showAutonomousActivity).toBe(true);
   act(() => { renderer!.unmount(); });
 });

@@ -1,4 +1,4 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
 import {Card, DataRow, FlowScreen, LoadingBlock, Notice, PageHeader} from '../components/Ui';
@@ -9,6 +9,7 @@ import {screenStyles as s} from '../theme/screenStyles';
 import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
 import {UserActivityDetailView} from './UserActivityDetailView';
+import {activityLifecycleReferenceFromParams, eventMatchesLifecycle, lifecycleEventPrefix} from '../services/userActivityPresentation';
 
 type DetailState = {owner: string; loading: boolean; error: string; interrupted: boolean;
   event: MonadActivityEvent | null; timeline: MonadActivityEvent[]};
@@ -24,9 +25,22 @@ export function ActivityDetailScreen() {
   ownerRef.current = ownerKey;
   const generation = useRef(0);
   const itemId = route.params?.itemId;
-  const operationId = typeof route.params?.operationId === 'string' && /^[a-z0-9-]{1,80}$/i.test(route.params.operationId)
-    ? route.params.operationId : null;
-  const operationPrefix = operationId ? `operation:${operationId}:` : null;
+  const operationIdParam = route.params?.operationId;
+  const manualOperationIdParam = route.params?.manualPerplOperationId;
+  const perplVenueParam = route.params?.perplOrder?.venueId;
+  const perplRunParam = route.params?.perplOrder?.runId;
+  const perplRequestParam = route.params?.perplOrder?.requestId;
+  const autonomousVenueParam = route.params?.autonomousUpdates?.venueId;
+  const autonomousRunParam = route.params?.autonomousUpdates?.runId;
+  const lifecycleReference = useMemo(() => activityLifecycleReferenceFromParams({
+    operationId: operationIdParam, manualPerplOperationId: manualOperationIdParam,
+    perplOrder: typeof perplVenueParam === 'string' && typeof perplRunParam === 'string'
+      ? {venueId: perplVenueParam, runId: perplRunParam, requestId: perplRequestParam} : undefined,
+    autonomousUpdates: typeof autonomousVenueParam === 'string' && typeof autonomousRunParam === 'string'
+      ? {venueId: autonomousVenueParam, runId: autonomousRunParam} : undefined,
+  }), [operationIdParam, manualOperationIdParam, perplVenueParam, perplRunParam, perplRequestParam,
+    autonomousVenueParam, autonomousRunParam]);
+  const lifecyclePrefix = useMemo(() => lifecycleReference ? lifecycleEventPrefix(lifecycleReference) : null, [lifecycleReference]);
   const linkedActivityPath = typeof route.path === 'string' && route.path.startsWith('activity/');
   const [state, setState] = useState<DetailState>({owner: '', loading: true, error: '', interrupted: false, event: null, timeline: []});
 
@@ -37,28 +51,29 @@ export function ActivityDetailScreen() {
     try {
       if (!ownerAddress) throw new Error('Sign in to view account activity.');
       if (typeof itemId !== 'string' || !itemId) throw new Error('This activity reference is incomplete.');
-      if (operationPrefix && !itemId.startsWith(operationPrefix)) throw new Error('This operation timeline reference is invalid.');
+      if (lifecyclePrefix && !itemId.startsWith(lifecyclePrefix)) throw new Error('This activity timeline reference is invalid.');
       // Route params are untrusted navigation data. Always resolve this ID through
       // the authenticated owner's activity pages before displaying any facts.
       let page = await fetchMonadActivityPage(ownerAddress, null);
-      let match = page.events.find(item => item.id === itemId) ?? null;
+      const isExpected = (item: MonadActivityEvent) => !lifecycleReference || eventMatchesLifecycle(item, lifecycleReference);
+      let match = page.events.find(item => item.id === itemId && isExpected(item)) ?? null;
       const timelineById = new Map<string, MonadActivityEvent>();
-      if (operationPrefix) {
-        for (const item of page.events) if (item.id.startsWith(operationPrefix)) timelineById.set(item.id, item);
+      if (lifecycleReference) {
+        for (const item of page.events) if (eventMatchesLifecycle(item, lifecycleReference)) timelineById.set(item.id, item);
       }
       const seenCursors = new Set<string>();
-      // An operation ID identifies a multi-event lifecycle. Its older stages can
-      // span any number of activity pages, so resolve the complete owner feed
+      // A lifecycle ID identifies one operation/order, not a whole Perpl run.
+      // Its older stages can span pages, so resolve the authenticated feed
       // before showing a grouped timeline. A single-event lookup can stop as soon
       // as its exact event is found.
-      while ((operationPrefix || !match) && page.hasMore && page.nextCursor
+      while ((lifecycleReference || !match) && page.hasMore && page.nextCursor
           && !seenCursors.has(page.nextCursor) && current === generation.current && ownerRef.current === requestedOwner) {
         const nextCursor = page.nextCursor;
         seenCursors.add(nextCursor);
         page = await fetchMonadActivityPage(ownerAddress, nextCursor);
-        match ??= page.events.find(item => item.id === itemId) ?? null;
-        if (operationPrefix) {
-          for (const item of page.events) if (item.id.startsWith(operationPrefix)) timelineById.set(item.id, item);
+        match ??= page.events.find(item => item.id === itemId && isExpected(item)) ?? null;
+        if (lifecycleReference) {
+          for (const item of page.events) if (eventMatchesLifecycle(item, lifecycleReference)) timelineById.set(item.id, item);
         }
       }
       if (current !== generation.current || ownerRef.current !== requestedOwner) return;
@@ -73,7 +88,7 @@ export function ActivityDetailScreen() {
           interrupted: isRequestCancellation(reason), event: null, timeline: []});
       }
     }
-  }, [itemId, operationPrefix, ownerAddress, ownerKey]);
+  }, [itemId, lifecyclePrefix, lifecycleReference, ownerAddress, ownerKey]);
 
   useFocusEffect(useCallback(() => {
     void refresh();
@@ -84,8 +99,10 @@ export function ActivityDetailScreen() {
   const event = stateMatchesOwner ? state.event : null;
   const timeline = stateMatchesOwner ? state.timeline : [];
   const error = stateMatchesOwner ? state.error : '';
+  const lifecycleTitle = lifecycleReference?.family === 'autonomous_updates' ? 'Autonomous updates' : undefined;
   if (presentationMode === 'user') return <UserActivityDetailView theme={theme} event={event}
     timeline={timeline}
+    lifecycleTitle={lifecycleTitle}
     loading={!stateMatchesOwner || state.loading} error={error} interrupted={stateMatchesOwner && state.interrupted}
     onBack={() => linkedActivityPath ? navigation.navigate('Main', {screen: 'Activity'}) : navigation.goBack()}
     onRetry={() => { void refresh(); }} />;

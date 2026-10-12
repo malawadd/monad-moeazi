@@ -104,12 +104,18 @@ received a browser/native visual pass.
 
 ## Prototype and hub captures
 
-Captured in Chrome on 11 October 2026. These images record local design artifacts
-with simulated data, not the production app or participant sessions.
+The original prototype and hub captures were recorded on 11 October 2026. The
+README gallery captures were recorded from the current local `prototype.html`
+on 12 October 2026 at a 393 × 852 CSS-pixel viewport. They show only the phone
+preview, with the reviewer panel outside the captured area. All prototype values
+are simulated fixtures; none of these images shows live wallet or market data.
 
 | Image | View | Evidence limit |
 |---|---|---|
 | [prototype-home.png](prototype-home.png) | Clickable prototype Home at 393 × 852 CSS px. | One simulated Home state; not a complete responsive or accessibility audit. |
+| [readme-prototype-home.png](readme-prototype-home.png) | Funded Home design preview for the root README. | Simulated test AUSD balance; no live wallet or service connection. |
+| [readme-prototype-markets.png](readme-prototype-markets.png) | Markets design preview for the root README. | Fixture quotes and watchlist; no live market connection. |
+| [readme-prototype-strategies.png](readme-prototype-strategies.png) | Strategies design preview for the root README. | Prototype cards and stats only; no live strategy data. |
 | [hub-preview.png](hub-preview.png) | Research hub at 1263 × 896 CSS px. | One desktop browser view; not evidence of mobile layout. |
 
 Prototype flow checks, smaller viewport samples and limitations are in the

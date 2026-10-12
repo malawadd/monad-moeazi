@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 284" role="img" aria-labelledby="title description">
+  <title id="title">Five Moeazi appearances</title>
+  <desc id="description">Palette previews for Original, After Hours, Citrus Press, Blueprint, and Candy Riot. Colors match the mobile theme tokens.</desc>
+  <rect width="1200" height="284" fill="#FFFDF5"/>
+  <text x="20" y="28" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="800" letter-spacing="2">FIVE WAYS TO SEE MOEAZI</text>
+
+  <g transform="translate(20 43)" font-family="Arial, Helvetica, sans-serif">
+    <rect x="5" y="5" width="216" height="218" fill="#111111"/>
+    <rect width="216" height="218" fill="#FFFDF5" stroke="#111111" stroke-width="2"/>
+    <text x="14" y="25" fill="#111111" font-size="11" font-weight="800" letter-spacing="2">MOEAZI</text>
+    <text x="14" y="53" fill="#111111" font-size="20" font-weight="800">Original</text>
+    <text x="14" y="72" fill="#54545A" font-size="11">Paper · ink · bright accents</text>
+    <rect x="14" y="88" width="188" height="73" fill="#FFFFFF" stroke="#111111" stroke-width="2"/>
+    <path d="M26 139 L57 130 L88 137 L119 111 L150 118 L189 103" fill="none" stroke="#111111" stroke-width="3"/>
+    <circle cx="189" cy="103" r="5" fill="#FFD23F" stroke="#111111" stroke-width="2"/>
+    <rect x="14" y="177" width="110" height="26" fill="#FFD23F" stroke="#111111" stroke-width="2"/>
+    <rect x="135" y="177" width="20" height="26" fill="#FF7BA5" stroke="#111111"/>
+    <rect x="159" y="177" width="20" height="26" fill="#74B9FF" stroke="#111111"/>
+    <rect x="183" y="177" width="19" height="26" fill="#88D498" stroke="#111111"/>
+  </g>
+
+  <g transform="translate(258 43)" font-family="Arial, Helvetica, sans-serif">
+    <rect x="5" y="5" width="216" height="218" fill="#000000"/>
+    <rect width="216" height="218" fill="#151519" stroke="#D0CCC3" stroke-width="2"/>
+    <path d="M0 44 H216 M0 88 H216 M0 132 H216 M0 176 H216 M43 0 V218 M86 0 V218 M129 0 V218 M172 0 V218" fill="none" stroke="#D9FF43" opacity=".08"/>
+    <text x="14" y="25" fill="#F5F3EA" font-size="11" font-weight="800" letter-spacing="2">MOEAZI</text>
+    <text x="14" y="53" fill="#F5F3EA" font-size="20" font-weight="800">After Hours</text>
+    <text x="14" y="72" fill="#B8B5C0" font-size="11">Charcoal · lime · violet</text>
+    <rect x="14" y="88" width="188" height="73" fill="#222229" stroke="#D0CCC3" stroke-width="2"/>
+    <path d="M26 139 L57 130 L88 137 L119 111 L150 118 L189 103" fill="none" stroke="#D9FF43" stroke-width="3"/>
+    <circle cx="189" cy="103" r="5" fill="#A995FF" stroke="#F5F3EA" stroke-width="2"/>
+    <rect x="14" y="177" width="110" height="26" fill="#D9FF43" stroke="#D0CCC3" stroke-width="2"/>
+    <rect x="135" y="177" width="20" height="26" fill="#A995FF" stroke="#D0CCC3"/>
+    <rect x="159" y="177" width="20" height="26" fill="#9EB8C8" stroke="#D0CCC3"/>
+    <rect x="183" y="177" width="19" height="26" fill="#403854" stroke="#D0CCC3"/>
+  </g>
+
+  <g transform="translate(496 43)" font-family="Arial, Helvetica, sans-serif">
+    <rect x="5" y="5" width="216" height="218" fill="#34231A"/>
+    <rect width="216" height="218" fill="#FFF8EC" stroke="#533829" stroke-width="2"/>
+    <circle cx="186" cy="19" r="2" fill="#533829" opacity=".4"/><circle cx="197" cy="19" r="2" fill="#533829" opacity=".4"/>
+    <text x="14" y="25" fill="#34231A" font-size="11" font-weight="800" letter-spacing="2">MOEAZI</text>
+    <text x="14" y="53" fill="#34231A" font-size="20" font-weight="800">Citrus Press</text>
+    <text x="14" y="72" fill="#6D594D" font-size="11">Ivory · orange · lemon</text>
+    <rect x="14" y="88" width="188" height="73" fill="#FFFDF8" stroke="#533829" stroke-width="2"/>
+    <path d="M26 139 L57 130 L88 137 L119 111 L150 118 L189 103" fill="none" stroke="#FF843D" stroke-width="3"/>
+    <circle cx="189" cy="103" r="5" fill="#FFE45B" stroke="#533829" stroke-width="2"/>
+    <rect x="14" y="177" width="110" height="26" fill="#FFE45B" stroke="#533829" stroke-width="2"/>
+    <rect x="135" y="177" width="20" height="26" fill="#FF843D" stroke="#533829"/>
+    <rect x="159" y="177" width="20" height="26" fill="#B4D09E" stroke="#533829"/>
+    <rect x="183" y="177" width="19" height="26" fill="#E5C5AD" stroke="#533829"/>
+  </g>
+
+  <g transform="translate(734 43)" font-family="Arial, Helvetica, sans-serif">
+    <rect x="5" y="5" width="216" height="218" fill="#2448D8"/>
+    <rect width="216" height="218" fill="#EAF4FF" stroke="#172D5B" stroke-width="2"/>
+    <path d="M0 44 H216 M0 88 H216 M0 132 H216 M0 176 H216 M43 0 V218 M86 0 V218 M129 0 V218 M172 0 V218" fill="none" stroke="#2448D8" opacity=".09"/>
+    <text x="14" y="25" fill="#172D5B" font-size="11" font-weight="800" letter-spacing="2">MOEAZI</text>
+    <text x="14" y="53" fill="#172D5B" font-size="20" font-weight="800">Blueprint</text>
+    <text x="14" y="72" fill="#50658C" font-size="11">Pale blue · navy · cobalt</text>
+    <rect x="14" y="88" width="188" height="73" fill="#FFFFFF" stroke="#172D5B" stroke-width="2"/>
+    <path d="M26 139 L57 130 L88 137 L119 111 L150 118 L189 103" fill="none" stroke="#2448D8" stroke-width="3"/>
+    <circle cx="189" cy="103" r="5" fill="#EFC84F" stroke="#172D5B" stroke-width="2"/>
+    <rect x="14" y="177" width="110" height="26" fill="#2448D8" stroke="#172D5B" stroke-width="2"/>
+    <rect x="135" y="177" width="20" height="26" fill="#EFC84F" stroke="#172D5B"/>
+    <rect x="159" y="177" width="20" height="26" fill="#BFD4F3" stroke="#172D5B"/>
+    <rect x="183" y="177" width="19" height="26" fill="#B8DCCC" stroke="#172D5B"/>
+  </g>
+
+  <g transform="translate(972 43)" font-family="Arial, Helvetica, sans-serif">
+    <rect x="5" y="5" width="216" height="218" fill="#4C214A"/>
+    <rect width="216" height="218" fill="#FFF0F7" stroke="#683461" stroke-width="2"/>
+    <rect x="167" y="0" width="24" height="22" fill="#C4B0FF" opacity=".3"/><rect x="191" y="22" width="24" height="22" fill="#C4B0FF" opacity=".3"/>
+    <text x="14" y="25" fill="#4C214A" font-size="11" font-weight="800" letter-spacing="2">MOEAZI</text>
+    <text x="14" y="53" fill="#4C214A" font-size="20" font-weight="800">Candy Riot</text>
+    <text x="14" y="72" fill="#75526F" font-size="11">Pink · plum · lavender</text>
+    <rect x="14" y="88" width="188" height="73" fill="#FFFAFD" stroke="#683461" stroke-width="2"/>
+    <path d="M26 139 L57 130 L88 137 L119 111 L150 118 L189 103" fill="none" stroke="#683461" stroke-width="3"/>
+    <circle cx="189" cy="103" r="5" fill="#FF82BC" stroke="#683461" stroke-width="2"/>
+    <rect x="14" y="177" width="110" height="26" fill="#FF82BC" stroke="#683461" stroke-width="2"/>
+    <rect x="135" y="177" width="20" height="26" fill="#C4B0FF" stroke="#683461"/>
+    <rect x="159" y="177" width="20" height="26" fill="#B7E2CF" stroke="#683461"/>
+    <rect x="183" y="177" width="19" height="26" fill="#F0B267" stroke="#683461"/>
+  </g>
+</svg>

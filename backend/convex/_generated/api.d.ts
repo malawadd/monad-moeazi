@@ -124,6 +124,7 @@ import type * as monadTradeSummaryLifecycle from "../monadTradeSummaryLifecycle.
 import type * as monadV4PoolIndex from "../monadV4PoolIndex.js";
 import type * as monadVenueAccounting from "../monadVenueAccounting.js";
 import type * as monadVenueActions from "../monadVenueActions.js";
+import type * as monadVenueEntryResumeRules from "../monadVenueEntryResumeRules.js";
 import type * as monadVenueHealth from "../monadVenueHealth.js";
 import type * as monadVenueOptimizer from "../monadVenueOptimizer.js";
 import type * as monadVenueOrders from "../monadVenueOrders.js";
@@ -285,6 +286,7 @@ declare const fullApi: ApiFromModules<{
   monadV4PoolIndex: typeof monadV4PoolIndex;
   monadVenueAccounting: typeof monadVenueAccounting;
   monadVenueActions: typeof monadVenueActions;
+  monadVenueEntryResumeRules: typeof monadVenueEntryResumeRules;
   monadVenueHealth: typeof monadVenueHealth;
   monadVenueOptimizer: typeof monadVenueOptimizer;
   monadVenueOrders: typeof monadVenueOrders;

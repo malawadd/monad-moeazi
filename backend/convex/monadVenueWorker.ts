@@ -3,6 +3,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { appendMonadActivity, requireMonadOperator } from "./monadHelpers";
 import { venueDispatchTickArgs, venueWatchdogDecision } from "./monadVenueWatchdogRules";
+import { perplEntryResumeEligibility } from "./monadVenueEntryResumeRules";
 
 const internalApi: any = internal;
 async function findRun(ctx: any, runId: string) {
@@ -37,6 +38,20 @@ export const pauseEntries = mutation({ args: { runId: v.string(), reason: v.stri
   await event(ctx, row, { eventId: "entries_paused", kind: "perpl_optimizer_safety",
     status: "paused", summary: "New autonomous entries paused after a worker safety incident; exits and settlement remain enabled." });
   return { paused: true, alreadyPaused: false };
+} });
+
+export const resumeEntries = mutation({ args: { runId: v.string(), expectedPauseAt: v.number() }, handler: async (ctx, args) => {
+  await requireMonadOperator(ctx); const row = await findRun(ctx, args.runId);
+  if (!row) return { resumed: false, reason: "run_not_found" };
+  const orders = await ctx.db.query("monadVenueOrders").withIndex("by_runId_createdAt", (q: any) => q.eq("runId", row.runId)).collect();
+  const now = Date.now(); const eligibility = perplEntryResumeEligibility(row, orders, now, args.expectedPauseAt);
+  if (!eligibility.eligible) return { resumed: false, reason: eligibility.reason };
+  const nextTickId = row.nextTickId;
+  await ctx.db.patch(row._id, { entryPausedAt: undefined, entryPauseReason: undefined, updatedAt: now });
+  await event(ctx, row, { eventId: `entries_resumed:${args.expectedPauseAt}:${nextTickId}`, kind: "perpl_optimizer_safety",
+    status: "resumed", summary: "New autonomous entries resumed after a healthy worker tick and flat account check.",
+    timestamp: now, data: { expectedPauseAt: args.expectedPauseAt, nextTickId } });
+  return { resumed: true, runId: row.runId, nextTickId };
 } });
 
 export const claimTick = mutation({ args: { runId: v.string(), tickId: v.string(), holderId: v.string() }, handler: async (ctx, args) => {

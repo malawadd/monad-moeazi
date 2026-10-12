@@ -21,6 +21,14 @@ realized result, including Perpl fees and funding. Operator gas was
 paused with reason `stalled_tick_recovery`; its existing mandate and settlement
 path remain intact.
 
+Later on 12 October, the operator resumed entries after a fresh finalized
+account read at block `70302217` showed 99.240265 AUSD, no position, and no
+open orders. Both persisted orders were finalized, the worker had a successful
+post-pause tick, all five required gates were on, and the health page had no
+critical alerts. The resume cleared only the entry pause; it did not place a
+trade. Tick 59 completed afterward with the normal
+`optimizer_market_scan_not_due` phase and no health alerts.
+
 ## Controls
 
 - Worker dispatch now sends only the action's declared `runId` and `tickId`.
@@ -38,6 +46,13 @@ path remain intact.
   worker and position-check age, unresolved orders, market observations,
   settlement status, readiness, gates, and visible alerts. Its Perpl panel is
   read-only and refreshes while the console is open.
+- `monadVenueWorker.resumeEntries` is an operator-only, compare-and-swap
+  recovery action. It requires the original pause timestamp, an active and
+  unexpired optimizer with enough time for a normal hold, a fresh successful
+  post-pause tick, no worker error or active lease, a valid queued next tick,
+  flat persisted account state, and terminal persisted orders. The operator
+  must separately verify a fresh finalized onchain account and service/gate
+  health before invoking it. Resuming does not submit an order.
 
 ## Operator response to an alert
 

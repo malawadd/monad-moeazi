@@ -3,6 +3,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation, useRoute} from '@react-navigation/native';
 import {useQuery} from '@tanstack/react-query';
 import {Button, Card, DataRow, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {MarketChart, type ChartRange} from '../components/MarketChart';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
 import {marketIdentity, uniqueMarketTradeActivity, type MarketBook, type MarketDirectoryRow} from '../types/marketDirectory';
@@ -249,7 +250,7 @@ export function MarketDetailScreen() {
       <Card><Text style={s.strong}>Activity timeline</Text>
         {marketActivity.length ? marketActivity.map(event => <Pressable key={event.id} accessibilityRole="button" onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id})} style={styles.activity}>
           <Text style={s.strong}>{event.title}</Text><Text style={s.body}>{event.summary}</Text><Text style={s.meta}>{event.status} · {formatMonadTimestamp(event.occurredAt)}</Text>
-          {event.transactionHash ? <Text selectable style={s.meta}>Tx · {event.transactionHash}</Text> : null}
+          {event.transactionHash ? <MonadTransactionHash prefix="Tx · " hash={event.transactionHash} style={s.meta} /> : null}
         </Pressable>) : <Text style={s.body}>No Activity events have been returned for this market.</Text>}
       </Card>
     </> : null}

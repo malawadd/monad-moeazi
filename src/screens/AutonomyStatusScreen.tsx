@@ -2,6 +2,7 @@ import React, {useCallback, useRef, useState} from 'react';
 import {Text} from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {autonomyApi} from '../services/autonomyApi';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
 import {validateAutonomyOwnerChain} from '../services/autonomyValidation';
@@ -118,7 +119,7 @@ function EventRow({event}: {event: AutonomyEvent}) {
     {finalizedFill && event.amountInUnits ? <DataRow label="Finalized input" value={`${event.amountInUnits} raw units`} /> : null}
     {finalizedFill && event.amountOutUnits ? <DataRow label="Finalized output" value={`${event.amountOutUnits} raw units`} /> : null}
     {event.finalizedBlockNumber ? <DataRow label="Finalized block" value={event.finalizedBlockNumber} /> : null}
-    {event.txHash ? <Text selectable style={s.body}>Transaction: {event.txHash}</Text> : null}
+    {event.txHash ? <MonadTransactionHash prefix="Transaction: " hash={event.txHash} style={s.body} /> : null}
   </Card>;
 }
 

@@ -3,8 +3,8 @@ import type {MonadActivityEvent} from '../types/monad';
 import type {UserThemeTokens} from '../theme/userThemes';
 import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
 
-export function UserActivityDetailView({theme, event, loading, error, interrupted = false, onBack, onRetry}: {
-  theme: UserThemeTokens; event: MonadActivityEvent | null; loading: boolean; error: string; interrupted?: boolean; onBack(): void; onRetry(): void;
+export function UserActivityDetailView({theme, event, timeline = [], loading, error, interrupted = false, onBack, onRetry}: {
+  theme: UserThemeTokens; event: MonadActivityEvent | null; timeline?: MonadActivityEvent[]; loading: boolean; error: string; interrupted?: boolean; onBack(): void; onRetry(): void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   return <UserPage theme={theme}>
@@ -30,6 +30,15 @@ export function UserActivityDetailView({theme, event, loading, error, interrupte
         {event.details?.map((detail, index) => <UserValueRow key={`${detail.label}:${index}`} theme={theme} label={detail.label} value={detail.value} />)}
         {!event.transactionHash && !event.details?.length ? <UserText theme={theme}>The service did not return additional receipt details.</UserText> : null}
       </UserDisclosure>
+      {timeline.length > 1 ? <UserCard theme={theme}>
+        <UserText theme={theme} kind="title">Operation timeline</UserText>
+        {timeline.map(item => <UserCard key={item.id} theme={theme}>
+          <UserValueRow theme={theme} label="Stage" value={`${status(item)} · ${item.kind.replaceAll('_', ' ')}`} />
+          <UserText theme={theme}>{item.summary}</UserText>
+          <UserValueRow theme={theme} label="When" value={date(item.occurredAt)} />
+          {item.transactionHash && !isBlocked(item) ? <UserValueRow theme={theme} label="Transaction hash" value={item.transactionHash} /> : null}
+        </UserCard>)}
+      </UserCard> : null}
     </> : null}
   </UserPage>;
 }

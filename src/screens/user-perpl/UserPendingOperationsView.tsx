@@ -2,16 +2,19 @@ import React, {useState} from 'react';
 import type {PendingOperationReference} from '../../services/pendingOperationJournal';
 import type {ReconciliationResult} from '../../services/pendingOperationReconcile';
 import type {VerifiedMonadContinuation} from '../../services/pendingMonadContinuation';
+import {pendingOperationReminderKey} from '../../services/pendingOperationReminder';
 import type {UserThemeTokens} from '../../theme/userThemes';
 import {formatMonadTimestamp, formatMonadUnits} from '../../services/monadFormatting';
 import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText, UserValueRow} from '../../components/user/UserPrimitives';
 
 export function UserPendingOperationsView({theme, references, resolved, results, busyKey, error, focusMissing,
-  onBack, onRetry, onCheck, onContinue}: {
+  dismissedReminderKeys, onBack, onRetry, onCheck, onContinue, onDismissReminder}: {
   theme: UserThemeTokens; references: PendingOperationReference[] | null; resolved: ReconciliationResult[];
   results: Record<string, ReconciliationResult>; busyKey: string; error: string; focusMissing: boolean;
+  dismissedReminderKeys: ReadonlySet<string>;
   onBack(): void; onRetry(): void; onCheck(reference: PendingOperationReference): void;
   onContinue(reference: PendingOperationReference, continuation: VerifiedMonadContinuation): void;
+  onDismissReminder(reference: PendingOperationReference): void;
 }) {
   return <UserPage theme={theme}>
     <UserButton label="Back" onPress={onBack} theme={theme} secondary />
@@ -28,8 +31,11 @@ export function UserPendingOperationsView({theme, references, resolved, results,
     {references?.map(reference => {
       const key = `${reference.kind}:${reference.id}:${reference.action}`;
       const result = results[key];
+      const reminderKey = pendingOperationReminderKey(reference);
       return <PendingCard key={key} theme={theme} reference={reference} result={result} busy={busyKey === key}
-        onCheck={() => onCheck(reference)} onContinue={continuation => onContinue(reference, continuation)} />;
+        reminderDismissed={dismissedReminderKeys.has(reminderKey)}
+        onCheck={() => onCheck(reference)} onContinue={continuation => onContinue(reference, continuation)}
+        onDismissReminder={() => onDismissReminder(reference)} />;
     })}
     {resolved.map(result => <UserCard key={`resolved:${result.reference.kind}:${result.reference.id}:${result.reference.action}`} theme={theme}>
       <UserText theme={theme} kind="title">{label(result.reference)} · checked</UserText>
@@ -40,9 +46,11 @@ export function UserPendingOperationsView({theme, references, resolved, results,
   </UserPage>;
 }
 
-function PendingCard({theme, reference, result, busy, onCheck, onContinue}: {
+function PendingCard({theme, reference, result, busy, reminderDismissed, onCheck, onContinue, onDismissReminder}: {
   theme: UserThemeTokens; reference: PendingOperationReference; result?: ReconciliationResult; busy: boolean;
+  reminderDismissed: boolean;
   onCheck(): void; onContinue(continuation: VerifiedMonadContinuation): void;
+  onDismissReminder(): void;
 }) {
   const [details, setDetails] = useState(false);
   const [referenceDetails, setReferenceDetails] = useState(false);
@@ -92,9 +100,13 @@ function PendingCard({theme, reference, result, busy, onCheck, onContinue}: {
       <UserButton label="Continue original transaction" theme={theme} loading={busy} onPress={() => onContinue(continuation)} />
       <UserText theme={theme} kind="meta">This rechecks the same operation ID and asks the service to broadcast its original verified transaction. No new request or signature is created.</UserText>
     </> : <UserButton label={busy ? 'Checking status…' : 'Check status'} theme={theme} secondary loading={busy} onPress={onCheck} />}
+    {reminderDismissed
+      ? <UserText theme={theme} kind="meta">Reminder dismissed · this saved action remains available for status checks.</UserText>
+      : <UserButton label="Dismiss reminder" theme={theme} secondary onPress={onDismissReminder} />}
     <UserDisclosure theme={theme} label="Saved reference" value="Show original ID" expanded={referenceDetails} onPress={() => setReferenceDetails(value => !value)}>
       <UserValueRow theme={theme} label="Original ID" value={reference.id} />
       {reference.relatedId ? <UserValueRow theme={theme} label="Related ID" value={reference.relatedId} /> : null}
+      {reference.txHash ? <UserValueRow theme={theme} label="Transaction hash" value={reference.txHash} /> : null}
     </UserDisclosure>
   </UserCard>;
 }

@@ -45,7 +45,7 @@ export function UserManualPerplReviewView({theme, ownerAddress, prepared, expect
     {result ? <UserCard theme={theme}>
       <UserText theme={theme} kind="title">{statusTitle(result.status)}</UserText>
       <UserText theme={theme}>{result.message ?? statusMessage(result.status)}</UserText>
-      {result.transactionHash ? <UserValueRow theme={theme} label="Transaction" value={shortHash(result.transactionHash)} /> : null}
+      {result.transactionHash ? <UserValueRow theme={theme} label="Transaction" value={result.transactionHash} /> : null}
       {approvalFinalized ? <UserText theme={theme}>Approval is complete. Opening and funding the account is a separate action.</UserText> : null}
       {result.fill?.length ? <FillSummary theme={theme} fills={result.fill} result={result.result ?? null}
         sizeDecimals={sizeDecimals} priceDecimals={priceDecimals} /> : null}
@@ -179,5 +179,4 @@ function statusMessage(status: ManualPerplOperationStatus['status']) {
   if (status === 'no_fill') return 'The order was finalized without a fill.';
   return 'Check this same operation before taking another action.';
 }
-function shortHash(value: string) { return value.length > 18 ? `${value.slice(0, 10)}…${value.slice(-6)}` : value; }
 function humanize(value: string) { return value.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()); }

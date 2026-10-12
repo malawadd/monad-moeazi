@@ -5,6 +5,7 @@ import type {PerplStopReview, PerplRun, PerplRunsPage} from '../types/perpl';
 import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
 import {keccak256, type Hex} from 'viem';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {perplApi, createPerplIdempotencyKey} from '../services/perplApi';
 import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../services/monadFormatting';
 import {signAndSubmitWithMera} from '../services/meraSubmission';
@@ -298,7 +299,7 @@ function OrderCard({order, run}: {order: NonNullable<PerplRun['orders']>[number]
     {order.side ?? action.side ? <DataRow label="Side" value={humanize(String(order.side ?? action.side))} /> : null}
     {(order.size ?? action.size) !== undefined ? <DataRow label="Size" value={String(order.size ?? action.size)} /> : null}
     {order.price !== undefined ? <DataRow label="Price" value={String(order.price)} /> : null}
-    {order.txHash ? <Text selectable style={s.meta}>Transaction · {String(order.txHash)}</Text> : null}
+    {order.txHash ? <MonadTransactionHash prefix="Transaction · " hash={String(order.txHash)} style={s.meta} /> : null}
     {response.feeUnits !== undefined ? <DataRow label="Perpl fees" value={`${formatMonadUnits(String(response.feeUnits), 6)} AUSD`} /> : null}
     {response.operatorGasWei !== undefined ? <DataRow label="Operator gas" value={`${formatMonadUnits(String(response.operatorGasWei), 18)} MON`} /> : null}
   </Card>;
@@ -320,7 +321,7 @@ function EventCard({event}: {event: NonNullable<PerplRun['events']>[number]}) {
     {timestamp ? <DataRow label="Recorded" value={formatMonadTimestamp(timestamp)} /> : null}
     {event.blockNumber ? <DataRow label="Block" value={String(event.blockNumber)} /> : null}
     {event.amountUnits ? <DataRow label="Amount" value={`${formatMonadUnits(event.amountUnits, 6)} AUSD`} /> : null}
-    {hash ? <Text selectable style={s.meta}>Transaction · {String(hash)}</Text> : null}
+    {hash ? <MonadTransactionHash prefix="Transaction · " hash={String(hash)} style={s.meta} /> : null}
     {event.details ? <RecordRows record={event.details} /> : null}
   </Card>;
 }

@@ -4,6 +4,7 @@ import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {border, colors, motion, spacing, type} from '../theme/tokens';
 import {useReducedMotion} from './Motion';
+import {isMonadTransactionHash, MonadTransactionHash} from './MonadTransactionHash';
 
 type Tone = 'paper' | 'sky' | 'mint' | 'orange' | 'lilac' | 'rose' | 'yellow';
 const toneColor: Record<Tone, string> = {paper: colors.cream, sky: colors.sky, mint: colors.mint, orange: colors.orange, lilac: colors.lilac, rose: colors.rose, yellow: colors.yellow};
@@ -74,7 +75,10 @@ export function Field(props: TextInputProps & {label: string}) {
 export function DataRow({label, value}: {label: string; value: string}) {
   const {fontScale} = useWindowDimensions();
   const stacked = fontScale >= 1.5;
-  return <View style={[styles.dataRow, stacked && styles.dataRowStacked]}><Text style={styles.dataLabel}>{label}</Text><Text style={[styles.dataValue, stacked && styles.dataValueStacked]}>{value}</Text></View>;
+  const transactionHash = isMonadTransactionHash(value) && /^(transaction(?: hash)?|tx(?: hash)?)$/i.test(label.trim());
+  return <View style={[styles.dataRow, stacked && styles.dataRowStacked]}><Text style={styles.dataLabel}>{label}</Text>
+    {transactionHash ? <MonadTransactionHash hash={value} style={[styles.dataValue, stacked && styles.dataValueStacked, {textDecorationLine: 'underline'}]} />
+      : <Text style={[styles.dataValue, stacked && styles.dataValueStacked]}>{value}</Text>}</View>;
 }
 
 export function StatusBadge({label, tone = 'paper'}: {label: string; tone?: Tone}) {

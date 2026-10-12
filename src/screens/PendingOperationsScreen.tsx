@@ -11,6 +11,8 @@ import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
 import {focusPendingReferences} from '../services/pendingOperationFocus';
 import {broadcastVerifiedMonadOperation} from '../services/pendingMonadContinuation';
+import {dismissPendingOperationReminder, loadPendingOperationReminderReferences,
+  pendingOperationReminderKey} from '../services/pendingOperationReminder';
 import {UserPendingOperationsView} from './user-perpl/UserPendingOperationsView';
 
 function keyOf(reference: PendingOperationReference) {
@@ -31,6 +33,7 @@ export function PendingOperationsScreen() {
   const [referencesOwner, setReferencesOwner] = useState('');
   const [results, setResults] = useState<Record<string, ReconciliationResult>>({});
   const [resolved, setResolved] = useState<ReconciliationResult[]>([]);
+  const [dismissedReminderKeys, setDismissedReminderKeys] = useState<Set<string>>(new Set());
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
   const visibleReferences = referencesOwner === owner ? references : null;
@@ -42,10 +45,17 @@ export function PendingOperationsScreen() {
 
   useEffect(() => {
     const current = ++generation.current;
-    setReferences(null); setReferencesOwner(owner); setResolved([]); setResults({}); setBusyKey(''); setError('');
+    setReferences(null); setReferencesOwner(owner); setResolved([]); setResults({});
+    setDismissedReminderKeys(new Set()); setBusyKey(''); setError('');
     if (!ownerAddress) { setReferences([]); return () => { generation.current += 1; }; }
-    void loadPendingOperationReferences(ownerAddress).then(rows => {
-      if (generation.current === current) setReferences(rows);
+    void loadPendingOperationReferences(ownerAddress).then(async rows => {
+      const visibleReminders = await loadPendingOperationReminderReferences(ownerAddress, rows);
+      if (generation.current === current) {
+        const visibleKeys = new Set(visibleReminders.map(pendingOperationReminderKey));
+        setReferences(rows);
+        setDismissedReminderKeys(new Set(rows.filter(item => !visibleKeys.has(pendingOperationReminderKey(item)))
+          .map(pendingOperationReminderKey)));
+      }
     }).catch(() => {
       if (generation.current === current) { setReferences(null); setError('Saved references could not be read from this device.'); }
     });
@@ -57,7 +67,13 @@ export function PendingOperationsScreen() {
     const current = generation.current, ownerAtStart = owner;
     try {
       const rows = await loadPendingOperationReferences(ownerAddress);
-      if (generation.current === current && ownerRef.current === ownerAtStart) { setReferences(rows); setReferencesOwner(owner); setError(''); }
+      const visibleReminders = await loadPendingOperationReminderReferences(ownerAddress, rows);
+      if (generation.current === current && ownerRef.current === ownerAtStart) {
+        const visibleKeys = new Set(visibleReminders.map(pendingOperationReminderKey));
+        setReferences(rows); setReferencesOwner(owner); setError('');
+        setDismissedReminderKeys(new Set(rows.filter(item => !visibleKeys.has(pendingOperationReminderKey(item)))
+          .map(pendingOperationReminderKey)));
+      }
     } catch {
       if (generation.current === current && ownerRef.current === ownerAtStart) setError('Saved references could not be read from this device.');
     }
@@ -70,12 +86,44 @@ export function PendingOperationsScreen() {
     const result = await reconcilePendingOperation(ownerAddress, reference);
     if (generation.current !== current || ownerRef.current !== ownerAtStart) return;
     setResults(previous => ({...previous, [key]: result}));
+    if (reference.kind === 'perpl-run' && result.disposition === 'tracked'
+        && result.status.toLowerCase() === 'active') {
+      try {
+        await dismissPendingOperationReminder(ownerAddress, reference);
+        if (generation.current === current && ownerRef.current === ownerAtStart) {
+          const reminderKey = pendingOperationReminderKey(reference);
+          setDismissedReminderKeys(previous => new Set(previous).add(reminderKey));
+        }
+      } catch {
+        if (generation.current === current && ownerRef.current === ownerAtStart) {
+          setError('Active status was checked, but its reminder preference could not be saved. The saved action is unchanged.');
+        }
+      }
+    }
+    if (generation.current !== current || ownerRef.current !== ownerAtStart) return;
     if (result.disposition === 'resolved') {
       setReferences(previous => previous?.filter(item => keyOf(item) !== key) ?? []);
       setResolved(previous => [result, ...previous.filter(item => keyOf(item.reference) !== key)]);
       void invalidateAfterFinalizedOperation(ownerAddress).catch(() => undefined);
     }
     setBusyKey('');
+  }
+
+  async function dismissReminder(reference: PendingOperationReference) {
+    if (!ownerAddress) return;
+    const current = generation.current, ownerAtStart = owner;
+    const referenceKey = pendingOperationReminderKey(reference);
+    if (!visibleReferences?.some(item => pendingOperationReminderKey(item) === referenceKey)) return;
+    try {
+      await dismissPendingOperationReminder(ownerAddress, reference);
+      if (generation.current === current && ownerRef.current === ownerAtStart) {
+        setDismissedReminderKeys(previous => new Set(previous).add(referenceKey));
+      }
+    } catch {
+      if (generation.current === current && ownerRef.current === ownerAtStart) {
+        setError('Reminder preference could not be saved. The original action remains available for status checks.');
+      }
+    }
   }
 
   async function continueOriginal(reference: PendingOperationReference, continuation: NonNullable<ReconciliationResult['continuation']>) {
@@ -105,6 +153,7 @@ export function PendingOperationsScreen() {
     references={visibleReferences === null ? null : hasFocusedResolved ? [] : focus.references}
     resolved={hasFocusedResolved ? focusedResolved : visibleResolved}
     results={results} busyKey={busyKey} error={error} focusMissing={visibleReferences !== null && focus.missing && !hasFocusedResolved}
+    dismissedReminderKeys={dismissedReminderKeys} onDismissReminder={reference => { void dismissReminder(reference); }}
     onBack={() => navigation.goBack()} onRetry={() => { void reload(); }} onCheck={reference => { void check(reference); }}
     onContinue={(reference, continuation) => { void continueOriginal(reference, continuation); }} />;
 
@@ -121,6 +170,7 @@ export function PendingOperationsScreen() {
         <DataRow label="Action" value={reference.action.replaceAll('_', ' ')} />
         <Text selectable style={s.body}>Original ID: {reference.id}</Text>
         {reference.relatedId ? <Text selectable style={s.body}>Related run ID: {reference.relatedId}</Text> : null}
+        {reference.txHash ? <DataRow label="Transaction hash" value={reference.txHash} /> : null}
         {result ? <><DataRow label="Read status" value={result.status} /><Text style={s.body}>{result.note}</Text></> : null}
         <Button label={busyKey === key ? 'Checking original status…' : 'Check original status · read-only'}
           variant="secondary" loading={busyKey === key} disabled={Boolean(busyKey)} onPress={() => { void check(reference); }} />

@@ -65,7 +65,7 @@ export function nextUserHomeAction(input: {
   currentReady: boolean; currentRun: PerplRun | null; currentRunInvalid: boolean; venueReady: boolean; venue: PerplVenue | null;
   venueError: boolean; initialFundingComplete: boolean | null;
 }): UserHomeAction {
-  if (input.currentRun && !input.currentRunInvalid) return {target: 'status', label: 'View Perpl status', title: 'Your Perpl run is in progress', detail: 'Check your run and recent activity.'};
+  if (input.currentRun && !input.currentRunInvalid) return {target: 'status', label: 'View autonomous run', title: 'Your autonomous run is in progress', detail: 'Check your run and recent activity.'};
   if (input.currentRunInvalid) return {target: 'refresh', label: 'Refresh status', title: 'Your strategy status needs a check', detail: 'Refresh to check the latest status.'};
   if (input.venueError) return {target: 'refresh', label: 'Refresh status', title: 'Perpl setup is unavailable', detail: 'Refresh to check the latest strategy availability.'};
   if (input.venueReady && !input.venue?.enabled) {

@@ -3,6 +3,7 @@ import {Text} from 'react-native';
 import type {TypedDataDefinition} from 'viem';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {perpAutonomyApi, createPerpIdempotencyKey} from '../services/perpAutonomyApi';
 import {validatePerpStop} from '../services/perpAutonomyValidation';
 import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../services/monadFormatting';
@@ -101,7 +102,7 @@ export function PerpStatusScreen() {
       {current.pendingOrder ? <OrderCard order={current.pendingOrder} run={current} /> : null}
       {current.events.length ? <Card><Text style={s.strong}>Latest run activity</Text>{current.events.slice(-8).reverse().map((event, index) => <EventCard key={event.id ?? event.eventId ?? `${event.timestamp}:${index}`} event={event} />)}</Card> : null}
       {current.status === 'activation_pending' ? <Notice tone="orange" title="Funding is still finalizing" message="A stop can be prepared after the initial Circle funding and vault activation have finalized. Follow the funding state here and in Activity." /> : null}
-      {stopResult ? <Card tint="#DDF4E7"><Text style={s.strong}>Stop request</Text><DataRow label="Transaction state" value={humanize(stopResult.status)} /><DataRow label="Operator phase" value={humanize(stopResult.phase)} /><Text style={s.body}>The exact owner-signed stop is with the operator. Its state updates as the transaction is submitted, executed, and finalized.</Text>{stopResult.transactionHash ? <Text selectable style={s.body}>Transaction: {stopResult.transactionHash}</Text> : null}</Card> : null}
+      {stopResult ? <Card tint="#DDF4E7"><Text style={s.strong}>Stop request</Text><DataRow label="Transaction state" value={humanize(stopResult.status)} /><DataRow label="Operator phase" value={humanize(stopResult.phase)} /><Text style={s.body}>The exact owner-signed stop is with the operator. Its state updates as the transaction is submitted, executed, and finalized.</Text>{stopResult.transactionHash ? <MonadTransactionHash prefix="Transaction: " hash={stopResult.transactionHash} style={s.body} /> : null}</Card> : null}
       {stopUncertain || current.status === 'stopping' ? <Card tint="#FFF1E5"><Text style={s.strong}>Stop outcome is being reconciled</Text><Text style={s.body}>Review this run and Activity before taking another action. The app will not prepare a second stop while the first result is uncertain.</Text><Button label="Review Activity" variant="secondary" onPress={() => navigation.navigate('Main', {screen: 'Activity'})} /></Card> : null}
       {stopReview ? <Card tint="#FFF1E5">
         <Text style={s.strong}>Review fresh Mera stop signature</Text>
@@ -142,7 +143,7 @@ function RunCard({run}: {run: PerpRun}) {
     {run.expiresAt ? <DataRow label="Expires" value={formatMonadTimestamp(run.expiresAt)} /> : null}
     {run.lastFinalizedBlock ? <DataRow label="Last finalized block" value={run.lastFinalizedBlock} /> : null}
     {run.fundingStatus ? <DataRow label="Funding status" value={run.fundingStatus} /> : null}
-    {run.fundingTransactionHash ? <Text selectable style={s.meta}>Funding tx · {run.fundingTransactionHash}</Text> : null}
+    {run.fundingTransactionHash ? <MonadTransactionHash prefix="Funding tx · " hash={run.fundingTransactionHash} style={s.meta} /> : null}
     <Text style={s.body}>Realized USDC profit or loss is separate from operator-paid MON gas. All posted margin can be lost.</Text>
   </Card>;
 }
@@ -189,7 +190,7 @@ function EventCard({event}: {event: PerpEvent}) {
     <Text style={s.body}>{event.summary}</Text><DataRow label="Recorded" value={formatMonadTimestamp(event.timestampIso ?? event.timestamp)} />
     {event.orderId ? <DataRow label="Order ID" value={event.orderId} /> : null}
     {event.finalizedBlockNumber ?? event.blockNumber ? <DataRow label="Finalized block" value={String(event.finalizedBlockNumber ?? event.blockNumber)} /> : null}
-    {txHash ? <Text selectable style={s.meta}>Tx · {txHash}</Text> : null}
+    {txHash ? <MonadTransactionHash prefix="Tx · " hash={txHash} style={s.meta} /> : null}
     {event.details ? Object.entries(event.details).filter(([, value]) => value === null || typeof value !== 'object').slice(0, 5).map(([label, value]) =>
       <DataRow key={label} label={humanize(label)} value={String(value)} />) : null}
   </Card>;

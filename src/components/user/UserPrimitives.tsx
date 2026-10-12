@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import type {UserTheme} from '../../services/presentationPreferences';
 import {userThemeTokens, type UserThemeTokens} from '../../theme/userThemes';
 import {userFonts} from '../../theme/tokens';
+import {isMonadTransactionHash, MonadTransactionHash} from '../MonadTransactionHash';
 
 export function UserPage({children, theme, safeTop = true, refreshing = false, onRefresh, scrollResetKey}: PropsWithChildren<{
   theme: UserThemeTokens; safeTop?: boolean; refreshing?: boolean; onRefresh?: () => void; scrollResetKey?: string;
@@ -68,10 +69,13 @@ export function UserButton({label, onPress, theme, secondary = false, disabled =
 
 export function UserValueRow({label, value, theme, detail}: {label: string; value: string; theme: UserThemeTokens; detail?: string}) {
   const stack = useWindowDimensions().fontScale >= 1.35 || value.length > 26 || label.length > 28;
+  const transactionHash = isMonadTransactionHash(value) && /^(transaction(?: hash)?|tx(?: hash)?)$/i.test(label.trim());
   return <View style={[styles.valueRow, stack && styles.valueRowStacked, {borderBottomColor: theme.border}]}>
     <View style={[styles.rowCopy, stack && styles.rowCopyStacked]}><Text style={[styles.meta, {color: theme.muted}]}>{label}</Text>
       {detail ? <Text style={[styles.body, {color: theme.muted}]}>{detail}</Text> : null}</View>
-    <Text style={[styles.rowValue, stack && styles.rowValueStacked, {color: theme.ink}]}>{value}</Text>
+    {transactionHash ? <MonadTransactionHash hash={value} style={[styles.rowValue, stack && styles.rowValueStacked,
+      {color: theme.ink, textDecorationLine: 'underline'}]} />
+      : <Text style={[styles.rowValue, stack && styles.rowValueStacked, {color: theme.ink}]}>{value}</Text>}
   </View>;
 }
 

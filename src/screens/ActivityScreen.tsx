@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {Button, Card, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {fetchMonadActivityPage, useMarketTradesQuery, useMonadActivityQuery} from '../services/useMarketQueries';
 import {subscribeNotificationActivityRefresh} from '../services/notifications/NotificationEvents';
 import {MarketTradeSummaryCard} from '../components/MarketTradeSummaryCard';
@@ -10,9 +11,11 @@ import type {MarketTradeSummary} from '../types/marketDirectory';
 import {colors, spacing} from '../theme/tokens';
 import {screenStyles as s} from '../theme/screenStyles';
 import {useApp} from '../state/AppContext';
-import {loadPendingOperationReferences} from '../services/pendingOperationJournal';
+import {loadPendingOperationReferences, type PendingOperationReference} from '../services/pendingOperationJournal';
+import {dismissPendingOperationReminder, loadPendingOperationReminderReferences} from '../services/pendingOperationReminder';
 import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
+import {buildUserActivityItems, isHiddenUserActivityDiagnostic} from '../services/userActivityPresentation';
 import {UserActivityView} from './UserActivityView';
 
 function eventTime(value: string) {
@@ -37,18 +40,20 @@ export function ActivityScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const [scope, setScope] = useState<'all' | 'perp'>('all');
-  const [pendingReferenceCount, setPendingReferenceCount] = useState(0);
+  const [pendingReferences, setPendingReferences] = useState<PendingOperationReference[]>([]);
+  const [dismissingReminders, setDismissingReminders] = useState(false);
   const pageGeneration = useRef(0);
   const pendingGeneration = useRef(0);
 
   useFocusEffect(useCallback(() => {
     const current = ++pendingGeneration.current;
-    setPendingReferenceCount(0);
+    setPendingReferences([]);
     if (!ownerAddress || presentationMode !== 'user') return () => { pendingGeneration.current += 1; };
-    void loadPendingOperationReferences(ownerAddress).then(rows => {
-      if (pendingGeneration.current === current) setPendingReferenceCount(rows.length);
+    void loadPendingOperationReferences(ownerAddress).then(rows =>
+      loadPendingOperationReminderReferences(ownerAddress, rows)).then(rows => {
+      if (pendingGeneration.current === current) setPendingReferences(rows);
     }).catch(() => {
-      if (pendingGeneration.current === current) setPendingReferenceCount(0);
+      if (pendingGeneration.current === current) setPendingReferences([]);
     });
     return () => { if (pendingGeneration.current === current) pendingGeneration.current += 1; };
   }, [ownerAddress, presentationMode]));
@@ -90,17 +95,38 @@ export function ActivityScreen() {
     [activityStale, summariesStale, refresh]));
   useEffect(() => subscribeNotificationActivityRefresh(() => { void refresh(); }), [refresh]);
   const visibleEvents = scope === 'perp' ? events.filter(isPerpVenueEvent) : events;
-  const userVisibleEvents = scope === 'perp' ? events.filter(isUserPerplEvent) : events;
+  const userVisibleEvents = (scope === 'perp' ? events.filter(isUserPerplEvent) : events)
+    .filter(event => !isHiddenUserActivityDiagnostic(event));
+  const userActivityItems = useMemo(() => buildUserActivityItems(userVisibleEvents), [userVisibleEvents]);
   const visibleSummaries = scope === 'perp' ? tradeSummaries.filter(item => item.venueId.startsWith('perpl-')) : tradeSummaries;
   const activityError = activity.error instanceof Error ? activity.error.message : '';
   const hasError = Boolean(activityError || paginationError);
 
-  if (presentationMode === 'user') return <UserActivityView theme={userTheme} events={userVisibleEvents}
+  const dismissPendingReminders = useCallback(async () => {
+    if (!ownerAddress || !pendingReferences.length || dismissingReminders) return;
+    const requestedOwner = ownerAddress;
+    const current = pendingGeneration.current;
+    setDismissingReminders(true);
+    try {
+      await Promise.all(pendingReferences.map(reference => dismissPendingOperationReminder(requestedOwner, reference)));
+      if (pendingGeneration.current === current && ownerAddress.toLowerCase() === requestedOwner.toLowerCase()) {
+        setPendingReferences([]);
+      }
+    } catch {
+      // Keep the reminder visible if local dismissal could not be saved.
+    } finally {
+      if (pendingGeneration.current === current) setDismissingReminders(false);
+    }
+  }, [ownerAddress, pendingReferences, dismissingReminders]);
+
+  if (presentationMode === 'user') return <UserActivityView theme={userTheme} items={userActivityItems}
     loading={!activityData && activity.isLoading} refreshing={pullRefreshing} error={[activityError, paginationError].filter(Boolean).join(' ')}
-    pendingCount={pendingReferenceCount} hasMore={hasMore} loadingMore={loadingMore} scope={scope === 'all' ? 'all' : 'perp'}
+    pendingCount={pendingReferences.length} dismissingReminders={dismissingReminders} hasMore={hasMore} loadingMore={loadingMore} scope={scope === 'all' ? 'all' : 'perp'}
     onRefresh={() => { void pullToRefresh(); }} onLoadMore={() => { void loadMore(); }}
-    onSetScope={setScope} onPending={() => navigation.navigate('PendingOperations')}
-    onOpen={event => navigation.navigate('ActivityDetail', {itemId: event.id, event})} />;
+    onSetScope={setScope} onPending={() => navigation.navigate('PendingOperations')} onDismissPending={() => { void dismissPendingReminders(); }}
+    onOpen={item => navigation.navigate('ActivityDetail', item.lifecycle
+      ? {itemId: item.event.id, operationId: item.lifecycle.operationId}
+      : {itemId: item.event.id, event: item.event})} />;
 
   return <Screen refreshing={pullRefreshing || (!activityData && activity.isLoading)} onRefresh={() => { void pullToRefresh(); }}>
     <PageHeader kicker="Activity · trades and service events" title="What happened" copy="Perp orders, holds, position changes, funding, stop requests, receipts, and returned funds appear here with their submitted, executed, or finalized state." />
@@ -125,7 +151,7 @@ export function ActivityScreen() {
         <Text style={s.body}>{event.summary}</Text>
         <Text style={s.meta}>Status · {activityStatus(event)}</Text>
         {event.amount && event.asset ? <Text style={s.strong}>{event.amount} {event.asset}</Text> : null}
-        {event.transactionHash && !isBlocked(event) ? <Text selectable style={s.meta}>Tx · {event.transactionHash}</Text> : null}
+        {event.transactionHash && !isBlocked(event) ? <MonadTransactionHash prefix="Tx · " hash={event.transactionHash} style={s.meta} /> : null}
       </View>
     </Pressable>)}</View>
     {hasMore ? <Button label="Load more activity" variant="secondary" onPress={() => { void loadMore(); }} loading={loadingMore} /> : null}

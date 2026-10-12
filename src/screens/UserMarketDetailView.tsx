@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {MarketChart} from '../components/MarketChart';
 import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {hasExecutableSpotRoute, isHookedPool} from '../services/marketDirectoryPresentation';
 import {perplTradeRouteParams, spotTradeReviewParams} from '../services/marketTradeRoutes';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
@@ -168,7 +169,8 @@ export function UserMarketDetailView(props: Props) {
           <Text style={[styles.eventTitle, {color: theme.ink, fontFamily: userFonts.body}]}>{event.title} · {event.status}</Text>
           <Text style={[styles.eventMeta, {color: theme.muted, fontFamily: userFonts.body}]}>{event.summary}</Text>
           <Text style={[styles.eventMeta, {color: theme.muted, fontFamily: userFonts.mono}]}>{formatMonadTimestamp(event.occurredAt)}</Text>
-          {event.transactionHash ? <Text selectable style={[styles.eventMeta, {color: theme.muted, fontFamily: userFonts.mono}]}>Transaction · {event.transactionHash}</Text> : null}
+          {event.transactionHash ? <MonadTransactionHash prefix="Transaction · " hash={event.transactionHash}
+            style={[styles.eventMeta, {color: theme.ink, fontFamily: userFonts.mono, textDecorationLine: 'underline'}]} /> : null}
         </Pressable>) : <UserText theme={theme}>No Activity events were returned for this market.</UserText>}
       </UserDisclosure></UserCard>
     </> : null}
@@ -224,7 +226,8 @@ function SelectedSummary({summary, market, theme}: {summary: MarketTradeSummary;
       <UserText theme={theme} kind="meta">Summary · {summary.summaryId}</UserText>
       {summary.runId ? <UserText theme={theme} kind="meta">Run · {summary.runId}</UserText> : null}
       {summary.orderIds.map(id => <Text key={`order-${id}`} selectable style={[styles.reference, {color: theme.muted, fontFamily: userFonts.mono}]}>Order · {id}</Text>)}
-      {summary.transactionHashes.map(hash => <Text key={`tx-${hash}`} selectable style={[styles.reference, {color: theme.muted, fontFamily: userFonts.mono}]}>Transaction · {hash}</Text>)}
+      {summary.transactionHashes.map(hash => <MonadTransactionHash key={`tx-${hash}`} prefix="Transaction · " hash={hash}
+        style={[styles.reference, {color: theme.ink, fontFamily: userFonts.mono, textDecorationLine: 'underline'}]} />)}
       {summary.activityIds.map(id => <Text key={`activity-${id}`} selectable style={[styles.reference, {color: theme.muted, fontFamily: userFonts.mono}]}>Activity · {id}</Text>)}
     </UserDisclosure>
   </View>;

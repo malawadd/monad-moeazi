@@ -14,6 +14,7 @@ import {perplApi} from '../services/perplApi';
 import {findPerplVenue} from '../services/perplValidation';
 import {hasInitialAusdFunding, recordInitialAusdFunding} from '../services/userFundingMilestones';
 import {formatHomeAmount, isUserHomeOffline, nextUserHomeAction, ownerScopedPerplRun, readUserWalletAsset, requiredPerplFundingUnits, verifiedPerplBalanceUnits} from '../services/userHomeReadiness';
+import {buildUserActivityItems} from '../services/userActivityPresentation';
 
 export function UserHomeScreen() {
   const navigation = useNavigation<any>();
@@ -97,6 +98,7 @@ export function UserHomeScreen() {
     else navigation.navigate('Strategies');
   };
   const strategyTotal = currentRun && !currentStatusStale ? verifiedPerplBalanceUnits(currentRun, ownerAddress) : null;
+  const recentActivityItems = useMemo(() => buildUserActivityItems(activityQuery.data?.events ?? []), [activityQuery.data?.events]);
   const strategyObservedAt = currentRun?.positionSnapshot?.observedAt;
   const staleActivity = activityQuery.isError && Boolean(activityQuery.data);
   const exactAusd = ausd ? formatMonadUnits(ausd.units.toString(), 6) : null;
@@ -115,7 +117,8 @@ export function UserHomeScreen() {
       <UserCard theme={theme} style={[{backgroundColor: theme.accent, borderColor: theme.accentBorder}, compactWidth && styles.compactCard]}>
         <Text style={[styles.heroLabel, {color: theme.accentText}]}>{walletStale ? 'LAST KNOWN · TEST AUSD' : 'AVAILABLE IN WALLET · TEST AUSD'}</Text>
         {separateApproximation ? <Text style={[styles.heroApprox, {color: theme.accentText}]}>ABOUT</Text> : null}
-        <Text accessibilityLabel={ausd ? `Test AUSD available in wallet: ${visibleAusd}` : 'Test AUSD balance unavailable'}
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}
+          accessibilityLabel={ausd ? `Test AUSD available in wallet: exactly ${exactAusd} AUSD; displayed as ${visibleAusd}` : 'Test AUSD balance unavailable'}
           style={[styles.heroValue, {color: theme.accentText, fontSize: compactWidth ? 34 : 42, lineHeight: compactWidth ? 42 : 52}]}>{displayAusd}</Text>
         <Text style={[styles.heroNote, {color: theme.accentText}]}>{ausd ? 'Test token · no real-world value' : 'Balance not returned'}</Text>
         <View style={[styles.heroDivider, {borderColor: theme.accentText}]} />
@@ -126,7 +129,7 @@ export function UserHomeScreen() {
           </View>
           <View style={styles.heroCell}>
             <Text style={[styles.heroLabel, {color: theme.accentText}]}>STRATEGY FUNDS</Text>
-            <Text accessibilityLabel={strategyTotal === null ? currentReady && !currentRun ? 'No active Perpl run' : 'Perpl strategy funds unavailable' : `Perpl strategy funds: ${visiblePerpl}`}
+            <Text accessibilityLabel={strategyTotal === null ? currentReady && !currentRun ? 'No active autonomous run' : 'Autonomous strategy funds unavailable' : `Autonomous strategy funds: ${visiblePerpl}`}
               style={[styles.heroSmallValue, {color: theme.accentText}]}>{visiblePerpl}</Text>
           </View>
         </View>
@@ -148,19 +151,23 @@ export function UserHomeScreen() {
         {wallet ? <UserText theme={theme} kind="meta">Wallet checked {formatMonadTimestamp(wallet.observedAt)}</UserText> : null}
         {strategyObservedAt ? <UserText theme={theme} kind="meta">Perpl checked {formatMonadTimestamp(strategyObservedAt)}</UserText> : null}
       </UserDisclosure>
-      {activityQuery.data?.events.slice(0, 2).length ? <UserCard theme={theme}>
+      {recentActivityItems.slice(0, 2).length ? <UserCard theme={theme}>
         <View style={styles.activityHeader}><UserText theme={theme} kind="title">Recent activity</UserText>
           <Pressable accessibilityRole="link" accessibilityLabel="View all activity" onPress={() => navigation.navigate('Activity')} style={styles.activityLink}>
             <Text style={[styles.activityLinkText, {color: theme.ink}]}>View all</Text></Pressable>
         </View>
-        {activityQuery.data.events.slice(0, 2).map(event => <Pressable key={event.id} accessibilityRole="button"
-          accessibilityLabel={`Open ${event.title}, status ${event.status}`} onPress={() => navigation.navigate('ActivityDetail', {itemId: event.id, event})}
+        {recentActivityItems.slice(0, 2).map(item => <Pressable key={item.key} accessibilityRole="button"
+          accessibilityLabel={item.lifecycle ? `Open wallet swap, latest status ${item.event.status}, ${item.lifecycle.events.length} updates`
+            : `Open ${item.event.title}, status ${item.event.status}`}
+          onPress={() => navigation.navigate('ActivityDetail', item.lifecycle
+            ? {itemId: item.event.id, operationId: item.lifecycle.operationId}
+            : {itemId: item.event.id, event: item.event})}
           style={[styles.activityRow, {borderColor: theme.border}]}>
-          <View style={styles.activityCopy}><Text numberOfLines={1} style={[styles.activityTitle, {color: theme.ink}]}>{event.title}</Text>
-            <Text numberOfLines={2} style={[styles.activitySummary, {color: theme.muted}]}>{event.summary}</Text></View>
-          <Text style={[styles.activityStatus, {color: theme.ink}]}>{event.status}</Text>
-          {event.status === 'finalized' && event.fundsMoved && event.amount && event.asset ?
-            <Text style={[styles.activityAmount, {color: theme.ink}]}>{event.amount} {event.asset}</Text> : null}
+          <View style={styles.activityCopy}><Text numberOfLines={1} style={[styles.activityTitle, {color: theme.ink}]}>{item.lifecycle ? 'Wallet swap' : item.event.title}</Text>
+            <Text numberOfLines={2} style={[styles.activitySummary, {color: theme.muted}]}>{item.event.summary}</Text></View>
+          <Text style={[styles.activityStatus, {color: theme.ink}]}>{item.event.status}</Text>
+          {item.event.status === 'finalized' && item.event.fundsMoved && item.event.amount && item.event.asset ?
+            <Text style={[styles.activityAmount, {color: theme.ink}]}>{item.event.amount} {item.event.asset}</Text> : null}
         </Pressable>)}
         {staleActivity ? <UserText theme={theme} kind="meta">Activity may be out of date.</UserText> : null}
       </UserCard> : activityQuery.isError ? <UserText theme={theme} kind="meta">Recent activity unavailable</UserText> : null}

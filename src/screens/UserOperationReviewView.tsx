@@ -48,7 +48,7 @@ export function UserOperationReviewView({theme, prepared, expected, amount, asse
     {result ? <UserCard theme={theme}>
       <UserText theme={theme} kind="title">{result.faucetTransferVerified === false ? 'AUSD not yet confirmed' : result.status ? `Status · ${result.status}` : 'Transaction update'}</UserText>
       <UserText theme={theme}>{result.message}</UserText>
-      {result.transactionHash ? <UserValueRow theme={theme} label="Transaction" value={shortHash(result.transactionHash)} /> : null}
+      {result.transactionHash ? <UserValueRow theme={theme} label="Transaction" value={result.transactionHash} /> : null}
       {result.faucetTransferVerified && result.verifiedAmountUnits
         ? <UserValueRow theme={theme} label="AUSD received · finalized receipt" value={`${formatMonadUnits(result.verifiedAmountUnits, 6)} AUSD`} /> : null}
       {!terminal ? <UserButton label="Check confirmation status" onPress={onCheck} theme={theme} secondary loading={busy} /> : null}
@@ -120,7 +120,6 @@ function feeLabel(gasLimit: string, fee: string) {
   try { return `${formatMonadUnits((BigInt(gasLimit) * BigInt(fee)).toString(), 18)} MON`; } catch { return 'Unavailable'; }
 }
 function humanize(value: string) { return value.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()); }
-function shortHash(value: string) { return value.length > 18 ? `${value.slice(0, 10)}…${value.slice(-6)}` : value; }
 function validDecimals(value: unknown): number | null { return Number.isSafeInteger(value) && Number(value) >= 0 && Number(value) <= 36 ? Number(value) : null; }
 function positiveUnits(value: unknown): value is string { return typeof value === 'string' && /^(?:0|[1-9][0-9]*)$/.test(value) && BigInt(value) > 0n; }
 function validAddress(value: unknown): boolean { return typeof value === 'string' && /^0x[a-f0-9]{40}$/i.test(value); }

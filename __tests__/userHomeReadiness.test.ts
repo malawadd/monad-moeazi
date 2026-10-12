@@ -72,6 +72,9 @@ test('next step preserves the first-use sequence and does not equate missing dat
   expect(nextUserHomeAction({...base, ausd: {...base.ausd, units: 99_999_999n}}).label).toBe('Request test AUSD');
   expect(nextUserHomeAction({...base, currentRunInvalid: true}).target).toBe('refresh');
   expect(nextUserHomeAction({...base, currentRun: run()}).target).toBe('status');
+  expect(nextUserHomeAction({...base, currentRun: run()})).toMatchObject({
+    title: 'Your autonomous run is in progress', label: 'View autonomous run',
+  });
   expect(nextUserHomeAction({...base, initialFundingComplete: true, ausd: {...base.ausd, units: 100_000_000n}}).target).toBe('setup');
 });
 

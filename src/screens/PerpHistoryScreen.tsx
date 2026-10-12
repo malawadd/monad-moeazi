@@ -2,6 +2,7 @@ import React, {useCallback, useState} from 'react';
 import {Text} from 'react-native';
 import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Card, DataRow, LoadingBlock, Notice, PageHeader, Screen, StatusBadge} from '../components/Ui';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {perpAutonomyApi} from '../services/perpAutonomyApi';
 import {formatMonadTimestamp, formatMonadUnits, shortenAddress} from '../services/monadFormatting';
 import {useApp} from '../state/AppContext';
@@ -76,7 +77,7 @@ function EventCard({event}: {event: PerpEvent}) {
     {event.realizedPnlUsdcUnits ? <DataRow label="Realized PnL" value={`${signedUsdc(event.realizedPnlUsdcUnits)} USDC`} /> : null}
     {event.amountUnits ? <DataRow label="Amount" value={`${formatMonadUnits(event.amountUnits, 6)} USDC`} /> : null}
     {block ? <DataRow label="Finalized block" value={String(block)} /> : null}
-    {hash ? <Text selectable style={s.meta}>Transaction · {hash}</Text> : null}
+    {hash ? <MonadTransactionHash prefix="Transaction · " hash={hash} style={s.meta} /> : null}
     {event.details || event.payload ? <EventDetails details={event.details ?? event.payload!} /> : null}
   </Card>;
 }

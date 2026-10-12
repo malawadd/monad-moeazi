@@ -10,7 +10,8 @@ import {usePresentation} from '../state/PresentationContext';
 import {userThemeTokens} from '../theme/userThemes';
 import {UserActivityDetailView} from './UserActivityDetailView';
 
-type DetailState = {owner: string; loading: boolean; error: string; interrupted: boolean; event: MonadActivityEvent | null};
+type DetailState = {owner: string; loading: boolean; error: string; interrupted: boolean;
+  event: MonadActivityEvent | null; timeline: MonadActivityEvent[]};
 
 export function ActivityDetailScreen() {
   const route = useRoute<any>();
@@ -23,35 +24,56 @@ export function ActivityDetailScreen() {
   ownerRef.current = ownerKey;
   const generation = useRef(0);
   const itemId = route.params?.itemId;
+  const operationId = typeof route.params?.operationId === 'string' && /^[a-z0-9-]{1,80}$/i.test(route.params.operationId)
+    ? route.params.operationId : null;
+  const operationPrefix = operationId ? `operation:${operationId}:` : null;
   const linkedActivityPath = typeof route.path === 'string' && route.path.startsWith('activity/');
-  const [state, setState] = useState<DetailState>({owner: '', loading: true, error: '', interrupted: false, event: null});
+  const [state, setState] = useState<DetailState>({owner: '', loading: true, error: '', interrupted: false, event: null, timeline: []});
 
   const refresh = useCallback(async () => {
     const current = ++generation.current;
     const requestedOwner = ownerKey;
-    setState({owner: requestedOwner, loading: true, error: '', interrupted: false, event: null});
+    setState({owner: requestedOwner, loading: true, error: '', interrupted: false, event: null, timeline: []});
     try {
       if (!ownerAddress) throw new Error('Sign in to view account activity.');
       if (typeof itemId !== 'string' || !itemId) throw new Error('This activity reference is incomplete.');
+      if (operationPrefix && !itemId.startsWith(operationPrefix)) throw new Error('This operation timeline reference is invalid.');
       // Route params are untrusted navigation data. Always resolve this ID through
       // the authenticated owner's activity pages before displaying any facts.
       let page = await fetchMonadActivityPage(ownerAddress, null);
       let match = page.events.find(item => item.id === itemId) ?? null;
-      while (!match && page.hasMore && page.nextCursor) {
-        page = await fetchMonadActivityPage(ownerAddress, page.nextCursor);
-        match = page.events.find(item => item.id === itemId) ?? null;
+      const timelineById = new Map<string, MonadActivityEvent>();
+      if (operationPrefix) {
+        for (const item of page.events) if (item.id.startsWith(operationPrefix)) timelineById.set(item.id, item);
       }
+      const seenCursors = new Set<string>();
+      // An operation ID identifies a multi-event lifecycle. Its older stages can
+      // span any number of activity pages, so resolve the complete owner feed
+      // before showing a grouped timeline. A single-event lookup can stop as soon
+      // as its exact event is found.
+      while ((operationPrefix || !match) && page.hasMore && page.nextCursor
+          && !seenCursors.has(page.nextCursor) && current === generation.current && ownerRef.current === requestedOwner) {
+        const nextCursor = page.nextCursor;
+        seenCursors.add(nextCursor);
+        page = await fetchMonadActivityPage(ownerAddress, nextCursor);
+        match ??= page.events.find(item => item.id === itemId) ?? null;
+        if (operationPrefix) {
+          for (const item of page.events) if (item.id.startsWith(operationPrefix)) timelineById.set(item.id, item);
+        }
+      }
+      if (current !== generation.current || ownerRef.current !== requestedOwner) return;
+      const orderedTimeline = [...timelineById.values()].sort((first, second) => Date.parse(first.occurredAt) - Date.parse(second.occurredAt));
       if (current === generation.current && ownerRef.current === requestedOwner) {
-        setState({owner: requestedOwner, loading: false, error: '', interrupted: false, event: match});
+        setState({owner: requestedOwner, loading: false, error: '', interrupted: false, event: match, timeline: orderedTimeline});
       }
     } catch (reason) {
       if (current === generation.current && ownerRef.current === requestedOwner) {
         setState({owner: requestedOwner, loading: false,
           error: reason instanceof Error ? reason.message : 'This event could not be loaded.',
-          interrupted: isRequestCancellation(reason), event: null});
+          interrupted: isRequestCancellation(reason), event: null, timeline: []});
       }
     }
-  }, [itemId, ownerAddress, ownerKey]);
+  }, [itemId, operationPrefix, ownerAddress, ownerKey]);
 
   useFocusEffect(useCallback(() => {
     void refresh();
@@ -60,8 +82,10 @@ export function ActivityDetailScreen() {
 
   const stateMatchesOwner = state.owner === ownerKey;
   const event = stateMatchesOwner ? state.event : null;
+  const timeline = stateMatchesOwner ? state.timeline : [];
   const error = stateMatchesOwner ? state.error : '';
   if (presentationMode === 'user') return <UserActivityDetailView theme={theme} event={event}
+    timeline={timeline}
     loading={!stateMatchesOwner || state.loading} error={error} interrupted={stateMatchesOwner && state.interrupted}
     onBack={() => linkedActivityPath ? navigation.navigate('Main', {screen: 'Activity'}) : navigation.goBack()}
     onRetry={() => { void refresh(); }} />;
@@ -79,6 +103,12 @@ export function ActivityDetailScreen() {
       {event.blockNumber !== undefined && event.blockNumber !== null ? <DataRow label="Block" value={String(event.blockNumber)} /> : null}
       {event.transactionHash && !isBlocked(event) ? <DataRow label="Transaction hash" value={event.transactionHash} /> : <Text style={s.body}>{isBlocked(event) ? 'This action was blocked before a transaction was created.' : 'No transaction hash was returned for this event.'}</Text>}
     </Card>
+    {timeline.length > 1 ? <Card><Text style={s.strong}>Operation timeline</Text>{timeline.map(item => <Card key={item.id}>
+      <DataRow label="Stage" value={`${activityStatus(item)} · ${item.kind.replaceAll('_', ' ')}`} />
+      <Text style={s.body}>{item.summary}</Text>
+      <DataRow label="When" value={new Date(item.occurredAt).toLocaleString()} />
+      {item.transactionHash && !isBlocked(item) ? <DataRow label="Transaction hash" value={item.transactionHash} /> : null}
+    </Card>)}</Card> : null}
     {event.details?.length ? <Card><Text style={s.strong}>Recorded facts</Text>{event.details.map((detail, index) => <DataRow key={`${detail.label}:${index}`} label={detail.label} value={detail.value} />)}</Card> : null}
   </FlowScreen>;
 }

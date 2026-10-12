@@ -5,7 +5,7 @@ import {Text} from 'react-native';
 let mockOwner = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const mockFetch = jest.fn();
 const mockNavigation = {goBack: jest.fn(), navigate: jest.fn()};
-let mockRoute: {params: {itemId: string; event?: unknown}; path?: string} = {
+let mockRoute: {params: {itemId: string; event?: unknown; operationId?: string}; path?: string} = {
   params: {itemId: 'event-1', event: {id: 'event-1', title: 'Untrusted route event', summary: 'must not render'}},
 };
 
@@ -83,5 +83,30 @@ test('a successful owner-scoped lookup with no matching ID remains a not-found r
   expect(text(renderer)).toContain('Activity not found');
   expect(text(renderer)).not.toContain('Activity unavailable');
   expect(text(renderer)).not.toContain('interrupted');
+  await act(async () => renderer.unmount());
+});
+
+test('grouped operation lookup follows all older pages and retains the selected event across page boundaries', async () => {
+  const operationId = 'aa58b552-cc08-4a04-8553-36d663c031cd';
+  const prefix = `operation:${operationId}:`;
+  const selectedId = `${prefix}finalized:0x${'f'.repeat(64)}`;
+  mockRoute = {params: {itemId: selectedId, operationId}};
+  mockFetch.mockReset()
+    .mockResolvedValueOnce({events: [{id: selectedId, kind: 'wallet_swap', title: 'Wallet swap finalized', summary: 'Finalized receipt',
+      status: 'finalized', occurredAt: '2026-10-12T12:03:00Z', fundsMoved: true}], nextCursor: 'older-1', hasMore: true})
+    .mockResolvedValueOnce({events: [{id: `${prefix}prepared`, kind: 'wallet_swap', title: 'Wallet swap prepared', summary: 'Prepared',
+      status: 'prepared', occurredAt: '2026-10-12T12:00:00Z', fundsMoved: false}], nextCursor: 'older-2', hasMore: true})
+    .mockResolvedValueOnce({events: [{id: `${prefix}authorized`, kind: 'wallet_swap', title: 'Wallet swap approved', summary: 'Authorized',
+      status: 'authorized', occurredAt: '2026-10-12T12:01:00Z', fundsMoved: false}], nextCursor: null, hasMore: false});
+
+  let renderer!: ReactTestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = ReactTestRenderer.create(<ActivityDetailScreen />); await flush(); });
+
+  expect(mockFetch.mock.calls).toEqual([[ownerA, null], [ownerA, 'older-1'], [ownerA, 'older-2']]);
+  expect(text(renderer)).toContain('Wallet swap finalized');
+  expect(text(renderer)).toContain('Operation timeline');
+  const rendered = text(renderer);
+  expect(rendered.indexOf('prepared · wallet swap')).toBeLessThan(rendered.indexOf('authorized · wallet swap'));
+  expect(rendered.indexOf('authorized · wallet swap')).toBeLessThan(rendered.indexOf('finalized · wallet swap'));
   await act(async () => renderer.unmount());
 });

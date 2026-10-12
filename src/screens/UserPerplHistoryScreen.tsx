@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
 import {UserButton, UserCard, UserDisclosure, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
+import {MonadTransactionHash} from '../components/MonadTransactionHash';
 import {marketDirectoryApi} from '../services/marketDirectoryApi';
 import {formatMonadTimestamp, formatMonadUnits} from '../services/monadFormatting';
 import {perplApi} from '../services/perplApi';
@@ -191,7 +192,7 @@ function EventItem({event, theme}: {event: PerplEvent; theme: ReturnType<typeof 
         {rawSummary ? <UserText theme={theme}>{String(rawSummary)}</UserText> : <UserText theme={theme}>No additional event note was recorded.</UserText>}
         {validUnits(event.amountUnits) ? <UserValueRow label="Amount" value={`${formatMonadUnits(event.amountUnits, 6)} AUSD`} theme={theme} /> : null}
         {timestamp ? <UserValueRow label="Recorded" value={formattedTime} theme={theme} /> : null}
-        {hash ? <Text selectable style={[styles.hash, {color: theme.ink, fontFamily: userFonts.mono}]}>{String(hash)}</Text> : null}
+        {hash ? <MonadTransactionHash hash={String(hash)} prefix="Transaction · " style={[styles.hash, {color: theme.ink, fontFamily: userFonts.mono, textDecorationLine: 'underline'}]} /> : null}
         {block !== undefined && block !== null ? <UserValueRow label="Block" value={String(block)} theme={theme} /> : null}
         {!hash && (block === undefined || block === null) ? <UserText theme={theme}>No transaction receipt is attached to this event.</UserText> : null}
       </UserDisclosure>
@@ -211,7 +212,7 @@ function OrderItem({order, theme}: {order: PerplOrder; theme: ReturnType<typeof 
     {hash || order.orderId !== undefined ? <UserDisclosure label="Order details" value={expanded ? 'Hide' : 'Show'} expanded={expanded}
       onPress={() => setExpanded(value => !value)} theme={theme}>
       {order.orderId !== undefined ? <UserValueRow label="Order ID" value={String(order.orderId)} theme={theme} /> : null}
-      {hash ? <Text selectable style={[styles.hash, {color: theme.ink, fontFamily: userFonts.mono}]}>{hash}</Text> : null}
+      {hash ? <MonadTransactionHash hash={hash} prefix="Transaction · " style={[styles.hash, {color: theme.ink, fontFamily: userFonts.mono, textDecorationLine: 'underline'}]} /> : null}
     </UserDisclosure> : null}
   </UserCard>;
 }

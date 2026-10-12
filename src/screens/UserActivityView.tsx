@@ -1,15 +1,15 @@
 import React from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import type {MonadActivityEvent} from '../types/monad';
+import type {UserActivityItem} from '../services/userActivityPresentation';
 import type {UserThemeTokens} from '../theme/userThemes';
 import {UserButton, UserCard, UserHeading, UserPage, UserText, UserValueRow} from '../components/user/UserPrimitives';
 
-export function UserActivityView({theme, events, loading, refreshing, error, pendingCount, hasMore, loadingMore, scope,
-  onRefresh, onLoadMore, onSetScope, onPending, onOpen}: {
-  theme: UserThemeTokens; events: MonadActivityEvent[]; loading: boolean; refreshing: boolean; error: string;
-  pendingCount: number; hasMore: boolean; loadingMore: boolean; scope: 'all' | 'perp';
+export function UserActivityView({theme, items, loading, refreshing, error, pendingCount, dismissingReminders, hasMore, loadingMore, scope,
+  onRefresh, onLoadMore, onSetScope, onPending, onDismissPending, onOpen}: {
+  theme: UserThemeTokens; items: UserActivityItem[]; loading: boolean; refreshing: boolean; error: string;
+  pendingCount: number; dismissingReminders: boolean; hasMore: boolean; loadingMore: boolean; scope: 'all' | 'perp';
   onRefresh(): void; onLoadMore(): void; onSetScope(value: 'all' | 'perp'): void;
-  onPending(): void; onOpen(event: MonadActivityEvent): void;
+  onPending(): void; onDismissPending(): void; onOpen(item: UserActivityItem): void;
 }) {
   return <UserPage theme={theme} refreshing={refreshing} onRefresh={onRefresh}>
     <UserHeading theme={theme} kicker="ACCOUNT · ACTIVITY" title="Recent activity" copy="See wallet and Perpl actions recorded for this account." />
@@ -17,8 +17,9 @@ export function UserActivityView({theme, events, loading, refreshing, error, pen
       <UserText theme={theme} kind="title">An action needs a status check</UserText>
       <UserText theme={theme}>{pendingCount === 1 ? 'One saved action' : `${pendingCount} saved actions`} still need a check.</UserText>
       <UserButton label="Check transaction status" onPress={onPending} theme={theme} secondary />
+      <UserButton label="Dismiss reminder" onPress={onDismissPending} theme={theme} secondary loading={dismissingReminders} />
     </UserCard> : null}
-    {error ? <UserCard theme={theme}><UserText theme={theme} kind="title">{events.length ? 'Showing saved activity' : 'Activity unavailable'}</UserText>
+    {error ? <UserCard theme={theme}><UserText theme={theme} kind="title">{items.length ? 'Showing saved activity' : 'Activity unavailable'}</UserText>
       <UserText theme={theme}>{error}</UserText><UserButton label="Refresh activity" onPress={onRefresh} theme={theme} secondary /></UserCard> : null}
     {loading ? <UserCard theme={theme}><UserText theme={theme}>Loading activity…</UserText></UserCard> : null}
     <View style={styles.filters} accessibilityRole="radiogroup" accessibilityLabel="Activity filter">
@@ -28,17 +29,24 @@ export function UserActivityView({theme, events, loading, refreshing, error, pen
         <UserText theme={theme}>{item === 'all' ? 'All' : 'Perpl'}</UserText>
       </Pressable>)}
     </View>
-    {!events.length && !loading && !error ? <UserCard theme={theme}>
+    {!items.length && !loading && !error ? <UserCard theme={theme}>
       <UserText theme={theme} kind="title">No activity yet</UserText>
       <UserText theme={theme}>Recorded actions will appear here.</UserText>
     </UserCard> : null}
-    {events.map(event => <Pressable key={event.id} accessibilityRole="button" accessibilityLabel={`Open activity: ${event.title}`}
-      onPress={() => onOpen(event)} style={({pressed}) => [styles.event, {borderColor: theme.border, backgroundColor: theme.surface}, pressed && {opacity: 0.7}]}>
-      <UserText theme={theme} kind="meta">{dateLabel(event.occurredAt)} · {event.status}</UserText>
-      <UserText theme={theme} kind="title">{event.title}</UserText>
-      <UserText theme={theme}>{event.summary}</UserText>
-      {event.amount && event.asset ? <UserValueRow theme={theme} label="Amount" value={`${event.amount} ${event.asset}`} /> : null}
-    </Pressable>)}
+    {items.map(item => {
+      const event = item.event;
+      const groupedSwap = Boolean(item.lifecycle);
+      return <Pressable key={item.key} accessibilityRole="button"
+        accessibilityLabel={groupedSwap ? `Open wallet swap, latest status ${event.status}, ${item.lifecycle!.events.length} updates`
+          : `Open activity: ${event.title}`}
+        onPress={() => onOpen(item)} style={({pressed}) => [styles.event, {borderColor: theme.border, backgroundColor: theme.surface}, pressed && {opacity: 0.7}]}>
+        <UserText theme={theme} kind="meta">{dateLabel(event.occurredAt)} · {event.status}</UserText>
+        <UserText theme={theme} kind="title">{groupedSwap ? 'Wallet swap' : event.title}</UserText>
+        <UserText theme={theme}>{event.summary}</UserText>
+        {item.lifecycle ? <UserText theme={theme} kind="meta">{item.lifecycle.events.length} status updates · Open for receipt details</UserText> : null}
+        {event.amount && event.asset ? <UserValueRow theme={theme} label="Amount" value={`${event.amount} ${event.asset}`} /> : null}
+      </Pressable>;
+    })}
     {hasMore ? <UserButton label={loadingMore ? 'Loading activity…' : 'Load more activity'} onPress={onLoadMore}
       theme={theme} secondary loading={loadingMore} /> : null}
   </UserPage>;
